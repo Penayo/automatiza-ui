@@ -1,0 +1,206 @@
+.form-editor-container {
+  height: calc(100vh - 7rem);
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  background-color: var(--surface-ground);
+}
+
+.fjs-vertical-layout {
+  padding-inline: 0px !important;
+}
+
+/* formjs-dark.css
+   Scoped dark theme for form-js form elements.
+   Usage: wrap your viewer/editor in <div class="formjs-root dark"> ... </div>
+   Import this file after form-js CSS.
+*/
+
+/* Color tokens */
+.formjs-dark {
+  --fj-btn-bg-hover: #171b32;
+  --fj-btn-bg: #040717;
+  --fj-bg: #27272a;           /* overall background */
+  --fj-surface: #1f2937;      /* panel / surface (matches bg) */
+  --fj-text: #e6eef6;         /* readable text (kept light for contrast) */
+  --fj-muted: #9aa6b2;        /* secondary text */
+  --fj-border: #4b5563;       /* normal border color (user provided) */
+  --fj-border-hover: rgba(134, 145, 162, 0.7); /* slightly lighter hover (alpha) */
+  --fj-focus: #07bf9b;        /* focus border color (1px) */
+  --fj-input-bg: #09090b;     /* input background (same as overall) */
+  --fj-placeholder: #94a3b8;  /* placeholder color */
+  --fj-danger: #ff6b6b;       /* validation / error accent (kept default) */
+}
+
+/* Root background + text color for viewer/editor containers */
+.formjs-dark,
+.formjs-dark .fjs,
+.formjs-dark .fjs-container,
+.formjs-dark .fjs-editor {
+  background-color: var(--fj-bg) !important;
+  color: var(--fj-text) !important;
+}
+
+/* Panels, properties and overlays: background + border-color only */
+.formjs-dark .fjs-panel,
+.formjs-dark .fjs-properties,
+.formjs-dark .fjs-sidebar,
+.formjs-dark .fjs-palette,
+.formjs-dark .fjs-palette .fjs-palette-header,
+.formjs-dark .fjs-properties-container,
+.formjs-dark .fjs-properties-container .bio-properties-panel-header,
+.formjs-dark .fjs-properties-container .bio-properties-panel-group,
+.formjs-dark .fjs-overlay,
+.formjs-dark .fjs-dropdown {
+  background-color: var(--fj-bg) !important;
+  color: var(--fj-text) !important;
+  border-color: var(--fj-border) !important;
+}
+
+/* Input-like controls inside viewer/editor
+   - Only change background-color, color, border-color, caret-color.
+   - Do NOT change padding, height, box-sizing, line-height.
+*/
+.formjs-dark .fjs-palette .fjs-palette-search-container,
+.formjs-dark .fjs-container .fjs-input,
+.formjs-dark .fjs-form-editor .fjs-input,
+.formjs-dark .fjs-form-field-select .fjs-input-group,
+.formjs-dark .fjs-form-field-select .fjs-select-anchor .fjs-dropdownlist-item,
+.formjs-dark .fjs-container input,
+.formjs-dark .fjs-container textarea,
+.formjs-dark .fjs-container select,
+.formjs-dark .fjs-form-editor input,
+.formjs-dark .fjs-form-editor textarea,
+.formjs-dark .fjs-form-editor select {
+  border: 1px solid !important;
+  background-color: var(--fj-input-bg) !important;
+  color: var(--fj-text) !important;
+  border-color: var(--fj-border) !important;
+  caret-color: var(--fj-text) !important;
+  border-radius: 6px !important;
+}
+
+.formjs-dark .fjs-form-field-select .fjs-select-anchor .fjs-dropdownlist {
+  box-shadow: none !important;
+  border-radius: 6px !important;
+  background-color: var(--fj-input-bg) !important;  
+}
+
+.formjs-dark .fjs-palette .fjs-palette-search-container input {
+  border-width: 0px !important;
+  box-shadow: none !important;
+}
+
+/* Keep placeholders readable */
+.formjs-dark .fjs-container ::placeholder,
+.formjs-dark .fjs-editor ::placeholder {
+  color: var(--fj-placeholder) !important;
+  opacity: 1;
+}
+
+/* Hover: slightly lighter border */
+.formjs-dark .fjs-container input:hover,
+.formjs-dark .fjs-container textarea:hover,
+.formjs-dark .fjs-container select:hover,
+.formjs-dark .fjs-editor input:hover,
+.formjs-dark .fjs-editor textarea:hover,
+.formjs-dark .fjs-editor select:hover {
+  border-color: var(--fj-border-hover) !important;
+}
+
+/* Focus: apply a 1px border color as requested.
+   Use an outline-like box-shadow to preserve existing control sizing; border-color is set to 1px color.
+*/
+.formjs-dark .fjs-container .fjs-form-field-textfield .fjs-input-group {
+  border-width: 0 !important;
+  border-radius: 6px;
+}
+
+.formjs-dark .fjs-container input:focus,
+.formjs-dark .fjs-container textarea:focus,
+.formjs-dark .fjs-form-field-select .fjs-input-group:focus-within,
+.formjs-dark .fjs-container select:focus,
+.formjs-dark .fjs-editor input:focus,
+.formjs-dark .fjs-editor textarea:focus,
+.formjs-dark .fjs-editor select:focus {
+  border-color: var(--fj-focus) !important;
+  /* subtle focus ring without changing layout: */
+  box-shadow: 0 0 0 3px rgba(6,172,139,0.12);
+  outline: none;
+}
+
+.formjs-dark .fjs-select-arrow,
+.formjs-dark .fjs-select-cross {
+  padding-top: 12px !important;
+}
+
+/* Labels, help text, descriptions */
+.formjs-dark label,
+.formjs-dark .fjs-label,
+.formjs-dark .fjs-description,
+.formjs-dark .fjs-hint {
+  color: var(--fj-muted) !important;
+}
+
+/* SVG / icon coloring — keep sizes, only affect color */
+.formjs-dark .fjs-container svg,
+.formjs-dark .fjs-editor svg,
+.formjs-dark .fjs-container .bio-icon,
+.formjs-dark .fjs-editor .bio-icon {
+  color: var(--fj-muted) !important;
+  fill: currentColor !important;
+}
+
+/* Validation / error state */
+.formjs-dark .fjs-invalid,
+.formjs-dark .fjs-container .fjs-invalid,
+.formjs-dark .fjs-editor .fjs-invalid {
+  border-color: var(--fj-danger) !important;
+  box-shadow: 0 0 0 3px rgba(255,107,107,0.08);
+}
+
+/* Dropdown menus / select overlays: background + border color only */
+.formjs-dark .fjs-dropdown,
+.formjs-dark .fjs-select-dropdown,
+.formjs-dark .fjs-overlay {
+  background-color: var(--fj-surface) !important;
+  border-color: var(--fj-border) !important;
+  color: var(--fj-text) !important;
+}
+
+/* Small utility: keep buttons readable (don't change sizes) */
+.formjs-dark .fjs-btn,
+.formjs-dark .fjs-palette-field,
+.fjs-button {
+  color: var(--fj-text) !important;
+  background: transparent !important;
+  border-color: var(--fj-border) !important;
+  outline: solid 1px var(--fj-border) !important;
+}
+
+.formjs-dark .fjs-button {
+  color: var(--fj-text) !important;
+  background: var(--fj-btn-bg) !important;
+  border: 1px solid var(--fj-border) !important;
+  outline: solid 0px !important;
+  font-weight: normal !important;
+  border-radius: 6px !important;
+}
+
+.formjs-dark .fjs-button:hover {
+  cursor: pointer;
+  background: var(--fj-btn-bg-hover) !important;  
+}
+
+.formjs-dark .fjs-btn:hover,
+.formjs-dark .fjs-palette-field:hover,
+.formjs-darkbutton:hover {
+  outline: solid 1px var(--fj-border-hover) !important;
+}
+
+/* Scrollbar styling (optional, unobtrusive) */
+.formjs-dark::-webkit-scrollbar { width: 10px; height: 10px; }
+.formjs-dark::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+}
+.formjs-dark::-webkit-scrollbar-track { background: transparent; }

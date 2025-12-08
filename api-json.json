@@ -1,0 +1,1996 @@
+{
+    "openapi": "3.0.0",
+    "paths": {
+        "/bpmn/processes": {
+            "get": {
+                "operationId": "ProcessesController_getAllProcessDefinition",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "List of process definitions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ProcessDefinitionResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get all process definitions",
+                "tags": [
+                    "processes"
+                ]
+            }
+        },
+        "/bpmn/processes/{id}/instances": {
+            "get": {
+                "operationId": "ProcessesController_getAllProcessInstances",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Process instance list retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ProcessInstanceResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get all process instances",
+                "tags": [
+                    "processes"
+                ]
+            }
+        },
+        "/bpmn/processes/instances/{id}": {
+            "get": {
+                "operationId": "ProcessesController_getInstance",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Process instance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessInstanceResponseDto"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get an instancce by id",
+                "tags": [
+                    "processes"
+                ]
+            }
+        },
+        "/bpmn/processes/instances/{id}/tasks": {
+            "get": {
+                "operationId": "ProcessesController_getInstanceTasks",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task list retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TaskResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get all tasks by instancce",
+                "tags": [
+                    "processes"
+                ]
+            }
+        },
+        "/bpmn/processes/save": {
+            "post": {
+                "operationId": "ProcessesController_saveProcess",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeployProcessDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Process successfully saved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessDefinitionResponseDto"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Save a BPMN process",
+                "tags": [
+                    "processes"
+                ]
+            }
+        },
+        "/bpmn/processes/deploy/{id}": {
+            "post": {
+                "operationId": "ProcessesController_deployProcess",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Process successfully deployed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessDefinitionResponseDto"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Deploy a new BPMN process",
+                "tags": [
+                    "processes"
+                ]
+            }
+        },
+        "/bpmn/processes/{id}": {
+            "get": {
+                "operationId": "ProcessesController_getProcessDefinition",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Process definition details retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProcessDefinitionDetailResponseDto"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get process definition details",
+                "tags": [
+                    "processes"
+                ]
+            }
+        },
+        "/bpmn/processes/{id}/start-form": {
+            "get": {
+                "operationId": "ProcessesController_getProcessStartForm",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Process Start Form retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FormResponseDto"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get start form schema",
+                "tags": [
+                    "processes"
+                ]
+            }
+        },
+        "/bpmn/processes/{id}/start": {
+            "post": {
+                "operationId": "ProcessesController_startProcess",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StartProcessDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Process instance started"
+                    },
+                    "404": {
+                        "description": "Process definition not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Start a process instance",
+                "tags": [
+                    "processes"
+                ]
+            }
+        },
+        "/bpmn/tasks": {
+            "get": {
+                "operationId": "TasksController_getAll",
+                "parameters": [
+                    {
+                        "name": "type",
+                        "required": false,
+                        "in": "query",
+                        "description": "Task type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "dueDate",
+                        "required": false,
+                        "in": "query",
+                        "description": "Task due date",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "followUpDate",
+                        "required": false,
+                        "in": "query",
+                        "description": "Task follow up date",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "priority",
+                        "required": false,
+                        "in": "query",
+                        "description": "Task priority",
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "assignee",
+                        "required": false,
+                        "in": "query",
+                        "description": "Task assignee",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "required": false,
+                        "in": "query",
+                        "description": "Task status",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "required": false,
+                        "in": "query",
+                        "description": "Task name",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "created",
+                        "required": false,
+                        "in": "query",
+                        "description": "Task created date",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "variableValue",
+                        "required": false,
+                        "in": "query",
+                        "description": "Process instance variable value",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tasks retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TaskResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get all tasks",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/bpmn/tasks/{taskId}": {
+            "get": {
+                "operationId": "TasksController_getTaskById",
+                "parameters": [
+                    {
+                        "name": "taskId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tasks retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TaskResponseDto"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get task by id",
+                "tags": [
+                    "tasks"
+                ]
+            },
+            "patch": {
+                "operationId": "TasksController_updateTask",
+                "parameters": [
+                    {
+                        "name": "taskId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateTaskDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Task updated successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Update a task",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/bpmn/tasks/{taskId}/complete": {
+            "post": {
+                "operationId": "TasksController_completeTask",
+                "parameters": [
+                    {
+                        "name": "taskId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompleteTaskDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Task completed successfully"
+                    },
+                    "403": {
+                        "description": "User not authorized to complete task"
+                    },
+                    "404": {
+                        "description": "Task not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Complete a task",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/bpmn/tasks/{taskId}/claim": {
+            "post": {
+                "operationId": "TasksController_claimTask",
+                "parameters": [
+                    {
+                        "name": "taskId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task claimed successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Claim a task",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/bpmn/tasks/{taskId}/unclaim": {
+            "post": {
+                "operationId": "TasksController_unclaimTask",
+                "parameters": [
+                    {
+                        "name": "taskId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task unclaimed successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Unclaim a task",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/bpmn/tasks/user/{userId}": {
+            "get": {
+                "operationId": "TasksController_getUserTasks",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tasks retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TaskResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get tasks for a user",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/bpmn/tasks/{taskId}/form": {
+            "get": {
+                "operationId": "TasksController_getTaskForm",
+                "parameters": [
+                    {
+                        "name": "taskId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tasks Form retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FormResponseDto"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get task form",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/bpmn/tasks/group/{groupId}": {
+            "get": {
+                "operationId": "TasksController_getGroupTasks",
+                "parameters": [
+                    {
+                        "name": "groupId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tasks retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TaskResponseDto"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get tasks for a group",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/bpmn/tasks/available": {
+            "get": {
+                "operationId": "TasksController_getAvailableTasksLoguedUser",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Tasks retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get available tasks for a logued user",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/bpmn/tasks/available/{userId}": {
+            "get": {
+                "operationId": "TasksController_getAvailableTasks",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tasks retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get available tasks for a user",
+                "tags": [
+                    "tasks"
+                ]
+            }
+        },
+        "/messages/public": {
+            "post": {
+                "operationId": "MessagesController_publicMessage",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PublicMessageDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": ""
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Public a message",
+                "tags": [
+                    "bpmn/messages"
+                ]
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "operationId": "AuthController_login",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "summary": "Login user",
+                "tags": [
+                    "auth"
+                ]
+            }
+        },
+        "/users": {
+            "post": {
+                "operationId": "UsersController_create",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateUserDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The user has been successfully created."
+                    },
+                    "403": {
+                        "description": "Forbidden."
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Create a new user",
+                "tags": [
+                    "users"
+                ]
+            },
+            "get": {
+                "operationId": "UsersController_findAll",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Return all users."
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get all users",
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/{id}": {
+            "get": {
+                "operationId": "UsersController_findOne",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Return the user."
+                    },
+                    "404": {
+                        "description": "User not found."
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get a user by id",
+                "tags": [
+                    "users"
+                ]
+            },
+            "patch": {
+                "operationId": "UsersController_update",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateUserDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The user has been successfully updated."
+                    },
+                    "403": {
+                        "description": "Forbidden."
+                    },
+                    "404": {
+                        "description": "User not found."
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Update a user",
+                "tags": [
+                    "users"
+                ]
+            },
+            "delete": {
+                "operationId": "UsersController_remove",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The user has been successfully deleted."
+                    },
+                    "403": {
+                        "description": "Forbidden."
+                    },
+                    "404": {
+                        "description": "User not found."
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Delete a user",
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/forms": {
+            "post": {
+                "operationId": "FormsController_create",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateFormDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Form created successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Create a new form",
+                "tags": [
+                    "forms"
+                ]
+            },
+            "get": {
+                "operationId": "FormsController_findAll",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Returns all forms"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get all forms",
+                "tags": [
+                    "forms"
+                ]
+            }
+        },
+        "/forms/{id}": {
+            "get": {
+                "operationId": "FormsController_findOne",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns the form"
+                    },
+                    "404": {
+                        "description": "Form not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Get form by id",
+                "tags": [
+                    "forms"
+                ]
+            },
+            "patch": {
+                "operationId": "FormsController_update",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateFormDto"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Form updated successfully"
+                    },
+                    "404": {
+                        "description": "Form not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Update form",
+                "tags": [
+                    "forms"
+                ]
+            },
+            "delete": {
+                "operationId": "FormsController_remove",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Form deleted successfully"
+                    },
+                    "404": {
+                        "description": "Form not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Delete form",
+                "tags": [
+                    "forms"
+                ]
+            }
+        }
+    },
+    "info": {
+        "title": "BPMN Engine API",
+        "description": "REST API for BPMN workflow engine based on Camunda specifications",
+        "version": "1.0",
+        "contact": {}
+    },
+    "tags": [
+        {
+            "name": "bpmn",
+            "description": ""
+        }
+    ],
+    "servers": [],
+    "components": {
+        "securitySchemes": {
+            "bearer": {
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "type": "http"
+            }
+        },
+        "schemas": {
+            "ProcessDefinitionResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Unique identifier of the deployed process",
+                        "example": "123e4567-e89b-12d3-a456-426614174000"
+                    },
+                    "processId": {
+                        "type": "string",
+                        "description": "Process definition id",
+                        "example": "invoice-approval"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the process",
+                        "example": "Invoice Approval"
+                    },
+                    "bpmnXml": {
+                        "type": "string",
+                        "description": "BPMN XML content",
+                        "example": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><bpmn:definitions ..."
+                    },
+                    "subscriptions": {
+                        "type": "array",
+                        "description": "Subscriptions for process start events",
+                        "example": [
+                            {
+                                "name": "startEvent",
+                                "startEventId": "StartEvent_1"
+                            }
+                        ]
+                    },
+                    "process": {
+                        "type": "object",
+                        "description": "Process object",
+                        "example": {}
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "description": "Creation timestamp",
+                        "example": "2023-09-20T10:00:00.000Z"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Process description",
+                        "example": "This process handles invoice approval workflow"
+                    },
+                    "version": {
+                        "type": "number",
+                        "description": "Version number of the process",
+                        "example": 1
+                    }
+                },
+                "required": [
+                    "id",
+                    "processId",
+                    "name",
+                    "bpmnXml",
+                    "process",
+                    "createdAt"
+                ]
+            },
+            "ProcessExceptionDto": {
+                "type": "object",
+                "properties": {
+                    "taskId": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "error": {
+                        "type": "object"
+                    }
+                },
+                "required": [
+                    "taskId",
+                    "createdAt",
+                    "error"
+                ]
+            },
+            "ProcessLogDto": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "info",
+                            "error",
+                            "warning"
+                        ]
+                    },
+                    "level": {
+                        "type": "number"
+                    },
+                    "variables": {
+                        "type": "object"
+                    }
+                },
+                "required": [
+                    "date",
+                    "message",
+                    "type",
+                    "level"
+                ]
+            },
+            "ProcessInstanceResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "processDefinitionId": {
+                        "type": "string"
+                    },
+                    "variables": {
+                        "type": "object"
+                    },
+                    "currentNode": {
+                        "type": "object"
+                    },
+                    "parallelGateways": {
+                        "type": "object",
+                        "default": {}
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "completedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "exceptions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessExceptionDto"
+                        }
+                    },
+                    "indexKeys": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "subscribedTo": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "log": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProcessLogDto"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "processDefinitionId",
+                    "variables",
+                    "currentNode",
+                    "parallelGateways",
+                    "status",
+                    "createdAt",
+                    "indexKeys"
+                ]
+            },
+            "TaskResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "taskDefinitionId": {
+                        "type": "string"
+                    },
+                    "attachedToRef": {
+                        "type": "string"
+                    },
+                    "attachedTo": {
+                        "type": "string"
+                    },
+                    "cancelActivity": {
+                        "type": "boolean"
+                    },
+                    "subscribedTo": {
+                        "type": "object"
+                    },
+                    "processInstanceId": {
+                        "type": "string"
+                    },
+                    "processName": {
+                        "type": "string"
+                    },
+                    "processVersion": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "branch": {
+                        "type": "string"
+                    },
+                    "documentation": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "user",
+                            "service",
+                            "script",
+                            "receive",
+                            "send",
+                            "manual",
+                            "businessRule",
+                            "callActivity",
+                            "subProcess",
+                            "startEvent",
+                            "endEvent",
+                            "intermediateCatchEvent",
+                            "intermediateThrowEvent",
+                            "boundaryEvent"
+                        ]
+                    },
+                    "serviceTaskType": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "statusMessage": {
+                        "type": "string"
+                    },
+                    "attempsNumber": {
+                        "type": "number"
+                    },
+                    "variables": {
+                        "type": "object"
+                    },
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "completedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "candidateGroups": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "candidateUsers": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "dueDate": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "followUpDate": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "priority": {
+                        "type": "number"
+                    },
+                    "assignee": {
+                        "type": "string"
+                    },
+                    "assignedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "claimedBy": {
+                        "type": "string"
+                    },
+                    "claimedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "script": {
+                        "type": "string"
+                    },
+                    "scriptFormat": {
+                        "type": "string"
+                    },
+                    "resultVariable": {
+                        "type": "string"
+                    },
+                    "delegateExpression": {
+                        "type": "string"
+                    },
+                    "restConfig": {
+                        "type": "object"
+                    },
+                    "formType": {
+                        "type": "string"
+                    },
+                    "formId": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "taskDefinitionId",
+                    "processInstanceId",
+                    "processName",
+                    "processVersion",
+                    "type",
+                    "status",
+                    "variables",
+                    "createdAt",
+                    "candidateGroups",
+                    "candidateUsers"
+                ]
+            },
+            "DeployProcessDto": {
+                "type": "object",
+                "properties": {
+                    "bpmnXml": {
+                        "type": "string",
+                        "description": "BPMN XML content",
+                        "example": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><bpmn:definitions ..."
+                    }
+                },
+                "required": [
+                    "bpmnXml"
+                ]
+            },
+            "ProcessDefinitionDetailResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Unique identifier of the deployed process",
+                        "example": "123e4567-e89b-12d3-a456-426614174000"
+                    },
+                    "processId": {
+                        "type": "string",
+                        "description": "Process definition id",
+                        "example": "invoice-approval"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the process",
+                        "example": "Invoice Approval"
+                    },
+                    "bpmnXml": {
+                        "type": "string",
+                        "description": "BPMN XML content",
+                        "example": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><bpmn:definitions ..."
+                    },
+                    "subscriptions": {
+                        "type": "array",
+                        "description": "Subscriptions for process start events",
+                        "example": [
+                            {
+                                "name": "startEvent",
+                                "startEventId": "StartEvent_1"
+                            }
+                        ]
+                    },
+                    "process": {
+                        "type": "object",
+                        "description": "Process object",
+                        "example": {}
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "description": "Creation timestamp",
+                        "example": "2023-09-20T10:00:00.000Z"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Process description",
+                        "example": "This process handles invoice approval workflow"
+                    },
+                    "version": {
+                        "type": "number",
+                        "description": "Version number of the process",
+                        "example": 1
+                    }
+                },
+                "required": [
+                    "id",
+                    "processId",
+                    "name",
+                    "bpmnXml",
+                    "process",
+                    "createdAt"
+                ]
+            },
+            "FormComponentValue": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+                    },
+                    "value": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "label",
+                    "value"
+                ]
+            },
+            "FormComponentLayout": {
+                "type": "object",
+                "properties": {
+                    "row": {
+                        "type": "string"
+                    },
+                    "col": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "row"
+                ]
+            },
+            "FormComponentValidation": {
+                "type": "object",
+                "properties": {
+                    "required": {
+                        "type": "boolean"
+                    },
+                    "minLength": {
+                        "type": "number"
+                    },
+                    "maxLength": {
+                        "type": "number"
+                    },
+                    "pattern": {
+                        "type": "string"
+                    },
+                    "min": {
+                        "type": "number"
+                    },
+                    "max": {
+                        "type": "number"
+                    }
+                }
+            },
+            "FormComponent": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "dateLabel": {
+                        "type": "string"
+                    },
+                    "key": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "defaultValue": {
+                        "type": "string"
+                    },
+                    "values": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FormComponentValue"
+                        }
+                    },
+                    "content": {
+                        "type": "string"
+                    },
+                    "layout": {
+                        "$ref": "#/components/schemas/FormComponentLayout"
+                    },
+                    "conditional": {
+                        "type": "object"
+                    },
+                    "subtype": {
+                        "type": "string"
+                    },
+                    "validate": {
+                        "$ref": "#/components/schemas/FormComponentValidation"
+                    },
+                    "properties": {
+                        "type": "object"
+                    }
+                },
+                "required": [
+                    "type",
+                    "id",
+                    "description",
+                    "defaultValue"
+                ]
+            },
+            "FormResponseDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "default",
+                            "form",
+                            "Form"
+                        ]
+                    },
+                    "schemaVersion": {
+                        "type": "number"
+                    },
+                    "version": {
+                        "type": "number"
+                    },
+                    "components": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FormComponent"
+                        }
+                    },
+                    "metadata": {
+                        "type": "object"
+                    },
+                    "processDefinitionId": {
+                        "type": "string"
+                    },
+                    "taskDefinitionId": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "type",
+                    "components",
+                    "createdAt",
+                    "updatedAt"
+                ]
+            },
+            "StartProcessDto": {
+                "type": "object",
+                "properties": {
+                    "variables": {
+                        "type": "object",
+                        "description": "Process variables",
+                        "example": {
+                            "amount": 1000,
+                            "requesterId": "user123"
+                        }
+                    }
+                }
+            },
+            "CompleteTaskDto": {
+                "type": "object",
+                "properties": {
+                    "variables": {
+                        "type": "object",
+                        "description": "Task variables",
+                        "example": {
+                            "approved": true,
+                            "comments": "Looks good"
+                        }
+                    }
+                }
+            },
+            "UpdateTaskDto": {
+                "type": "object",
+                "properties": {
+                    "assignee": {
+                        "type": "string",
+                        "description": "User assignee"
+                    },
+                    "dueDate": {
+                        "type": "string",
+                        "description": "Task due date"
+                    },
+                    "followUpDate": {
+                        "type": "string",
+                        "description": "Task follow up date"
+                    },
+                    "priority": {
+                        "type": "number",
+                        "description": "Task priority"
+                    }
+                }
+            },
+            "PublicMessageDto": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "message name"
+                    },
+                    "correlationKey": {
+                        "type": "string",
+                        "description": "message correlation key"
+                    },
+                    "timeToLive": {
+                        "type": "string",
+                        "description": "Time to live for the message in miliseconds"
+                    },
+                    "variables": {
+                        "type": "object",
+                        "description": "message payload"
+                    }
+                }
+            },
+            "LoginDto": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "email",
+                    "username",
+                    "password"
+                ]
+            },
+            "CreateUserDto": {
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "tenantId": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "username",
+                    "email",
+                    "password",
+                    "status"
+                ]
+            },
+            "UpdateUserDto": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "tenantId": {
+                        "type": "string"
+                    }
+                }
+            },
+            "CreateFormDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Form Id"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Form Name"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Form Description"
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Form Type"
+                    },
+                    "version": {
+                        "type": "number",
+                        "description": "Form Version"
+                    },
+                    "schemaVersion": {
+                        "type": "number",
+                        "description": "Form Schema Version"
+                    },
+                    "components": {
+                        "description": "Form Components",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "type",
+                    "version",
+                    "schemaVersion",
+                    "components"
+                ]
+            },
+            "UpdateFormDto": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Form Id"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Form Name"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Form Description"
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Form Type"
+                    },
+                    "version": {
+                        "type": "number",
+                        "description": "Form Version"
+                    },
+                    "schemaVersion": {
+                        "type": "number",
+                        "description": "Form Schema Version"
+                    },
+                    "components": {
+                        "description": "Form Components",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

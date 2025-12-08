@@ -1,0 +1,176 @@
+/* You might use a customized CSS selector */
+
+    /* Scoped dark theme for form-js (viewer & editor) */
+.formjs-dark {
+    --fj-bg: #0f1113;             /* overall background */
+    --fj-surface: #141619;        /* panel/card surface */
+    --fj-elev: #1b1e22;           /* elevated surface */
+    --fj-text: #e6eef6;           /* primary text */
+    --fj-muted: #9aa6b2;          /* secondary text */
+    --fj-border: #2a2f33;         /* borders */
+    --fj-focus: #4aa3ff;          /* focus ring / primary accent */
+    --fj-danger: #ff6b6b;
+    --fj-warning: #ffb86b;
+    --fj-success: #6be28f;
+    --fj-input-bg: #0e1113;       /* input backgrounds */
+    --fj-input-border: #263036;
+    --fj-input-text: #e6eef6;
+    --fj-placeholder: #7d8892;
+}
+
+/* Apply background to form container and surfaces */
+.formjs-dark .fjs-container,
+.formjs-dark .fjs {
+    background: var(--fj-bg);
+    color: var(--fj-text);
+}
+
+/* Panels, property sheets, palette, sidebar */
+.formjs-dark .fjs-panel,
+.formjs-dark .fjs-properties,
+.formjs-dark .fjs-sidebar,
+.formjs-dark .fjs-palette {
+    background: linear-gradient(180deg, var(--fj-surface), var(--fj-elev));
+    border-color: var(--fj-border);
+    color: var(--fj-text);
+}
+
+/* Cards and items */
+.formjs-dark .fjs-card,
+.formjs-dark .fjs-item {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.03);
+    color: var(--fj-text);
+}
+
+/* Inputs, textareas, selects */
+.formjs-dark input,
+.formjs-dark textarea,
+.formjs-dark select,
+.formjs-dark .fjs-input {
+    background: var(--fj-input-bg);
+    border: 1px solid var(--fj-input-border);
+    color: var(--fj-input-text);
+    caret-color: var(--fj-text);
+}
+
+.formjs-dark ::placeholder {
+    color: var(--fj-placeholder);
+}
+
+/* Labels and descriptions */
+.formjs-dark label,
+.formjs-dark .fjs-label,
+.formjs-dark .fjs-description {
+    color: var(--fj-muted);
+}
+
+/* Buttons */
+.formjs-dark button,
+.formjs-dark .fjs-btn {
+    background: transparent;
+    border: 1px solid var(--fj-border);
+    color: var(--fj-text);
+}
+
+.formjs-dark .fjs-btn.primary {
+    background: linear-gradient(180deg, rgba(74,163,255,0.14), rgba(74,163,255,0.06));
+    border-color: rgba(74,163,255,0.24);
+    color: var(--fj-text);
+}
+
+/* Focus states */
+.formjs-dark input:focus,
+.formjs-dark textarea:focus,
+.formjs-dark select:focus,
+.formjs-dark .fjs-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(74,163,255,0.12);
+    border-color: var(--fj-focus);
+}
+
+/* Icons (SVG) */
+.formjs-dark svg {
+    fill: currentColor;
+    stroke: currentColor;
+    color: var(--fj-muted);
+}
+
+/* Data / validation states */
+.formjs-dark .fjs-invalid {
+    border-color: var(--fj-danger) !important;
+    box-shadow: 0 0 0 3px rgba(255,107,107,0.08);
+}
+
+/* Dropdown / popup menus */
+.formjs-dark .fjs-dropdown,
+.formjs-dark .fjs-overlay {
+    background: var(--fj-surface);
+    border: 1px solid var(--fj-border);
+    color: var(--fj-text);
+}
+
+/* Scrollbars (optional, WebKit) */
+.formjs-dark ::-webkit-scrollbar { height: 10px; width: 10px; }
+.formjs-dark ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+}
+.formjs-dark ::-webkit-scrollbar-track { background: transparent; }
+
+
+/* src/styles/formjs-dark.css - safe, non-layout-changing overrides */
+.formjs-dark {
+    --fj-bg: #0f1113;
+    --fj-surface: #141619;
+    --fj-text: #e6eef6;
+    --fj-muted: #9aa6b2;
+    --fj-border: #2a2f33;
+    --fj-input-bg: #0e1113;
+    --fj-input-border: #263036;
+    --fj-input-text: #e6eef6;
+}
+
+/* Root container color/background only */
+.formjs-dark,
+.formjs-dark .fjs,
+.formjs-dark .fjs-viewer {
+    background-color: var(--fj-bg);
+    color: var(--fj-text);
+}
+
+/* Panels and overlays: background + border-color only */
+.formjs-dark .fjs-panel,
+.formjs-dark .fjs-properties,
+.formjs-dark .fjs-sidebar,
+.formjs-dark .fjs-palette,
+.formjs-dark .fjs-overlay {
+    background-color: var(--fj-surface);
+    border-color: var(--fj-border);
+    color: var(--fj-text);
+}
+
+/* Inputs: background, color and border-color only.
+   Do NOT alter padding, height, box-sizing, line-height. */
+.formjs-dark .fjs-viewer .fjs-input,
+.formjs-dark .fjs-viewer input,
+.formjs-dark .fjs-viewer textarea,
+.formjs-dark .fjs-viewer select {
+    background-color: var(--fj-input-bg);
+    border-color: var(--fj-input-border);
+    color: var(--fj-input-text);
+    caret-color: var(--fj-input-text);
+}
+
+/* Placeholder color only */
+.formjs-dark .fjs-viewer ::placeholder {
+    color: #7d8892;
+    opacity: 1;
+}
+
+/* SVG/icon color only */
+.formjs-dark .fjs-viewer svg {
+    color: var(--fj-muted);
+    fill: currentColor;
+    stroke: currentColor;
+}

@@ -1,0 +1,32 @@
+.bpmn-modeler-container {
+  height: 100vh;
+  display: flex;
+  color: #333;
+  background: #fff;
+}
+
+.djs-context-pad .entry {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.canvas {
+  flex: 1;
+  position: relative;
+}
+
+.properties-panel {
+  width: 300px;
+  overflow: auto;
+  border-left: 1px solid #ccc;
+  background-color: #f8f8f8;
+}
+
+.bio-properties-panel-input {
+  color: #333;
+}
+
+:root {
+  --bpmn-js-primary-color: #1a73e8;
+  --bpmn-js-secondary-color: #0d47a1;
+}
