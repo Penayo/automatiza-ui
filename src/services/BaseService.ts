@@ -42,12 +42,18 @@ export class BaseService {
     }
   }
 
-  async post<T>(url: string = "", postData = {}, config?: AxiosRequestConfig): Promise<T | void> {
+  async post<T>(url?: string | Object, postData = {}, config?: AxiosRequestConfig): Promise<T | void> {
+    if (typeof url === "object") {
+      config = postData
+      postData = url
+      url = ''
+    }
+
     try {
       config = config ?? {}
       config.headers = { ...this.getAuthorizationHeader() }
 
-      const { data } = await axios.post(this.getUrl(url), postData, config);
+      const { data } = await axios.post(this.getUrl(url as string), postData, config);
       console.log({ data })
       return data;
     } catch (err) {

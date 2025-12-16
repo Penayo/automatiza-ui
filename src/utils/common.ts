@@ -31,13 +31,13 @@ export function onDelete<T>(
 	confirm: any,
 	item: T | null,
 	onAccept: (item: T) => void,
-	message = 'Confirma?'
+	message = 'Esta seguro de elilminar el registro?'
 ) {
 	if (!item) return ;
 
 	confirm.require({
 		message,
-		header: 'Confirmación',
+		header: 'Confirmar acción',
 		icon: 'pi pi-exclamation-triangle',
 		rejectProps: {
 			label: 'Cancelar',

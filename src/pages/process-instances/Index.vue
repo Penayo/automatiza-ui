@@ -2,24 +2,23 @@
 import { onMounted, ref } from 'vue';
 import Page from '../../components/Page.vue';
 import { DataTable, Column, Button, useToast, Select, InputText } from 'primevue';
-import { useConfirm } from "primevue/useconfirm";
-import { $api, type PageRequest, type PageResponse } from '../../services/api';
-import { useRouter, useRoute } from 'vue-router';
+import { $api, type PageResponse } from '../../services/api';
+import { useRouter } from 'vue-router';
 import type { ProcessInstance, ProcessInstanceQuery } from '../../services/ProcessesService';
 import type { ProcessDefinition } from '../../services/ProcessesService';
 
-const route = useRoute();
 const $router = useRouter();
-const confirm = useConfirm();
 const items = ref<PageResponse<ProcessInstance>>();
 const selectedItem = ref<ProcessInstance | null>(null);
-const loading = ref(false);
 const toast = useToast();
 
+const loading = ref(false);
+const pageRef = ref<InstanceType<typeof Page>>();
 const processes = ref<ProcessDefinition[]>([]);
 const selectedProcess = ref<String | null>(null);
 const search = ref('');
 const rowsPerPage = ref(15);
+const params = ref({ page: 1, rowsPerPage: rowsPerPage.value });
 
 const fetchProcesses = async () => {
   try {
@@ -32,10 +31,9 @@ const fetchProcesses = async () => {
   }
 };
 
-const fetchData = async (params?: { page: number, rowsPerPage: number }) => {
+const fetchData = async () => {
   loading.value = true;
-  params = params || { page: 1, rowsPerPage: rowsPerPage.value };
-  const pageRequest: ProcessInstanceQuery = { ...params };
+  const pageRequest: ProcessInstanceQuery = { ...params.value };
 
   try {
     pageRequest.search = search.value;
@@ -53,8 +51,9 @@ const fetchData = async (params?: { page: number, rowsPerPage: number }) => {
 };
 
 const onPageChange = ({ page, rows }: { page: number, rows: number }) => {
-  console.log({ page, rows });
-  fetchData({ page: page + 1, rowsPerPage: rows });
+	rowsPerPage.value = rows
+	params.value = { page: page + 1, rowsPerPage: rows }
+	fetchData();
 };
 
 onMounted(async () => {
@@ -63,19 +62,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Page title="Instancias del Proceso">
+  <Page title="Instancias del Proceso" ref="pageRef">
     <template v-slot:actions>
       <div class="flex items-center gap-2">
         
       </div>      
       <Button variant="text" size="" rounded icon="pi pi-refresh" @click="fetchData()" />
-      <Button 
-        severity="secondary" 
-        :disabled="!selectedItem" 
-        label="Tasks" 
-        icon="pi pi-list" 
-        @click="$router.push({ name: 'ProcessInstanceTasks', params: { id: selectedItem?.id } })" 
-      />
       <Button
         severity="info"
         :disabled="!selectedItem"
@@ -119,6 +111,8 @@ onMounted(async () => {
       :rowsPerPageOptions="[5, 10, 20, 40]"
       @page="onPageChange"
       :lazy="true"
+			scrollable
+			:scrollHeight="(pageRef?.$el.clientHeight - 225) + 'px'"
     >
       <Column field="id" header="Instance ID"></Column>
       <Column field="status" header="Status"></Column>

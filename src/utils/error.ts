@@ -7,7 +7,7 @@ export type FormErrorItem = {
 }
 
 export type FormErrorMap = {
-	[key: string]: FormErrorItem
+	[key: string | number]: FormErrorItem | FormErrorMap
 }
 
 export type ApiErrorInfo = {
@@ -21,12 +21,20 @@ export const parseZodError = (zodError: ZodError): FormErrorMap => {
 	const errorMap: FormErrorMap = {};
 
 	zodError.issues.forEach(err => {
-		const field = err.path[0]
-		errorMap[field] = {
+		let current: FormErrorMap = errorMap;
+		for (let i = 0; i < err.path.length - 1; i++) {
+			const key = err.path[i] as string;
+			if (!current[key] || (typeof current[key] === 'object' && 'code' in current[key])) {
+				current[key] = {};
+			}
+			current = current[key] as FormErrorMap;
+		}
+		const lastKey = err.path[err.path.length - 1] as string;
+		current[lastKey] = {
 			code: err.code,
 			message: err.message,
-			field
-		}
+			field: lastKey
+		};
 	})
 
 	return errorMap;

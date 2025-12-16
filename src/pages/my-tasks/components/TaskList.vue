@@ -3,6 +3,7 @@ import { DataTable, Column, Button, InputText } from 'primevue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
+
 import { $api } from '../../../services/api';
 import type { Task } from '../../../services/TasksService';
 import { onMounted, ref, watch } from 'vue';
@@ -82,13 +83,13 @@ defineExpose({ getTasks });
                     <div class="col-12 pl-2 pb-0 text-lg list-title text-emerald-500">{{ slotProps.data.name }}</div>
                     <div
                         v-if="slotProps.data.processInfo?.correlationKey"
-                        class="col-12 pl-2 font-thin text-sm text-emerald-500"
+                        class="col-12 pl-2 text-sm font-bold"
                     >
                         <span>{{ slotProps.data.processInfo.correlationLabel }}:</span>
                         {{ slotProps.data.variables?.[slotProps.data.processInfo.correlationKey] }}
                     </div>
-                    <div class="col-12 pl-2 text-xs font-bold">{{ slotProps.data.processName ?? slotProps.data.processInfo.name }}</div>
-                    <div class="col-12 pl-2 text-xs font-light italic">Created {{ dayjs(slotProps.data.createdAt).fromNow() }}</div>
+                    <div class="col-12 pl-2 text-xs">{{ slotProps.data.processName ?? slotProps.data.processInfo.name }}</div>
+                    <div class="col-12 pl-2 text-xs text-right font-light italic">Created {{ dayjs(slotProps.data.createdAt).fromNow() }}</div>
                 </div>
             </template>
         </Column>

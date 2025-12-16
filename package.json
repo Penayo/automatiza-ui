@@ -39,7 +39,7 @@
     "vue-router": "^4.5.1",
     "vue3-ts-jsoneditor": "^3.1.2",
     "zeebe-bpmn-moddle": "github:Penayo/zeebe-bpmn-moddle",
-    "zod": "^3.25.76"
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/bpmn-moddle": "^5.1.11",

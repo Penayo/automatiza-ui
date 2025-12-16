@@ -51,7 +51,9 @@
 		{ label: 'Mis Tareas', icon: 'pi pi-list-check', path: '/my-tasks' },
 		{ label: 'Todas las Tareas', icon: 'pi pi-list-check', path: '/tasks' },
 
-		{ label: 'Opeadores', icon: 'pi pi-users', path: '/inspecciones' },
+		{ label: 'Users', icon: 'pi pi-users', path: '/users' },
+		{ label: 'Roles', icon: 'pi pi-users', path: '/roles' },
+		{ label: 'Permissions', icon: 'pi pi-shield', path: '/permissions' },
 		{ label: 'Agenda', icon: 'pi pi-calendar', path: '/inspecciones' },
 		{ label: 'Variables', icon: 'pi pi-wrench', path: 'variables' },
 		// BPMN Engine menu items
