@@ -1,11 +1,11 @@
-import type { PageRequest, PageResponse } from "./api";
+import type { IPermission, PageRequest, PageResponse } from "./api";
 import { ModelApiService } from "./ModelAPI";
 
 export interface IRole {
     _id?: string;
     key: string;
     description: string;
-    permissions: string[];
+    permissions: IPermission[] | string[];
 }
 
 export type RoleRequestQuery = PageRequest & { search?: string  };

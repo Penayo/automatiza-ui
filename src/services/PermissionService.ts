@@ -8,14 +8,14 @@ export interface IPermission {
     description: string;
 }
 
-export type PermissionQuery = PageRequest & { search?: string, type?: string  };
+export type PermissionQuery = PageRequest & { search?: string, type?: string, roleId?: string  };
 
 export class PermissionService extends ModelApiService {
     constructor() {
         super("permissions");
     }
 
-    async fetchPermissions(params: PermissionQuery): Promise<IPermission[] | PageResponse<IPermission>> {
+    async fetchPermissions(params?: PermissionQuery): Promise<IPermission[] | PageResponse<IPermission>> {
         const result = await this.get<IPermission[]>('', { params });
         return result as IPermission[];
     }

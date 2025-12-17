@@ -60,7 +60,14 @@ const routes = [
     children: []
   },
   { path: '/roles/new', name: 'RolesNew', components: { default: () => import('./pages/roles/New.vue'), Sidebar, Header }},
-  { path: '/roles/:id/show', name: 'RolesShow', components: { default: () => import('./pages/roles/Show.vue'), Sidebar, Header }},
+  {
+    path: '/roles/:id/show',
+    name: 'RolesShow',
+    components: { default: () => import('./pages/roles/Show.vue'), Sidebar, Header },
+    children: [
+      { path: 'add-permissions', name: 'AddRolesPermissions', component: () => import('./pages/roles/AddPermissionDialog.vue') },
+    ]
+  },
   { path: '/roles/:id/edit', name: 'RolesEdit', components: { default: () => import('./pages/roles/Edit.vue'), Sidebar, Header }},
   {
     path: '/permissions',

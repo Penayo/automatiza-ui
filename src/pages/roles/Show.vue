@@ -1,23 +1,43 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { type PageResponse } from '../../services/api';
 import { $api } from '../../services/api';
-import type { IRole } from '../../services/api';
+import type { IPermission, IRole } from '../../services/api';
 import { useRoute, useRouter } from 'vue-router';
 import Page from '../../components/Page.vue';
 import { onDelete } from '../../utils/common';
-import { Button, Card, Panel, useConfirm, useToast } from 'primevue';
+import { Button, Card, Column, DataTable, Divider, Panel, Tab, TabList, TabPanel, TabPanels, Tabs, useConfirm, useToast } from 'primevue';
 
 const confirm = useConfirm();
 const $router = useRouter();
 const toast = useToast();
 const $route = useRoute();
+const pageRef = ref<InstanceType<typeof Page>>();
 const roleId = ref<string>('');
 const role = ref<IRole | null>(null);
+const permissionsList = ref<IPermission[]>([]);
+const selectedPermission = ref<IPermission | null>(null);
 
 async function findItem() {
 	const { id } = $route.params
 	roleId.value = id as string;
 	role.value = await $api.roles.findById(roleId.value);
+    permissionsList.value = role.value.permissions as IPermission[];
+}
+
+const onAddPermissions = async (permissions: IPermission[]) => {
+    if (!role.value) return;
+
+    try {
+        const result = await $api.roles.update(roleId.value, {
+            ...role.value,
+            permissions: [ ...permissionsList.value.map(p => p._id), ...permissions.map((permission) => permission._id)] as string[]
+        });
+        findItem();
+        toast.add({ severity: 'success', summary: 'Ok', detail: 'Permissions added successfully!', life: 3000 });
+    } catch (error) {
+        throw error;
+    }
 }
 
 const onDeleteConfirm = async (item: IRole) => {
@@ -36,7 +56,7 @@ onMounted(() => {
 </script>
 
 <template>
-	<Page :title="role?.key">
+	<Page :title="role?.key" ref="pageRef">
         <template #header>
 			<h2 class="text-2xl md:text-4xl font-thin text-emerald-600 mb-4">
                 <a href="#" @click.prevent="$router.go(-1)" class="text-gray-400 hover:text-gray-500">
@@ -58,26 +78,54 @@ onMounted(() => {
         </template>
 
 		<div class="m-0" v-if="role">
-            <Panel header="Role Information" class="mt-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Key</label>
-                        <p class="mt-1 text-sm  font-bold">{{ role.key }}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Description</label>
-                        <p class="mt-1 text-sm  font-bold">{{ role.description }}</p>
-                    </div>
-                </div>
-            </Panel>
+            <Tabs value="data">
+                <TabList>
+                    <Tab value="data">Datos del Rol</Tab>
+                    <Tab value="1">Permisos</Tab>
+                </TabList>
+                <TabPanels>
+                    <TabPanel value="data">
+                        <div class="grid grid-cols-2 gap-4 p-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500">Key</label>
+                                <p class="mt-1 text-sm  font-bold">{{ role.key }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500">Description</label>
+                                <p class="mt-1 text-sm  font-bold">{{ role.description }}</p>
+                            </div>
+                        </div>
+                    </TabPanel>
 
-            <Panel header="Permissions" class="mt-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <p class="mt-1 text-sm  font-bold">{{ role.permissions.join(', ') }}</p>
-                    </div>
-                </div>
-            </Panel>
+                    <TabPanel value="1" class="-m-3">
+                        <DataTable
+                            v-model:selection="selectedPermission"
+                            selectionMode="single"
+                            dataKey="_id"
+                            :value="permissionsList"
+                            scrollable
+                            :scrollHeight="(pageRef?.$el.clientHeight - 210) + 'px'"
+                        >
+
+                            <template #header>
+                                <div class="flex flex-wrap mb-2 justify-between gap-2">
+                                    <h3 class=""></h3>
+                                    <div class="flex flex-wrap gap-2">
+                                        <Button label="Add" size="small" icon="pi pi-plus" @click="$router.push({ name: 'AddRolesPermissions' })" />
+                                        <Button label="Remove" size="small" icon="pi pi-trash" severity="danger" :disabled="!selectedPermission" />
+                                    </div>
+                                </div>                        
+                            </template>
+
+                            <Column field="name" header="Name"></Column>
+                            <Column field="type" header="Type"></Column>
+                            <Column field="description" header="Description"></Column>
+                        </DataTable>
+                    </TabPanel>
+                </TabPanels>
+            </Tabs>
 		</div>
+
+        <router-view @add-permissions="onAddPermissions" />
 	</Page>
 </template>

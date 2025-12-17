@@ -1,10 +1,11 @@
 <script setup lang="ts">
-	import { onMounted, ref, watch } from 'vue';
-	import { InputText, Panel } from 'primevue';
+	import { onMounted, ref, watch, computed } from 'vue';
+	import { InputText, Panel, DataTable, Column, Button, Dialog } from 'primevue';
 	import z from 'zod';
 	import { parseZodError, type FormErrorMap } from '../../../utils/error';
 	import FormField from '../../../components/form/FormField.vue';
-	import type { IRole } from '../../../services/api';
+	import type { IRole, IPermission } from '../../../services/api';
+	import { $api } from '../../../services/api';
 
 	const props = defineProps(['defaultValues'])
 	const $emit = defineEmits(['submit'])
@@ -24,6 +25,11 @@
 		permissions: [],
 	})
 
+	const allPermissions = ref<IPermission[]>([]);
+	const selectedPermissionToAdd = ref<IPermission | null>(null);
+	const selectedPermissionToRemove = ref<IPermission | null>(null);
+	const showAddDialog = ref(false);
+
 	async function handleFormSubmit () {
 		console.log('handling submit')
 
@@ -40,6 +46,21 @@
 		save: handleFormSubmit
 	})
 
+	const assignedPermissions = computed(() =>
+		allPermissions.value.filter(p => role.value.permissions.includes(p._id!))
+	);
+
+	const fetchAllPermissions = async () => {
+		try {
+			const perms = await $api.permissions.fetchPermissions({ page: 1, rowsPerPage: 1000 });
+			allPermissions.value = perms as IPermission[];
+		} catch (error) {
+			console.error('Error fetching permissions:', error);
+		}
+	};
+
+
+
 	const assignDefaultValues = () => {
 		if (props.defaultValues) {
 			role.value = props.defaultValues;
@@ -48,7 +69,10 @@
 
 	watch(() => props.defaultValues, assignDefaultValues)
 
-	onMounted(assignDefaultValues)
+	onMounted(() => {
+		assignDefaultValues();
+		fetchAllPermissions();
+	})
 </script>
 
 <template>

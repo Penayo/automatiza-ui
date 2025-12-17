@@ -18,8 +18,8 @@ import { RoleService } from "./RoleService.ts";
 import { PermissionService } from "./PermissionService.ts";
 
 export type PageRequest = {
-	page: number;
-	rowsPerPage: number;
+	page?: number;
+	rowsPerPage?: number;
 }
 
 export type PageResponse<T> = {
