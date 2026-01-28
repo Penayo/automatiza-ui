@@ -1,10 +1,11 @@
 <script setup lang="ts">
 	import { onMounted, ref, watch } from 'vue';
-	import { InputText, Password, Panel } from 'primevue';
+	import { InputText, Password, Panel, Checkbox } from 'primevue';
 	import z from 'zod';
 	import { parseZodError, type FormErrorMap } from '../../../utils/error';
 	import FormField from '../../../components/form/FormField.vue';
-	import type { IUser, IPerson } from '../../../services/api';
+	import type { IUser, IRole, PageResponse } from '../../../services/api';
+	import { $api } from '../../../services/api';
 
 	const props = defineProps(['defaultValues'])
 	const $emit = defineEmits(['submit'])
@@ -23,6 +24,8 @@
 	})
 
 	const validationError = ref<FormErrorMap | null>(null);
+
+	const allRoles = ref<IRole[]>([]);
 
 	const user = ref<IUser>({
 		username: '',
@@ -71,7 +74,21 @@
 
 	watch(() => props.defaultValues, assignDefaultValues)
 
-	onMounted(assignDefaultValues)
+	async function fetchRoles() {
+		const result = await $api.roles.fetchRoles({});
+
+		if (Array.isArray(result)) {
+			allRoles.value = result;
+		} else {
+			allRoles.value = result.rows || [];
+		}
+		console.log(allRoles.value);
+	}
+
+	onMounted(() => {
+		assignDefaultValues();
+		fetchRoles();
+	})
 </script>
 
 <template>
@@ -115,6 +132,17 @@
 					<FormField label="Password" label-for="password" :error="validationError?.password">
 						<Password id="password" v-model="user.password" aria-describedby="password-help" />
 					</FormField>
+				</div>
+			</div>
+		</Panel>
+
+		<Panel header="Roles" class="mt-4">
+			<div class="flex flex-col gap-2">
+				<div v-for="role in allRoles" :key="role.key" class="flex items-center">
+					<div class="flex flex-row gap-2">
+						<Checkbox :inputId="role._id" v-model="user.roles" :value="role.key" />
+						<label :for="role._id">{{ role.key }}</label>
+					</div>
 				</div>
 			</div>
 		</Panel>

@@ -1,8 +1,8 @@
 <template>
 	<aside
-		class="bg-white dark:bg-zinc-900 border-r border-gray-400 dark:border-emerald-900 shadow-md 
-		z-20 fixed inset-y-0 left-0 
-		transform transition-transform duration-200 ease-in-out 
+		class="bg-white dark:bg-zinc-900 border-r border-gray-400 dark:border-emerald-900 shadow-md
+		z-20 fixed inset-y-0 left-0
+		transform transition-transform duration-200 ease-in-out
 		md:relative md:translate-x-0
 		min-w-72
 		"
@@ -20,8 +20,8 @@
 			</button>
 		</nav>
 	</aside>
-	
-	<!-- Overlay for mobile sidebar -->    
+
+	<!-- Overlay for mobile sidebar -->
 	<div
 		v-if="sidebarOpen"
 		class="fixed inset-0 bg-zinc-500/50 z-10 md:hidden"
@@ -39,25 +39,12 @@
 
 	const emit = defineEmits(['toggle-sidebar'])
 	const router = useRouter();
-	const currentMenu = ref('dashboard')
+	const currentMenu = ref('/frontoffice/my-tasks')
 
 	const menuItems = [
-		{ label: 'Dashboard', icon: 'pi pi-chart-line', path: '/dashboard' },
-		{ label: 'Modeler', icon: 'pi pi-chart-line', path: '/modeler' },
-		{ label: 'Form Builder', icon: 'pi pi-address-book', path: '/formbuilder' },
-		{ label: 'Procesos', icon: 'pi pi-sitemap', path: '/processes' },
-		{ label: 'Instancias de Proceso', icon: 'pi pi-server', path: '/process-instances' },
-		
-		{ label: 'Mis Tareas', icon: 'pi pi-list-check', path: '/my-tasks' },
-		{ label: 'Todas las Tareas', icon: 'pi pi-list-check', path: '/tasks' },
-
-		{ label: 'Users', icon: 'pi pi-users', path: '/users' },
-		{ label: 'Roles', icon: 'pi pi-users', path: '/roles' },
-		{ label: 'Permissions', icon: 'pi pi-shield', path: '/permissions' },
-		{ label: 'Agenda', icon: 'pi pi-calendar', path: '/inspecciones' },
-		{ label: 'Variables', icon: 'pi pi-wrench', path: '/variables' },
-		// BPMN Engine menu items
-
+		{ label: 'Dashboard', icon: 'pi pi-chart-line', path: '/frontoffice/dashboard' },
+		{ label: 'Mis Tareas', icon: 'pi pi-list-check', path: '/frontoffice/my-tasks' },
+		// Add other frontoffice menu items here if needed
 	]
 
 	function go(path: string) {

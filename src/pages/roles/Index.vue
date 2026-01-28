@@ -102,11 +102,6 @@ onMounted(async () => {
 		>
 			<Column field="key" header="Key"></Column>
 			<Column field="description" header="Description"></Column>
-			<Column field="permissions" header="Permissions">
-				<template #body="slotProps">
-					{{ slotProps.data.permissions.join(', ') }}
-				</template>
-			</Column>
 		</DataTable>
 
 		<router-view @created="onCreated" />

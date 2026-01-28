@@ -78,11 +78,13 @@ export class BaseService {
 
   async delete(id: string) {
     if (!id) throw Error("Id was not provided");
+
     try {
       await axios.delete(this.getUrl(id));
       return true;
     } catch (err) {
       this.handleErrors(err);
+      throw err;
     }
   }
 
@@ -99,6 +101,7 @@ export class BaseService {
     console.log('API Error:', err);
 
     localStorage.setItem('errors', JSON.stringify(errors));
+
     // Handle 401 Unauthorized error
     if (err?.response?.status === 401 || err?.status === 401) {
       // Optionally clear tokens, redirect, or show login
@@ -122,5 +125,5 @@ export class BaseService {
     }
 
     return {}
-  }  
+  }
 }

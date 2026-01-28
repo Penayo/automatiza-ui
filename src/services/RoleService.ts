@@ -8,7 +8,7 @@ export interface IRole {
     permissions: IPermission[] | string[];
 }
 
-export type RoleRequestQuery = PageRequest & { search?: string  };
+export type RoleRequestQuery = PageRequest & { search?: string, keys: string[]  };
 
 export class RoleService extends ModelApiService {
     constructor() {
@@ -16,8 +16,8 @@ export class RoleService extends ModelApiService {
     }
 
     async fetchRoles(params: RoleRequestQuery): Promise<IRole[] | PageResponse<IRole>> {
-        const result = await this.get<IRole[]>('', { params });
-        return result as IRole[];
+        const result = await this.get<PageResponse<IRole>>('', { params });
+        return result as PageResponse<IRole>;
     }
 
     createRole(role: IRole): Promise<IRole> {
@@ -31,5 +31,9 @@ export class RoleService extends ModelApiService {
     async findById(id: string): Promise<IRole> {
         const role = await this.get<IRole>(id);
         return role as IRole;
+    }
+
+    async delete(id: string): Promise<boolean> {
+        return this.delete(id);
     }
 };

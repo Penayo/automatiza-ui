@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { type PageResponse } from '../../services/api';
 import { $api } from '../../services/api';
 import type { IPermission, IRole } from '../../services/api';
 import { useRoute, useRouter } from 'vue-router';
 import Page from '../../components/Page.vue';
-import { onDelete } from '../../utils/common';
-import { Button, Card, Column, DataTable, Divider, Panel, Tab, TabList, TabPanel, TabPanels, Tabs, useConfirm, useToast } from 'primevue';
+import { onApprove, onDelete } from '../../utils/common';
+import { Button, Column, DataTable, Tab, TabList, TabPanel, TabPanels, Tabs, useConfirm, useToast } from 'primevue';
 
 const confirm = useConfirm();
 const $router = useRouter();
@@ -29,25 +28,37 @@ const onAddPermissions = async (permissions: IPermission[]) => {
     if (!role.value) return;
 
     try {
-        const result = await $api.roles.update(roleId.value, {
+        await $api.roles.update(roleId.value, {
             ...role.value,
             permissions: [ ...permissionsList.value.map(p => p._id), ...permissions.map((permission) => permission._id)] as string[]
         });
         findItem();
         toast.add({ severity: 'success', summary: 'Ok', detail: 'Permissions added successfully!', life: 3000 });
     } catch (error) {
-        throw error;
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error adding permissions!', life: 3000 });
     }
 }
 
-const onDeleteConfirm = async (item: IRole) => {
+const onDeleteConfirm = async () => {
+    if (!role.value) return;
+
 	try {
-		await $api.roles.delete(item._id as string)
-		toast.add({ severity: 'success', summary: 'Ok', detail: 'Role deleted successfully', life: 3000 });
-		setTimeout(() => { $router.go(-1) }, 500)
+        role.value = {
+            ...role.value,
+            permissions: permissionsList.value.filter((permission) => permission._id !== selectedPermission.value?._id)
+        }
+
+		await $api.roles.update(role.value?._id as string, role.value);
+		toast.add({ severity: 'success', summary: 'Ok', detail: 'Permission removed successfully', life: 3000 });
+        findItem();
 	} catch (error) {
-		toast.add({ severity: 'error', summary: 'Error', detail: 'Error deleting role', life: 3000 });
+        console.log(error)
+		toast.add({ severity: 'error', summary: 'Error', detail: 'Error removing permission', life: 3000 });
 	}
+}
+
+const removePermission = async () => {
+    onApprove(confirm, 'Are you sure you want to remove this permission?', onDeleteConfirm)
 }
 
 onMounted(() => {
@@ -112,9 +123,9 @@ onMounted(() => {
                                     <h3 class=""></h3>
                                     <div class="flex flex-wrap gap-2">
                                         <Button label="Add" size="small" icon="pi pi-plus" @click="$router.push({ name: 'AddRolesPermissions' })" />
-                                        <Button label="Remove" size="small" icon="pi pi-trash" severity="danger" :disabled="!selectedPermission" />
+                                        <Button label="Remove" size="small" icon="pi pi-trash" severity="danger" :disabled="!selectedPermission" @click="removePermission" />
                                     </div>
-                                </div>                        
+                                </div>
                             </template>
 
                             <Column field="name" header="Name"></Column>
