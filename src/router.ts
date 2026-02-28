@@ -14,7 +14,8 @@ const routes = [
   { path: '/', name: 'Home', components: { default: Home, Sidebar, Header } },
   { path: '/unauthorized', name: 'Home', components: { default: UnauthorizedPage, Sidebar, Header } },
   { path: '/login', name: 'Login', component: () => import('./pages/Login.vue') },
-  { path: '/dashboard', name: 'Dashboard', components: { default: DashboardIndex, Sidebar, Header } },
+  { path: '/dashboard', name: 'TaskDashboard', components: { default: DashboardIndex, Sidebar, Header } },
+  { path: '/process-dashboard', name: 'ProcessDashboard', components: { default: () => import('./pages/process-dashboard/Index.vue'), Sidebar, Header } },
 
   // BPMN Engine routes
   {
@@ -87,6 +88,24 @@ const routes = [
   { path: '/permissions/new', name: 'PermissionsNew', components: { default: () => import('./pages/permissions/New.vue'), Sidebar, Header }, meta: { requiresPermission: 'manage_permissions' }},
   { path: '/permissions/:id/show', name: 'PermissionsShow', components: { default: () => import('./pages/permissions/Show.vue'), Sidebar, Header }, meta: { requiresPermission: 'view_permissions' }},
   { path: '/permissions/:id/edit', name: 'PermissionsEdit', components: { default: () => import('./pages/permissions/Edit.vue'), Sidebar, Header }, meta: { requiresPermission: 'manage_permissions' }},
+  {
+    path: '/secrets',
+    name: 'SecretsIndex',
+    components: { default: () => import('./pages/secrets/Index.vue'), Sidebar, Header },
+    meta: { requiresPermission: 'manage_secrets' },
+    children: []
+  },
+  { path: '/secrets/new', name: 'SecretsNew', components: { default: () => import('./pages/secrets/New.vue'), Sidebar, Header }, meta: { requiresPermission: 'manage_secrets' }},
+  { path: '/secrets/:key/edit', name: 'SecretsEdit', components: { default: () => import('./pages/secrets/Edit.vue'), Sidebar, Header }, meta: { requiresPermission: 'manage_secrets' }},
+  {
+    path: '/api-keys',
+    name: 'ApiKeysIndex',
+    components: { default: () => import('./pages/api-keys/Index.vue'), Sidebar, Header },
+    meta: { requiresPermission: false },
+    children: [],
+  },
+  { path: '/api-keys/new', name: 'ApiKeysNew', components: { default: () => import('./pages/api-keys/New.vue'), Sidebar, Header } },
+  { path: '/api-keys/:id/edit', name: 'ApiKeysEdit', components: { default: () => import('./pages/api-keys/Edit.vue'), Sidebar, Header } },
   {
     path: '/frontoffice',
     name: 'Frontoffice',

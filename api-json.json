@@ -1485,7 +1485,7 @@
                     "delegateExpression": {
                         "type": "string"
                     },
-                    "restConfig": {
+                    "serviceConfig": {
                         "type": "object"
                     },
                     "formType": {

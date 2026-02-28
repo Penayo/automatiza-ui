@@ -8,6 +8,8 @@ export type { IUser } from "./UserService.ts"
 export type { IPerson } from "./PersonService.ts"
 export type { IRole } from "./RoleService.ts"
 export type { IPermission } from "./PermissionService.ts"
+export type { ISecret } from "./SecretsService.ts"
+export type { IApiKey, IApiKeyCreateResponse } from "./ApiKeyService.ts"
 
 import { TasksService } from "./TasksService";
 import { FormsService } from "./FormsService.ts";
@@ -16,6 +18,8 @@ import { UserService } from "./UserService.ts";
 import { PersonService } from "./PersonService.ts";
 import { RoleService } from "./RoleService.ts";
 import { PermissionService } from "./PermissionService.ts";
+import { SecretsService } from "./SecretsService.ts";
+import { ApiKeyService } from "./ApiKeyService.ts";
 
 export type PageRequest = {
 	page?: number;
@@ -37,4 +41,6 @@ export const $api = {
 	persons: new PersonService(),
 	roles: new RoleService(),
 	permissions: new PermissionService(),
+	secrets: new SecretsService(),
+	apiKeys: new ApiKeyService(),
 }

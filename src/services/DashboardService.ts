@@ -1,26 +1,57 @@
-import axios from 'axios';
+import { BaseService } from './BaseService';
 
-export const DashboardService = {
+export interface TasksByStatus {
+  status: string;
+  count: number;
+}
 
-    async getDashboardData() {
-        // Mocked dashboard data
-        return {
-            activeTasks: 12,
-            completedTasks: 34,
-            suspendedTasks: 3,
-            totalProcesses: 7,
-            tasksPerProcess: [
-                { processName: 'Onboarding', taskCount: 8 },
-                { processName: 'Claims', taskCount: 5 },
-                { processName: 'Payments', taskCount: 2 },
-                { processName: 'Support', taskCount: 4 },
-            ],
-            taskCompletionByUser: [
-                { username: 'alice', completedTasks: 10 },
-                { username: 'bob', completedTasks: 7 },
-                { username: 'carol', completedTasks: 12 },
-                { username: 'dave', completedTasks: 5 },
-            ],
-        }
-    },
-};
+export interface CompletedOverTime {
+  date: string;
+  count: number;
+}
+
+export interface AvgCompletionTime {
+  avgMs: number;
+  minMs: number;
+  maxMs: number;
+  totalCompleted: number;
+}
+
+export interface DateAlerts {
+  overdue: number;
+  dueSoon: number;
+  followUpPending: number;
+  followUpSoon: number;
+}
+
+export interface TasksDashboard {
+  tasksByStatus: TasksByStatus[];
+  completedOverTime: CompletedOverTime[];
+  avgCompletionTime: AvgCompletionTime;
+  dateAlerts: DateAlerts;
+}
+
+export type Period = 'day' | 'week' | 'month';
+
+class DashboardApiService extends BaseService {
+  constructor() {
+    super('dashboard');
+  }
+
+  async getProcessNames(): Promise<string[]> {
+    return this.get<string[]>('processes') as Promise<string[]>;
+  }
+
+  async getTasksDashboard(
+    period: Period = 'week',
+    claimedBy?: string,
+    processName?: string,
+  ): Promise<TasksDashboard> {
+    const params: Record<string, string> = { period };
+    if (claimedBy) params.claimedBy = claimedBy;
+    if (processName) params.process = processName;
+    return this.get<TasksDashboard>('tasks', { params }) as Promise<TasksDashboard>;
+  }
+}
+
+export const DashboardService = new DashboardApiService();

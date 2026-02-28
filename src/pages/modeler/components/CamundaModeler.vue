@@ -39,6 +39,7 @@ async function loadTemplates() {
 	// Assuming you know the template file names, or can generate them  
 	const templateNames: string[] = [  
 		// List of template filenames, e.g., 'template1.json', 'template2.json', ...  
+		'email-connector',
 		'sendgrid-connector',
 		'whatsapp-connector',
 		'openai-connector'

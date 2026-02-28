@@ -9,15 +9,16 @@
 		:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
 	>
 		<nav class="flex flex-col mt-4 text-base px-2 gap-2">
-			<button
-				v-for="menu in menuItems"
-				class="cursor-pointer rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:hover:text-emerald-100 flex flex-row items-center gap-4 px-4 py-2"
-				:class="{ 'bg-green-200 text-emerald-600! dark:text-emerald-100! dark:bg-emerald-800! font-semibold': currentMenu == menu.path }"
-				@click="go(menu.path)"
-			>
-				<span :class="menu.icon" style="font-size: 1.2rem"></span>
-				<span>{{ menu.label }}</span>
-			</button>
+			<PanelMenu :model="menuItems" class="w-full md:w-80 pt-1">
+				<template #item="{ item }">
+					<a v-ripple class="flex items-center px-4 py-2 cursor-pointer group">
+						<span :class="[item.icon, 'text-primary group-hover:text-inherit']" />
+						<span :class="['ml-2', { 'font-semibold': item.items }]">{{ item.label }}</span>
+						<Badge v-if="item.badge" class="ml-auto" :value="item.badge" />
+						<span v-if="item.shortcut" class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1">{{ item.shortcut }}</span>
+					</a>
+				</template>
+			</PanelMenu>
 		</nav>
 	</aside>
 	
@@ -30,6 +31,7 @@
 </template>
 
 <script setup lang="ts">
+	import { PanelMenu } from 'primevue';
 	import { ref } from 'vue';
 	import { useRouter } from 'vue-router';
 
@@ -41,28 +43,45 @@
 	const router = useRouter();
 	const currentMenu = ref('dashboard')
 
-	const menuItems = [
-		{ label: 'Dashboard', icon: 'pi pi-chart-line', path: '/dashboard' },
-		{ label: 'Modeler', icon: 'pi pi-chart-line', path: '/modeler' },
-		{ label: 'Form Builder', icon: 'pi pi-address-book', path: '/formbuilder' },
-		{ label: 'Procesos', icon: 'pi pi-sitemap', path: '/processes' },
-		{ label: 'Instancias de Proceso', icon: 'pi pi-server', path: '/process-instances' },
-		
-		{ label: 'Mis Tareas', icon: 'pi pi-list-check', path: '/my-tasks' },
-		{ label: 'Todas las Tareas', icon: 'pi pi-list-check', path: '/tasks' },
-
-		{ label: 'Users', icon: 'pi pi-users', path: '/users' },
-		{ label: 'Roles', icon: 'pi pi-users', path: '/roles' },
-		{ label: 'Permissions', icon: 'pi pi-shield', path: '/permissions' },
-		{ label: 'Agenda', icon: 'pi pi-calendar', path: '/inspecciones' },
-		{ label: 'Variables', icon: 'pi pi-wrench', path: '/variables' },
-		// BPMN Engine menu items
-
-	]
-
-	function go(path: string) {
-		currentMenu.value = path;
-		router.push(path);
-		console.log('CURRENT PATH', currentMenu.value, path)
-	}
+	const menuItems = ref([
+		{
+			label: 'Dashboards',
+			icon: 'pi pi-chart-pie',
+			items: [
+				{ label: 'Task Dashboard', icon: 'pi pi-chart-line', path: '/dashboard', command: () => { currentMenu.value = '/dashboard'; router.push('/dashboard'); } },
+				{ label: 'Process Dashboard', icon: 'pi pi-chart-bar', path: '/process-dashboard', command: () => { currentMenu.value = '/process-dashboard'; router.push('/process-dashboard'); } }
+			]
+		},
+		{
+			label: 'Processes',
+			icon: 'pi pi-sitemap',
+			items: [
+				{ label: 'Procesos', icon: 'pi pi-sitemap', path: '/processes', command: () => { currentMenu.value = '/processes'; router.push('/processes'); } },
+				{ label: 'Instancias de Proceso', icon: 'pi pi-server', path: '/process-instances', command: () => { currentMenu.value = '/process-instances'; router.push('/process-instances'); } },
+				{ label: 'Mis Tareas', icon: 'pi pi-list-check', path: '/my-tasks', command: () => { currentMenu.value = '/my-tasks'; router.push('/my-tasks'); } },
+				{ label: 'Todas las Tareas', icon: 'pi pi-list-check', path: '/tasks', command: () => { currentMenu.value = '/tasks'; router.push('/tasks'); } }
+			]
+		},
+		{
+			label: 'Config',
+			icon: 'pi pi-cog',
+			items: [
+				{ label: 'Users', icon: 'pi pi-users', path: '/users', command: () => { currentMenu.value = '/users'; router.push('/users'); } },
+				{ label: 'Roles', icon: 'pi pi-users', path: '/roles', command: () => { currentMenu.value = '/roles'; router.push('/roles'); } },
+				{ label: 'Permissions', icon: 'pi pi-shield', path: '/permissions', command: () => { currentMenu.value = '/permissions'; router.push('/permissions'); } },
+				{ label: 'Agenda', icon: 'pi pi-calendar', path: '/inspecciones', command: () => { currentMenu.value = '/inspecciones'; router.push('/inspecciones'); } },
+				{ label: 'Variables', icon: 'pi pi-wrench', path: '/variables', command: () => { currentMenu.value = '/variables'; router.push('/variables'); } },
+				{ label: 'Secrets', icon: 'pi pi-wrench', path: '/secrets', command: () => { currentMenu.value = '/secrets'; router.push('/secrets'); } },
+				{ label: 'API Keys', icon: 'pi pi-key', path: '/api-keys', command: () => { currentMenu.value = '/api-keys'; router.push('/api-keys'); } }
+			]
+		},
+		{
+			label: 'Modeler',
+			icon: 'pi pi-palette',
+			items: [
+				{ label: 'Modeler', icon: 'pi pi-palette', path: '/modeler', command: () => { currentMenu.value = '/modeler'; router.push('/modeler'); } },
+				{ label: 'Form Builder', icon: 'pi pi-file-edit', path: '/formbuilder', command: () => { currentMenu.value = '/formbuilder'; router.push('/formbuilder'); } }
+			]
+		}
+	]);
 </script>
