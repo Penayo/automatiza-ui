@@ -5,9 +5,11 @@ import { useRoute } from 'vue-router';
 import { $api } from '../../services/api';
 import type { ProcessInstance } from '../../services/ProcessesService';
 import DataItem from '../../components/data/DataItem.vue';
+import VariableList from '../../components/data/VariableList.vue';
 import TaskList from './components/TaskList.vue';
 import PauseProcessInstance from './components/PauseProcessInstance.vue';
 import ResumeProcessInstance from './components/ResumeProcessInstance.vue';
+import ProcessInstanceLog from './components/ProcessInstanceLog.vue';
 
 const toast = useToast();
 const route = useRoute();
@@ -37,7 +39,7 @@ onMounted(fetchInstance);
     v-model:visible="visible"
     maximizable
     modal
-    header="Detalles de la Instancia"
+    :header="instance ? instance.processDefinition.name : 'Detalles de la Instancia'"
     :style="{ width: '60rem', 'min-height': '40rem' }"
     :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
     @after-hide="$router.go(-1)"
@@ -47,7 +49,7 @@ onMounted(fetchInstance);
     </div>
 
     <div v-else>
-      <Toolbar>
+      <Toolbar v-if="instance?.status !== 'COMPLETED'">
           <template #start>
           </template>
 
@@ -67,13 +69,12 @@ onMounted(fetchInstance);
             <Tab value="3">Log</Tab>
             <Tab value="4">Exceptions</Tab>
         </TabList>
-        <TabPanels>
+        <TabPanels class="overflow-y-auto" style="height: calc(100vh - 270px)">
             <TabPanel value="0">
               <div  class="flex flex-col mt-4 gap-4">
                 <div class="flex flex-col gap-3 text-zinc-600 dark:text-zinc-200">
 
-                  <DataItem icon="pi pi-key" label="Id:" :value="instance?.id" />
-                  <DataItem icon="pi pi-sitemap" label="Proceso:" :value="instance?.processDefinition.name" />
+                  <DataItem icon="pi pi-key" label="Instance Id:" :value="instance?.id" />
                   <DataItem icon="pi pi-ellipsis-h" label="Version:" :value="instance?.processDefinition.version" />
 
                   <DataItem v-if="instance?.status != 'COMPLETED'" icon="pi pi-circle" class="uppercase" label="Estado:" :value="instance?.status" />
@@ -84,8 +85,8 @@ onMounted(fetchInstance);
                 </div>
 
                 <div class="col-12">
-                  <h3>Variables</h3>
-                  <pre class="p-2 rounded mb-3 text-sm">{{ JSON.stringify(instance?.variables, null, 2) }}</pre>
+                  <h3 class="text-lg font-semibold pb-3">Variables List</h3>
+                  <VariableList :variables="instance?.variables" />
                 </div>
               </div>
             </TabPanel>
@@ -95,35 +96,13 @@ onMounted(fetchInstance);
             </TabPanel>
 
             <TabPanel value="3">
-              <div v-if="instance?.log?.length" class="col-12 -mx-3">
-                <div v-for="(log, index) in instance.log" :key="index" 
-                    class="p-2 rounded mb-2 text-sm"
-                    :class="{
-                      'bg-emerald-700/40': log.type === 'info',
-                      'bg-red-200': log.type === 'error',
-                      'bg-yellow-500': log.type === 'warning'
-                    }">
-                  <div class="flex justify-between items-center">
-                    <span><strong>{{ new Date(log.date).toLocaleString() }}</strong></span>
-                    <span class="px-2 py-1 rounded text-xs"
-                          :class="{
-                            'bg-emerald-600': log.type === 'info',
-                            'bg-red-400': log.type === 'error',
-                            'bg-yellow-700': log.type === 'warning'
-                          }">
-                      {{ log.type.toUpperCase() }}
-                    </span>
-                  </div>
-                  <p class="my-2">{{ log.message }}</p>
-                  <pre v-if="log.variables" class="p-2 rounded">{{ JSON.stringify(log.variables, null, 2) }}</pre>
-                </div>
-              </div>
+              <ProcessInstanceLog :processInstanceId="instance?.id" />
             </TabPanel>
 
             <TabPanel value="4">
               <div v-if="instance?.exceptions?.length" class="col-12">
                 <h3>Excepciones</h3>
-                <div v-for="exception in instance.exceptions" :key="exception.taskId" class="p-2 bg-red-50 rounded mb-2">
+                <div v-for="exception in instance.exceptions" :key="exception.taskId" class="p-2 rounded mb-2">
                   <p><strong>Task ID:</strong> {{ exception.taskId }}</p>
                   <p><strong>Fecha:</strong> {{ new Date(exception.createdAt).toLocaleString() }}</p>
                   <pre class="p-2 bg-red-100 rounded">{{ JSON.stringify(exception.error, null, 2) }}</pre>

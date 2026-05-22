@@ -23,7 +23,7 @@ export interface IForm extends APIData {
         };
         [key: string]: any;
     }>;
-    metadata?: Record<string, string | number>;
+    metadata?: { key: string; value: any }[];
     processDefinitionId?: string;
     taskDefinitionId?: string;
     _id?: string;

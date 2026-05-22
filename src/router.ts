@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import Home from './pages/Home.vue';
 import Header from './layout/components/Header.vue';
 import Sidebar from './layout/components/Sidebar.vue';
@@ -48,6 +48,12 @@ const routes = [
       { path: ':id/complete', name: 'TaskComplete', component: () => import('./pages/tasks/Complete.vue') },
     ]
   },
+  {
+    path: '/tasks/:taskId',
+    name: 'FOTask',
+    component: () => import('./pages/tasks/FOTask.vue'),
+  },
+  { path: '/audit', name: 'AuditLogs', components: { default: () => import('./pages/audit/Index.vue'), Sidebar, Header } },
   { path: '/modeler', name: 'CamundaModeler', components: { default: () => import('./pages/modeler/Index.vue'), Sidebar, Header }},
   { path: '/formbuilder', name: 'FormsBuilder', components: { default: () => import('./pages/forms/Index.vue'), Sidebar, Header }},
   {
@@ -110,14 +116,20 @@ const routes = [
     path: '/frontoffice',
     name: 'Frontoffice',
     components: { default: () => import('./pages/frontoffice/Index.vue'), Sidebar: FrontofficeSidebar, Header },
-    children: []
+    children: [
+      {
+        path: 'tasks/:taskId',
+        name: 'TaskForm',
+        component: () => import('./pages/frontoffice/my-tasks/_id.vue'),
+      },      
+    ]
   },
   { path: '/frontoffice/my-tasks', name: 'FrontofficeMyTasks', components: { default: () => import('./pages/frontoffice/my-tasks/Index.vue'), Sidebar: FrontofficeSidebar, Header }},
   { path: '/frontoffice/dashboard', name: 'FrontofficeDashboard', components: { default: () => import('./pages/frontoffice/dashboard/Index.vue'), Sidebar: FrontofficeSidebar, Header }},
 ]
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes,
 })
 

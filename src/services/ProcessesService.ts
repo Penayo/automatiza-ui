@@ -19,11 +19,16 @@ export interface ProcessDefinition extends APIData {
     version?: number;
 }
 
+export interface ProcessVariable {
+    key: string;
+    value: any;
+}
+
 export interface ProcessInstance extends APIData {
     id: string;
     processDefinition: ProcessDefinition,
     processDefinitionId: string;
-    variables: Record<string, any>;
+    variables: ProcessVariable[];
     currentNode: any;
     parallelGateways: Record<string, any>;
     status: string;
@@ -53,7 +58,13 @@ export interface StartProcessDto {
     variables?: Record<string, any>;
 }
 
-export type ProcessInstanceQuery = PageRequest & { search?: string, processId?: string  };
+export type ProcessInstanceQuery = PageRequest & {
+    search?: string;
+    processId?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+};
 
 export class ProcessesService extends ModelApiService {
     constructor() {
@@ -77,10 +88,13 @@ export class ProcessesService extends ModelApiService {
 
     async getAllProcessInstances(params: ProcessInstanceQuery): Promise<ProcessInstance[] | PageResponse<ProcessInstance>> {
         const url = `${params.processId}/instances`;
-
         const response = await this.get(url, { params });
-
         return response as ProcessInstance[];
+    }
+
+    async getAllInstances(params: ProcessInstanceQuery): Promise<PageResponse<ProcessInstance>> {
+        const response = await this.get('instances', { params });
+        return response as PageResponse<ProcessInstance>;
     }
 
     async getInstance(instanceId: string): Promise<ProcessInstance> {

@@ -17,7 +17,7 @@ const loading = ref(false);
 const handleLogin = (event: Event) => {
     event.preventDefault();
     loading.value = true;
-    
+
     const login = {
         username: username.value,
         password: password.value,
@@ -42,18 +42,18 @@ const handleLogin = (event: Event) => {
     <Page>
         <div class="flex flex-col items-center justify-center min-h-screen">
             <form @submit="handleLogin" class="p-8 rounded shadow-md w-full max-w-md flex flex-col gap-4 border border-emerald-500">
-            <h2 class="text-2xl font-bold mb-4 text-center">Iniciar sesión</h2>
-            <FormField label="Usuario" label-for="username">
+            <h2 class="text-2xl font-bold mb-4 text-center">Sign in</h2>
+            <FormField label="Username" label-for="username">
                 <InputText class="w-full" id="username" v-model="username" autocomplete="username" />
             </FormField>
-            <FormField label="Contraseña" label-for="password">
+            <FormField label="Password" label-for="password">
                 <Password id="password" class="w-full" v-model="password" fluid />
             </FormField>
-            <FormField label="Recordarme">
+            <FormField label="Remember me">
                 <Checkbox v-model="rememberMe" />
             </FormField>
 
-            <Button label="Ingresar" icon="pi pi-sign-in" type="submit" :loading="loading" class="w-full" />
+            <Button label="Sign in" icon="pi pi-sign-in" type="submit" :loading="loading" class="w-full" />
             </form>
         </div>
     </Page>

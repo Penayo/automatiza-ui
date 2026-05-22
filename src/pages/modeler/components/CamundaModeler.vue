@@ -75,6 +75,7 @@ function showTemplateErrors(errors: any[]) {
 	if (errorPanelPre) {
 		errorPanelPre.textContent = errorMessage;
 	}
+
 	const errorPanel = containerRef.value?.querySelector('.error-panel');
 	if (errorPanel) {
 		errorPanel.classList.remove('hidden');

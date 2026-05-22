@@ -9,6 +9,10 @@ import { $api } from '../../../services/api';
 import type { IForm } from '../../../services/FormsService';
 import { Button, useConfirm, useToast } from 'primevue';
 import type { ProcessVariables } from "../../../services/ProcessesService";
+
+
+const toVariableMap = (variables: { key: string; value: any }[] | undefined): Record<string, any> =>
+    Object.fromEntries((variables || []).map(v => [v.key, v.value]));
 import { onApprove } from "../../../utils/common";
 import { parseApiError } from "../../../utils/error";
 import type { IAccess } from "../../../services/AuthService.ts";
@@ -97,7 +101,8 @@ watch(formSchema, () => {
 
     formViewer.value = form;
 
-    form.importSchema(formSchema.value, formSchema.value.metadata)
+    // formSchema.value.metadata comes with the process intance variables.
+    form.importSchema(formSchema.value, toVariableMap(formSchema.value.metadata))
         .then(() => {
             if (props.task?.assignee !== userInfo.value?.user.username) {
                 formViewer.value?.setProperty('readOnly', true);

@@ -20,6 +20,7 @@ import { RoleService } from "./RoleService.ts";
 import { PermissionService } from "./PermissionService.ts";
 import { SecretsService } from "./SecretsService.ts";
 import { ApiKeyService } from "./ApiKeyService.ts";
+import { AuditService } from "./AuditService.ts";
 
 export type PageRequest = {
 	page?: number;
@@ -43,4 +44,5 @@ export const $api = {
 	permissions: new PermissionService(),
 	secrets: new SecretsService(),
 	apiKeys: new ApiKeyService(),
+	audit: new AuditService(),
 }

@@ -2,6 +2,11 @@ import type { APIData } from "./BaseService";
 import type { IForm } from "./FormsService";
 import { ModelApiService } from "./ModelAPI";
 
+export interface TaskVariable {
+    key: string;
+    value: any;
+}
+
 export interface Task extends APIData {
     id: string;
     taskDefinitionId: string;
@@ -15,7 +20,7 @@ export interface Task extends APIData {
     name: string;
     type: string;
     status: string;
-    variables: Record<string, any>;
+    variables: TaskVariable[];
     createdAt: Date;
     completedAt?: Date;
     candidateGroups: string[];
