@@ -1,9 +1,9 @@
-import type { APIData } from "./BaseService";
-import type { IForm } from "./FormsService";
-import { ModelApiService } from "./ModelAPI";
+import type { APIData } from "@services/BaseService";
+import type { IForm } from "@services/FormsService";
+import { ModelApiService } from "@services/ModelAPI";
 import axios from 'axios';
-import type { Task } from "./TasksService";
-import type { PageRequest, PageResponse } from "./api";
+import type { Task } from "@services/TasksService";
+import type { PageRequest, PageResponse } from "@services/api";
 
 export type ProcessVariables = { [key: string]: string | number | null }
 

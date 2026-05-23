@@ -1,4 +1,5 @@
 import axios, { Axios, type AxiosInstance, type AxiosRequestConfig } from 'axios';
+import { navigateTo } from '@services/routerRef';
 
 export type ILog = {
   date: Date;
@@ -106,7 +107,7 @@ export class BaseService {
     if (err?.response?.status === 401 || err?.status === 401) {
       // Optionally clear tokens, redirect, or show login
       localStorage.removeItem('token');
-      window.location.assign('/#/login');
+      navigateTo('/login');
       window.dispatchEvent(new CustomEvent('api-unauthorized'));
     }
 
@@ -120,8 +121,6 @@ export class BaseService {
       return {
         Authorization: `Bearer ${authToken}`
       }
-    } else {
-      location.assign('/#/login')
     }
 
     return {}

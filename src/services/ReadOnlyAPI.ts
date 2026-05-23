@@ -1,6 +1,7 @@
 import type { AxiosRequestConfig } from "axios";
-import { BaseService } from "./BaseService";
+import { BaseService } from "@services/BaseService";
 import axios from 'axios';
+import { navigateTo } from '@services/routerRef';
 
 export class ReadOnlyAPI extends BaseService {
   constructor(resource: string) {
@@ -14,7 +15,7 @@ export class ReadOnlyAPI extends BaseService {
 
       const { data } = await axios.get(this.getUrl(url), config);
       if (data && data.statusCode === 401) {
-        location.assign('#/login')
+        navigateTo('/login')
         return
       }
   
@@ -33,7 +34,7 @@ export class ReadOnlyAPI extends BaseService {
 
       const { data } = await axios.get(this.getUrl(id), config);
       if (data && data.statusCode === 401) {
-        location.assign('#/login')
+        navigateTo('/login')
         return
       }
 

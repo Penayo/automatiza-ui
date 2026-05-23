@@ -2,9 +2,9 @@
 	import { onMounted, ref, watch } from 'vue';
 	import { InputText, Select, Button } from 'primevue';
 	import z from 'zod';
-	import { parseZodError, type FormErrorMap } from '../../../utils/error';
-	import FormField from '../../../components/form/FormField.vue';
-	import type { IVariable } from '../../../services/api';
+	import { parseZodError, type FormErrorMap } from '@/utils/error';
+	import FormField from '@components/form/FormField.vue';
+	import type { IVariable } from '@services/api';
 
 	const props = defineProps(['defaultValues'])
 

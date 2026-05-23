@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { Dialog } from 'primevue';
-import { $api } from '../../services/api';
-import Form from './components/Form.vue';
-import type { IVariable } from '../../services/api';
+import { $api } from '@services/api';
+import Form from '@pages/variables/components/Form.vue';
+import type { IVariable } from '@services/api';
 import { useRoute } from 'vue-router';
 
 const $emit = defineEmits(['created'])

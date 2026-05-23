@@ -1,6 +1,6 @@
-import type { APIData } from "./BaseService";
-import type { IForm } from "./FormsService";
-import { ModelApiService } from "./ModelAPI";
+import type { APIData } from "@services/BaseService";
+import type { IForm } from "@services/FormsService";
+import { ModelApiService } from "@services/ModelAPI";
 
 export interface TaskVariable {
     key: string;

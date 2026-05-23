@@ -1,0 +1,41 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Admin theme — emerald accent / zinc chrome
+───────────────────────────────────────────────────────────────────────── */
+
+[data-context="admin"] {
+  /* ── Header ─────────────────────────────────────────────────────────── */
+  --layout-header-bg:           #f4f4f5;   /* zinc-100                    */
+  --layout-header-text:         #18181b;   /* zinc-900                    */
+  --layout-header-border:       #e4e4e7;   /* zinc-200                    */
+
+  /* ── Sidebar ────────────────────────────────────────────────────────── */
+  --layout-sidebar-bg:          #fafafa;   /* zinc-50                     */
+  --layout-sidebar-border:      #e4e4e7;   /* zinc-200                    */
+
+  /* ── Active sidebar item ────────────────────────────────────────────── */
+  --layout-sidebar-active-bg:   #d1fae5;   /* emerald-100                 */
+  --layout-sidebar-active-fg:   #065f46;   /* emerald-800                 */
+
+  /* ── Page tokens ────────────────────────────────────────────────────── */
+  --layout-title-color:         #059669;   /* emerald-600                 */
+  --layout-accent-color:        #10b981;   /* emerald-500                 */
+}
+
+/* ── Dark mode overrides ─────────────────────────────────────────────── */
+.dark [data-context="admin"] {
+  --layout-header-bg:           #27272a;   /* zinc-800                    */
+  --layout-header-text:         #fafafa;   /* zinc-50                     */
+  --layout-header-border:       #3f3f46;   /* zinc-700                    */
+
+  --layout-sidebar-bg:          #18181b;   /* zinc-900                    */
+  --layout-sidebar-border:      #3f3f46;   /* zinc-700                    */
+
+  --layout-sidebar-active-bg:   #065f46;   /* emerald-800                 */
+  --layout-sidebar-active-fg:   #ecfdf5;   /* emerald-50                  */
+}
+
+/* ── Sidebar active item ──────────────────────────────────────────────── */
+[data-context="admin"] .sidebar-active {
+  background-color: var(--layout-sidebar-active-bg);
+  color: var(--layout-sidebar-active-fg);
+}

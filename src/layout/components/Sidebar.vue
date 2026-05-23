@@ -1,10 +1,14 @@
 <template>
 	<aside
-		class="bg-white dark:bg-zinc-900 border-r border-gray-400 dark:border-emerald-900 shadow-md 
-		z-20 fixed inset-y-0 left-0 
-		transform transition-transform duration-200 ease-in-out 
+		class="border-r shadow-md
+		z-20 fixed inset-y-0 left-0
+		transform transition-transform duration-200 ease-in-out
 		md:relative md:translate-x-0
 		min-w-72
+		"
+		style="
+			background-color: var(--layout-sidebar-bg);
+			border-color: var(--layout-sidebar-border);
 		"
 		:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
 	>
@@ -21,8 +25,8 @@
 			</PanelMenu>
 		</nav>
 	</aside>
-	
-	<!-- Overlay for mobile sidebar -->    
+
+	<!-- Overlay for mobile sidebar -->
 	<div
 		v-if="sidebarOpen"
 		class="fixed inset-0 bg-zinc-500/50 z-10 md:hidden"
@@ -48,46 +52,44 @@
 			label: 'Dashboards',
 			icon: 'pi pi-chart-pie',
 			items: [
-				{ label: 'Task Dashboard', icon: 'pi pi-chart-line', path: '/dashboard', command: () => { currentMenu.value = '/dashboard'; router.push('/dashboard'); } },
-				{ label: 'Process Dashboard', icon: 'pi pi-chart-bar', path: '/process-dashboard', command: () => { currentMenu.value = '/process-dashboard'; router.push('/process-dashboard'); } }
+				{ label: 'Task Dashboard', icon: 'pi pi-chart-line', path: '/admin/dashboard', command: () => { currentMenu.value = '/admin/dashboard'; router.push('/admin/dashboard'); } },
+				{ label: 'Process Dashboard', icon: 'pi pi-chart-bar', path: '/admin/process-dashboard', command: () => { currentMenu.value = '/admin/process-dashboard'; router.push('/admin/process-dashboard'); } }
 			]
 		},
 		{
 			label: 'Processes',
 			icon: 'pi pi-sitemap',
 			items: [
-				{ label: 'All Processes', icon: 'pi pi-sitemap', path: '/processes', command: () => { currentMenu.value = '/processes'; router.push('/processes'); } },
-				{ label: 'Instancias de Proceso', icon: 'pi pi-server', path: '/process-instances', command: () => { currentMenu.value = '/process-instances'; router.push('/process-instances'); } },
+				{ label: 'All Processes', icon: 'pi pi-sitemap', path: '/admin/processes', command: () => { currentMenu.value = '/admin/processes'; router.push('/admin/processes'); } },
+				{ label: 'Process Instances', icon: 'pi pi-server', path: '/admin/process-instances', command: () => { currentMenu.value = '/admin/process-instances'; router.push('/admin/process-instances'); } },
 			]
 		},
 		{
 			label: 'Tasks',
 			icon: 'pi pi-list',
 			items: [
-				{ label: 'My Tasks', icon: 'pi pi-list-check', path: '/my-tasks', command: () => { currentMenu.value = '/my-tasks'; router.push('/my-tasks'); } },
-				{ label: 'All Tasks', icon: 'pi pi-list-check', path: '/my-tasks', command: () => { currentMenu.value = '/my-tasks'; router.push('/my-tasks'); } },
+				{ label: 'All Tasks', icon: 'pi pi-list-check', path: '/admin/tasks', command: () => { currentMenu.value = '/admin/tasks'; router.push('/admin/tasks'); } },
 			]
 		},
 		{
 			label: 'Design',
 			icon: 'pi pi-palette',
 			items: [
-				{ label: 'Process', icon: 'pi pi-palette', path: '/modeler', command: () => { currentMenu.value = '/modeler'; router.push('/modeler'); } },
-				{ label: 'Form', icon: 'pi pi-file-edit', path: '/formbuilder', command: () => { currentMenu.value = '/formbuilder'; router.push('/formbuilder'); } }
+				{ label: 'Process', icon: 'pi pi-palette', path: '/admin/modeler', command: () => { currentMenu.value = '/admin/modeler'; router.push('/admin/modeler'); } },
+				{ label: 'Form', icon: 'pi pi-file-edit', path: '/admin/formbuilder', command: () => { currentMenu.value = '/admin/formbuilder'; router.push('/admin/formbuilder'); } }
 			]
 		},
 		{
 			label: 'System',
 			icon: 'pi pi-cog',
 			items: [
-				{ label: 'Audit Logs', icon: 'pi pi-eye', path: '/audit', command: () => { currentMenu.value = '/audit'; router.push('/audit'); } },				
-				{ label: 'Users', icon: 'pi pi-users', path: '/users', command: () => { currentMenu.value = '/users'; router.push('/users'); } },
-				{ label: 'Roles', icon: 'pi pi-users', path: '/roles', command: () => { currentMenu.value = '/roles'; router.push('/roles'); } },
-				{ label: 'Permissions', icon: 'pi pi-shield', path: '/permissions', command: () => { currentMenu.value = '/permissions'; router.push('/permissions'); } },
-				{ label: 'Agenda', icon: 'pi pi-calendar', path: '/inspecciones', command: () => { currentMenu.value = '/inspecciones'; router.push('/inspecciones'); } },
-				{ label: 'Variables', icon: 'pi pi-wrench', path: '/variables', command: () => { currentMenu.value = '/variables'; router.push('/variables'); } },
-				{ label: 'Secrets', icon: 'pi pi-wrench', path: '/secrets', command: () => { currentMenu.value = '/secrets'; router.push('/secrets'); } },
-				{ label: 'API Keys', icon: 'pi pi-key', path: '/api-keys', command: () => { currentMenu.value = '/api-keys'; router.push('/api-keys'); } }
+				{ label: 'Audit Logs', icon: 'pi pi-eye', path: '/admin/audit', command: () => { currentMenu.value = '/admin/audit'; router.push('/admin/audit'); } },
+				{ label: 'Users', icon: 'pi pi-users', path: '/admin/users', command: () => { currentMenu.value = '/admin/users'; router.push('/admin/users'); } },
+				{ label: 'Roles', icon: 'pi pi-users', path: '/admin/roles', command: () => { currentMenu.value = '/admin/roles'; router.push('/admin/roles'); } },
+				{ label: 'Permissions', icon: 'pi pi-shield', path: '/admin/permissions', command: () => { currentMenu.value = '/admin/permissions'; router.push('/admin/permissions'); } },
+				{ label: 'Variables', icon: 'pi pi-wrench', path: '/admin/variables', command: () => { currentMenu.value = '/admin/variables'; router.push('/admin/variables'); } },
+				{ label: 'Secrets', icon: 'pi pi-wrench', path: '/admin/secrets', command: () => { currentMenu.value = '/admin/secrets'; router.push('/admin/secrets'); } },
+				{ label: 'API Keys', icon: 'pi pi-key', path: '/admin/api-keys', command: () => { currentMenu.value = '/admin/api-keys'; router.push('/admin/api-keys'); } }
 			]
 		}
 	]);

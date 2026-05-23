@@ -1,8 +1,13 @@
 @import "tailwindcss";
 @import "tailwindcss-primeui";
 @import 'primeicons/primeicons.css';
+@import './styles/themes/admin.css';
+@import './styles/themes/frontoffice.css';
 
 @source not "**/._*";
+
+/* Tailwind v4: enable class-based dark mode (toggling .dark on <html>) */
+@custom-variant dark (&:is(.dark *));
 
 html {
     font-size: 14px;

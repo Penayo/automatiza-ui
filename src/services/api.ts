@@ -1,26 +1,26 @@
-import { ProcessesService } from "./ProcessesService.ts";
-import { VariablesService } from "./VariablesService";
+import { ProcessesService } from "@services/ProcessesService.ts";
+import { VariablesService } from "@services/VariablesService";
 
-export type { IVariable } from "./VariablesService";
-export type { ProcessDefinition, ProcessInstance } from "./ProcessesService.ts";
-export type { Task } from "./TasksService";
-export type { IUser } from "./UserService.ts"
-export type { IPerson } from "./PersonService.ts"
-export type { IRole } from "./RoleService.ts"
-export type { IPermission } from "./PermissionService.ts"
-export type { ISecret } from "./SecretsService.ts"
-export type { IApiKey, IApiKeyCreateResponse } from "./ApiKeyService.ts"
+export type { IVariable } from "@services/VariablesService";
+export type { ProcessDefinition, ProcessInstance } from "@services/ProcessesService.ts";
+export type { Task } from "@services/TasksService";
+export type { IUser } from "@services/UserService.ts"
+export type { IPerson } from "@services/PersonService.ts"
+export type { IRole } from "@services/RoleService.ts"
+export type { IPermission } from "@services/PermissionService.ts"
+export type { ISecret } from "@services/SecretsService.ts"
+export type { IApiKey, IApiKeyCreateResponse } from "@services/ApiKeyService.ts"
 
-import { TasksService } from "./TasksService";
-import { FormsService } from "./FormsService.ts";
-import { AuthService } from "./AuthService.ts";
-import { UserService } from "./UserService.ts";
-import { PersonService } from "./PersonService.ts";
-import { RoleService } from "./RoleService.ts";
-import { PermissionService } from "./PermissionService.ts";
-import { SecretsService } from "./SecretsService.ts";
-import { ApiKeyService } from "./ApiKeyService.ts";
-import { AuditService } from "./AuditService.ts";
+import { TasksService } from "@services/TasksService";
+import { FormsService } from "@services/FormsService.ts";
+import { AuthService } from "@services/AuthService.ts";
+import { UserService } from "@services/UserService.ts";
+import { PersonService } from "@services/PersonService.ts";
+import { RoleService } from "@services/RoleService.ts";
+import { PermissionService } from "@services/PermissionService.ts";
+import { SecretsService } from "@services/SecretsService.ts";
+import { ApiKeyService } from "@services/ApiKeyService.ts";
+import { AuditService } from "@services/AuditService.ts";
 
 export type PageRequest = {
 	page?: number;

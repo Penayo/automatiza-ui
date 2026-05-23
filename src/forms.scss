@@ -204,3 +204,193 @@
   border-radius: 8px;
 }
 .formjs-dark::-webkit-scrollbar-track { background: transparent; }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   formjs-light.scss
+   Light theme for form-js viewer/editor.
+   Usage: wrap in <div class="formjs-light"> … </div>
+───────────────────────────────────────────────────────────────────────── */
+
+/* Color tokens */
+.formjs-light {
+  --fj-btn-bg:          #f4f4f5;           /* zinc-100 */
+  --fj-btn-bg-hover:    #e4e4e7;           /* zinc-200 */
+  --fj-bg:              #ffffff;           /* white — overall background */
+  --fj-surface:         #f4f4f5;           /* zinc-100 — panels / surfaces */
+  --fj-text:            #18181b;           /* zinc-900 — body text */
+  --fj-muted:           #52525b;           /* zinc-600 — labels / hints */
+  --fj-border:          #d4d4d8;           /* zinc-300 — normal border */
+  --fj-border-hover:    rgba(82,82,91,0.5);/* zinc-600 alpha — hover border */
+  --fj-focus:           #0ea5e9;           /* sky-500 — focus ring */
+  --fj-input-bg:        #ffffff;           /* white — input background */
+  --fj-placeholder:     #a1a1aa;           /* zinc-400 — placeholder */
+  --fj-danger:          #dc2626;           /* red-600 — validation error */
+}
+
+/* Root background + text */
+.formjs-light,
+.formjs-light .fjs,
+.formjs-light .fjs-container,
+.formjs-light .fjs-editor {
+  background-color: var(--fj-bg) !important;
+  color: var(--fj-text) !important;
+}
+
+/* Panels, properties, overlays */
+.formjs-light .fjs-panel,
+.formjs-light .fjs-properties,
+.formjs-light .fjs-sidebar,
+.formjs-light .fjs-palette,
+.formjs-light .fjs-palette .fjs-palette-header,
+.formjs-light .fjs-properties-container,
+.formjs-light .fjs-properties-container .bio-properties-panel-header,
+.formjs-light .fjs-properties-container .bio-properties-panel-group,
+.formjs-light .fjs-overlay,
+.formjs-light .fjs-dropdown {
+  background-color: var(--fj-surface) !important;
+  color: var(--fj-text) !important;
+  border-color: var(--fj-border) !important;
+}
+
+/* Input-like controls */
+.formjs-light .fjs-palette .fjs-palette-search-container,
+.formjs-light .fjs-container .fjs-input,
+.formjs-light .fjs-form-editor .fjs-input,
+.formjs-light .fjs-form-field-select .fjs-input-group,
+.formjs-light .fjs-form-field-select .fjs-select-anchor .fjs-dropdownlist-item,
+.formjs-light .fjs-container input,
+.formjs-light .fjs-container textarea,
+.formjs-light .fjs-container select,
+.formjs-light .fjs-form-editor input,
+.formjs-light .fjs-form-editor textarea,
+.formjs-light .fjs-form-editor select {
+  border: 1px solid !important;
+  background-color: var(--fj-input-bg) !important;
+  color: var(--fj-text) !important;
+  border-color: var(--fj-border) !important;
+  caret-color: var(--fj-text) !important;
+  border-radius: 6px !important;
+}
+
+.formjs-light .fjs-form-field-select .fjs-select-anchor .fjs-dropdownlist {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+  border-radius: 6px !important;
+  background-color: var(--fj-input-bg) !important;
+}
+
+.formjs-light .fjs-palette .fjs-palette-search-container input {
+  border-width: 0px !important;
+  box-shadow: none !important;
+}
+
+/* Placeholders */
+.formjs-light .fjs-container ::placeholder,
+.formjs-light .fjs-editor ::placeholder {
+  color: var(--fj-placeholder) !important;
+  opacity: 1;
+}
+
+/* Hover */
+.formjs-light .fjs-container input:hover,
+.formjs-light .fjs-container textarea:hover,
+.formjs-light .fjs-container select:hover,
+.formjs-light .fjs-editor input:hover,
+.formjs-light .fjs-editor textarea:hover,
+.formjs-light .fjs-editor select:hover {
+  border-color: var(--fj-border-hover) !important;
+}
+
+/* Textfield group border reset */
+.formjs-light .fjs-container .fjs-form-field-textfield .fjs-input-group {
+  border-width: 0 !important;
+  border-radius: 6px;
+}
+
+/* Focus */
+.formjs-light .fjs-container input:focus,
+.formjs-light .fjs-container textarea:focus,
+.formjs-light .fjs-form-field-select .fjs-input-group:focus-within,
+.formjs-light .fjs-container select:focus,
+.formjs-light .fjs-editor input:focus,
+.formjs-light .fjs-editor textarea:focus,
+.formjs-light .fjs-editor select:focus {
+  border-color: var(--fj-focus) !important;
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.15);   /* sky-500 glow */
+  outline: none;
+}
+
+.formjs-light .fjs-select-arrow,
+.formjs-light .fjs-select-cross {
+  padding-top: 12px !important;
+}
+
+/* Labels, help text */
+.formjs-light label,
+.formjs-light .fjs-label,
+.formjs-light .fjs-description,
+.formjs-light .fjs-hint {
+  color: var(--fj-muted) !important;
+}
+
+/* SVG / icons */
+.formjs-light .fjs-container svg,
+.formjs-light .fjs-editor svg,
+.formjs-light .fjs-container .bio-icon,
+.formjs-light .fjs-editor .bio-icon {
+  color: var(--fj-muted) !important;
+  fill: currentColor !important;
+}
+
+/* Validation / error */
+.formjs-light .fjs-invalid,
+.formjs-light .fjs-container .fjs-invalid,
+.formjs-light .fjs-editor .fjs-invalid {
+  border-color: var(--fj-danger) !important;
+  box-shadow: 0 0 0 3px rgba(220,38,38,0.08);
+}
+
+/* Dropdowns / overlays */
+.formjs-light .fjs-dropdown,
+.formjs-light .fjs-select-dropdown,
+.formjs-light .fjs-overlay {
+  background-color: var(--fj-surface) !important;
+  border-color: var(--fj-border) !important;
+  color: var(--fj-text) !important;
+}
+
+/* Buttons */
+.formjs-light .fjs-btn,
+.formjs-light .fjs-palette-field {
+  color: var(--fj-text) !important;
+  background: transparent !important;
+  border-color: var(--fj-border) !important;
+  outline: solid 1px var(--fj-border) !important;
+}
+
+.formjs-light .fjs-button {
+  color: var(--fj-text) !important;
+  background: var(--fj-btn-bg) !important;
+  border: 1px solid var(--fj-border) !important;
+  outline: solid 0px !important;
+  font-weight: normal !important;
+  border-radius: 6px !important;
+}
+
+.formjs-light .fjs-button:hover {
+  cursor: pointer;
+  background: var(--fj-btn-bg-hover) !important;
+}
+
+.formjs-light .fjs-btn:hover,
+.formjs-light .fjs-palette-field:hover {
+  outline: solid 1px var(--fj-border-hover) !important;
+}
+
+/* Scrollbar */
+.formjs-light::-webkit-scrollbar { width: 10px; height: 10px; }
+.formjs-light::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.08);
+  border-radius: 8px;
+}
+.formjs-light::-webkit-scrollbar-track { background: transparent; }

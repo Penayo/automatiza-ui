@@ -1,0 +1,170 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Frontoffice theme — sky accent / zinc chrome
+   Replace --fo-brand-* values to match the customer's palette.
+───────────────────────────────────────────────────────────────────────── */
+
+[data-context="frontoffice"] {
+
+  /* ── 1. Brand palette — sky ──────────────────────────────────────────── */
+  --fo-brand-50:  #f0f9ff;
+  --fo-brand-100: #e0f2fe;
+  --fo-brand-200: #bae6fd;
+  --fo-brand-300: #7dd3fc;
+  --fo-brand-400: #38bdf8;
+  --fo-brand-500: #0ea5e9;   /* main brand colour */
+  --fo-brand-600: #0284c7;
+  --fo-brand-700: #0369a1;
+  --fo-brand-800: #075985;
+  --fo-brand-900: #0c4a6e;
+  --fo-brand-950: #082f49;
+
+  /* ── 2. Header ───────────────────────────────────────────────────────── */
+  --layout-header-bg:           #f4f4f5;   /* zinc-100                    */
+  --layout-header-text:         #18181b;   /* zinc-900                    */
+  --layout-header-border:       #e4e4e7;   /* zinc-200                    */
+
+  /* ── 3. Sidebar ─────────────────────────────────────────────────────── */
+  --layout-sidebar-bg:          #fafafa;   /* zinc-50                     */
+  --layout-sidebar-border:      #e4e4e7;   /* zinc-200                    */
+
+  /* ── 4. Active sidebar item ─────────────────────────────────────────── */
+  --layout-sidebar-active-bg:   var(--fo-brand-50);
+  --layout-sidebar-active-fg:   var(--fo-brand-600);
+
+  /* ── 5. Page tokens ─────────────────────────────────────────────────── */
+  --layout-title-color:         var(--fo-brand-600);
+  --layout-accent-color:        var(--fo-brand-500);
+
+  /* ── 6. PrimeVue Tabs → sky ─────────────────────────────────────────── */
+  --p-tabs-tab-active-color:        var(--fo-brand-500);
+  --p-tabs-tab-active-border-color: var(--fo-brand-500);
+  --p-tabs-tab-hover-color:         var(--fo-brand-600);
+  --p-tabs-active-bar-background:   var(--fo-brand-500);
+
+  /* ── 7. PrimeVue Button → sky ────────────────────────────────────────── */
+  /* filled primary */
+  --p-button-primary-background:         var(--fo-brand-500);
+  --p-button-primary-border-color:       var(--fo-brand-500);
+  --p-button-primary-color:              #ffffff;
+  --p-button-primary-hover-background:   var(--fo-brand-600);
+  --p-button-primary-hover-border-color: var(--fo-brand-600);
+  --p-button-primary-active-background:  var(--fo-brand-700);
+  --p-button-primary-focus-ring-color:   var(--fo-brand-500);
+  /* text primary */
+  --p-button-text-primary-color:              var(--fo-brand-500);
+  --p-button-text-primary-hover-background:   var(--fo-brand-50);
+  --p-button-text-primary-active-background:  var(--fo-brand-100);
+  /* outlined primary */
+  --p-button-outlined-primary-color:              var(--fo-brand-500);
+  --p-button-outlined-primary-border-color:       var(--fo-brand-200);
+  --p-button-outlined-primary-hover-background:   var(--fo-brand-50);
+  --p-button-outlined-primary-active-background:  var(--fo-brand-100);
+  /* link */
+  --p-button-link-color:        var(--fo-brand-500);
+  --p-button-link-hover-color:  var(--fo-brand-600);
+  --p-button-link-active-color: var(--fo-brand-700);
+
+  /* ── 8. PrimeVue highlight (selection) overrides → sky ─────────────── */
+  /* Abstract tokens (used by some components) */
+  --p-highlight-background:       var(--fo-brand-50);
+  --p-highlight-color:            var(--fo-brand-700);
+  --p-highlight-focus-background: var(--fo-brand-100);
+  --p-highlight-focus-color:      var(--fo-brand-800);
+  /* DataTable-specific tokens (what the component actually reads) */
+  --p-datatable-row-selected-background:        var(--fo-brand-50);
+  --p-datatable-row-selected-color:             var(--fo-brand-700);
+  --p-datatable-header-cell-selected-background: var(--fo-brand-50);
+  --p-datatable-header-cell-selected-color:      var(--fo-brand-700);
+  --p-datatable-body-cell-selected-border-color: var(--fo-brand-100);
+
+  /* ── 7. PrimeVue primary overrides → sky ────────────────────────────── */
+  --p-primary-50:  var(--fo-brand-50);
+  --p-primary-100: var(--fo-brand-100);
+  --p-primary-200: var(--fo-brand-200);
+  --p-primary-300: var(--fo-brand-300);
+  --p-primary-400: var(--fo-brand-400);
+  --p-primary-500: var(--fo-brand-500);
+  --p-primary-600: var(--fo-brand-600);
+  --p-primary-700: var(--fo-brand-700);
+  --p-primary-800: var(--fo-brand-800);
+  --p-primary-900: var(--fo-brand-900);
+  --p-primary-950: var(--fo-brand-950);
+
+  --p-primary-color:          var(--fo-brand-500);
+  --p-primary-hover-color:    var(--fo-brand-600);
+  --p-primary-active-color:   var(--fo-brand-700);
+  --p-primary-contrast-color: #ffffff;
+
+  /* ── 7. PrimeVue surface → zinc scale ───────────────────────────────── */
+  --p-surface-0:   #ffffff;
+  --p-surface-50:  #fafafa;
+  --p-surface-100: #f4f4f5;
+  --p-surface-200: #e4e4e7;
+  --p-surface-300: #d4d4d8;
+  --p-surface-400: #a1a1aa;
+  --p-surface-500: #71717a;
+  --p-surface-600: #52525b;
+  --p-surface-700: #3f3f46;
+  --p-surface-800: #27272a;
+  --p-surface-900: #18181b;
+  --p-surface-950: #09090b;
+}
+
+/* ── Dark mode overrides ─────────────────────────────────────────────── */
+.dark [data-context="frontoffice"] {
+  --layout-header-bg:           #27272a;   /* zinc-800                    */
+  --layout-header-text:         #fafafa;   /* zinc-50                     */
+  --layout-header-border:       #3f3f46;   /* zinc-700                    */
+
+  --layout-sidebar-bg:          #18181b;   /* zinc-900                    */
+  --layout-sidebar-border:      #3f3f46;   /* zinc-700                    */
+
+  --layout-sidebar-active-bg:   var(--fo-brand-900);
+  --layout-sidebar-active-fg:   var(--fo-brand-300);
+
+  /* Tabs */
+  --p-tabs-tab-active-color:        var(--fo-brand-400);
+  --p-tabs-tab-active-border-color: var(--fo-brand-400);
+  --p-tabs-tab-hover-color:         var(--fo-brand-300);
+  --p-tabs-active-bar-background:   var(--fo-brand-400);
+
+  /* Button filled primary */
+  --p-button-primary-background:         var(--fo-brand-500);
+  --p-button-primary-border-color:       var(--fo-brand-500);
+  --p-button-primary-color:              #ffffff;
+  --p-button-primary-hover-background:   var(--fo-brand-400);
+  --p-button-primary-hover-border-color: var(--fo-brand-400);
+  --p-button-primary-active-background:  var(--fo-brand-300);
+  --p-button-primary-focus-ring-color:   var(--fo-brand-400);
+  /* Button text primary */
+  --p-button-text-primary-color:             var(--fo-brand-400);
+  --p-button-text-primary-hover-background:  color-mix(in srgb, var(--fo-brand-400), transparent 92%);
+  --p-button-text-primary-active-background: color-mix(in srgb, var(--fo-brand-400), transparent 84%);
+  /* Button outlined primary */
+  --p-button-outlined-primary-color:             var(--fo-brand-400);
+  --p-button-outlined-primary-border-color:      var(--fo-brand-700);
+  --p-button-outlined-primary-hover-background:  color-mix(in srgb, var(--fo-brand-400), transparent 96%);
+  --p-button-outlined-primary-active-background: color-mix(in srgb, var(--fo-brand-400), transparent 84%);
+  /* Button link */
+  --p-button-link-color:        var(--fo-brand-400);
+  --p-button-link-hover-color:  var(--fo-brand-300);
+  --p-button-link-active-color: var(--fo-brand-200);
+
+  /* Selection — dark sky background, sky-100 text */
+  --p-highlight-background:       var(--fo-brand-900);   /* sky-900 #0c4a6e */
+  --p-highlight-color:            #e0f2fe;               /* sky-100         */
+  --p-highlight-focus-background: var(--fo-brand-800);   /* sky-800         */
+  --p-highlight-focus-color:      #e0f2fe;
+
+  --p-datatable-row-selected-background:         var(--fo-brand-900);
+  --p-datatable-row-selected-color:              #e0f2fe;
+  --p-datatable-header-cell-selected-background: var(--fo-brand-900);
+  --p-datatable-header-cell-selected-color:      #e0f2fe;
+  --p-datatable-body-cell-selected-border-color: var(--fo-brand-800);
+}
+
+/* ── Sidebar active item ─────────────────────────────────────────────── */
+[data-context="frontoffice"] .sidebar-active {
+  background-color: var(--layout-sidebar-active-bg);
+  color: var(--layout-sidebar-active-fg);
+}

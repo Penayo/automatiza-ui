@@ -4,8 +4,8 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
 
-import { $api } from '../../../services/api';
-import type { Task } from '../../../services/TasksService';
+import { $api } from '@services/api';
+import type { Task } from '@services/TasksService';
 import { onMounted, ref, watch } from 'vue';
 
 const emit = defineEmits(['select']);

@@ -1,18 +1,22 @@
 <template>
 	<aside
-		class="bg-white dark:bg-zinc-900 border-r border-gray-400 dark:border-emerald-900 shadow-md
+		class="border-r shadow-md
 		z-20 fixed inset-y-0 left-0
 		transform transition-transform duration-200 ease-in-out
 		md:relative md:translate-x-0
 		min-w-72
+		"
+		style="
+			background-color: var(--layout-sidebar-bg);
+			border-color: var(--layout-sidebar-border);
 		"
 		:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
 	>
 		<nav class="flex flex-col mt-4 text-base px-2 gap-2">
 			<button
 				v-for="menu in menuItems"
-				class="cursor-pointer rounded-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:hover:text-emerald-100 flex flex-row items-center gap-4 px-4 py-2"
-				:class="{ 'bg-green-200 text-emerald-600! dark:text-emerald-100! dark:bg-emerald-800! font-semibold': currentMenu == menu.path }"
+				class="cursor-pointer rounded-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex flex-row items-center gap-4 px-4 py-2 transition-colors"
+				:class="{ 'sidebar-active font-semibold': currentMenu == menu.path }"
 				@click="go(menu.path)"
 			>
 				<span :class="menu.icon" style="font-size: 1.2rem"></span>
@@ -39,17 +43,15 @@
 
 	const emit = defineEmits(['toggle-sidebar'])
 	const router = useRouter();
-	const currentMenu = ref('/frontoffice/my-tasks')
+	const currentMenu = ref('/my-tasks')
 
 	const menuItems = [
-		{ label: 'Dashboard', icon: 'pi pi-chart-line', path: '/frontoffice/dashboard' },
-		{ label: 'Mis Tareas', icon: 'pi pi-list-check', path: '/frontoffice/my-tasks' },
-		// Add other frontoffice menu items here if needed
+		{ label: 'Dashboard', icon: 'pi pi-chart-line', path: '/dashboard' },
+		{ label: 'Mis Tareas', icon: 'pi pi-list-check', path: '/my-tasks' },
 	]
 
 	function go(path: string) {
 		currentMenu.value = path;
 		router.push(path);
-		console.log('CURRENT PATH', currentMenu.value, path)
 	}
 </script>

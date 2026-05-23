@@ -1,4 +1,4 @@
-import { ModelApiService } from "./ModelAPI";
+import { ModelApiService } from "@services/ModelAPI";
 
 export interface IApiKey {
     _id?: string;

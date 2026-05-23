@@ -1,5 +1,5 @@
-import type { IPermission, PageRequest, PageResponse } from "./api";
-import { ModelApiService } from "./ModelAPI";
+import type { IPermission, PageRequest, PageResponse } from "@services/api";
+import { ModelApiService } from "@services/ModelAPI";
 
 export interface IRole {
     _id?: string;

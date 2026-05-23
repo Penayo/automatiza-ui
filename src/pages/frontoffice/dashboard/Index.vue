@@ -19,8 +19,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import * as d3 from 'd3';
-import Card from './components/Card.vue';
-import { DashboardService } from '../../../services/DashboardService';
+import Card from '@pages/frontoffice/dashboard/components/Card.vue';
+import { DashboardService } from '@services/DashboardService';
 
 const cards = ref([
     { title: 'Active Tasks', value: 0, icon: 'pi pi-clock' },

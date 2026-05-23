@@ -1,0 +1,193 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   BPMN Modeler theme
+   Default = light. Wrapped in .dark for dark mode.
+───────────────────────────────────────────────────────────────────────── */
+
+.bpmn-modeler-container {
+  height: 100vh;
+  display: flex;
+  color: #18181b;           /* zinc-900 */
+  background: #fafafa;      /* zinc-50  */
+}
+
+.canvas {
+  flex: 1;
+  position: relative;
+}
+
+.properties-panel {
+  width: 300px;
+  overflow: auto;
+  border-left: 1px solid #e4e4e7;   /* zinc-200 */
+  background-color: #f4f4f5;         /* zinc-100 */
+}
+
+/* ── Context pad ────────────────────────────────────────────────────── */
+.djs-context-pad .entry {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+/* ── Palette ────────────────────────────────────────────────────────── */
+.djs-palette {
+  background: #ffffff !important;
+  border: 1px solid #e4e4e7 !important;
+  border-radius: 4px;
+}
+.djs-palette path,
+.djs-palette .entry {
+  stroke: #52525b !important;
+  color: #52525b;
+}
+
+/* ── Canvas background ──────────────────────────────────────────────── */
+.djs-container > svg {
+  background: #fafafa;   /* zinc-50 */
+}
+
+/* ── BPMN element fills / strokes ───────────────────────────────────── */
+.djs-element .djs-visual rect {
+  fill:   #ffffff !important;
+  stroke: #a1a1aa !important;   /* zinc-400 */
+  rx: 8 !important;
+  ry: 8 !important;
+}
+.djs-element .djs-visual circle {
+  fill:   #ffffff !important;
+  stroke: #a1a1aa !important;
+}
+.djs-element .djs-visual polygon {
+  fill:   none    !important;
+  stroke: #71717a !important;   /* zinc-500 */
+}
+.djs-element .djs-visual path {
+  stroke: #52525b !important;   /* zinc-600 */
+}
+
+/* ── Labels ─────────────────────────────────────────────────────────── */
+.djs-label {
+  fill: #27272a !important;     /* zinc-800 */
+}
+
+/* ── Properties panel token overrides (light) ───────────────────────── */
+.bio-properties-panel {
+  --text-base-color:              #18181b;   /* zinc-900  */
+  --description-color:            #52525b;   /* zinc-600  */
+  --placeholder-color:            #71717a;   /* zinc-500  */
+  --placeholder-background-color: #f4f4f5;   /* zinc-100  */
+
+  --header-background-color:      #f4f4f5;
+  --header-icon-fill-color:       #27272a;
+  --header-bottom-border-color:   #d4d4d8;   /* zinc-300  */
+
+  --group-background-color:       #ffffff;
+  --group-bottom-border-color:    #e4e4e7;   /* zinc-200  */
+  --sticky-group-background-color:      #f4f4f5;
+  --sticky-group-bottom-border-color:   #d4d4d8;
+
+  --input-background-color:       #ffffff;
+  --input-border-color:           #d4d4d8;
+
+  --arrow-fill-color:             #71717a;
+  --arrow-hover-background-color: #f4f4f5;
+
+  --dot-color:                    #71717a;
+  --feel-inactive-color:          #52525b;
+  --feel-hover-color:             #18181b;
+  --feel-hover-background-color:  #f4f4f5;
+
+  --dropdown-item-background-color:       #ffffff;
+  --dropdown-item-hover-background-color: #f4f4f5;
+  --dropdown-separator-background-color:  #d4d4d8;
+}
+
+/* ── Selected element ───────────────────────────────────────────────── */
+.djs-element.selected rect {
+  rx: 8 !important;
+  ry: 8 !important;
+}
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   DARK MODE — all overrides scoped to .dark ancestor
+═════════════════════════════════════════════════════════════════════ */
+
+.dark .bpmn-modeler-container {
+  color: #a1a1aa;          /* zinc-400 */
+  background: #18181b;     /* zinc-900 */
+}
+
+.dark .properties-panel {
+  background-color: #191919;
+  border-left-color: #3f3f46;   /* zinc-700 */
+}
+
+/* Palette */
+.dark .djs-palette {
+  background: transparent !important;
+  border-color: #3f3f46 !important;
+}
+.dark .djs-palette path,
+.dark .djs-palette .entry {
+  stroke: #d1d5db !important;
+  color:  #d1d5db;
+}
+
+/* Canvas */
+.dark .djs-container > svg {
+  background: #18181b;
+}
+
+/* Elements */
+.dark .djs-element .djs-visual rect {
+  fill:   #3f3f46 !important;
+  stroke: #3f3f46 !important;
+}
+.dark .djs-element .djs-visual circle {
+  fill:   #191919 !important;
+  stroke: #3f3f46 !important;
+}
+.dark .djs-element .djs-visual polygon {
+  fill:   none    !important;
+  stroke: #bdbdbd !important;
+}
+.dark .djs-element .djs-visual path {
+  stroke: #d1d5db !important;
+}
+
+/* Labels */
+.dark .djs-label {
+  fill: #c2c9d6 !important;
+}
+
+/* Properties panel tokens (dark) */
+.dark .bio-properties-panel {
+  --text-base-color:              #a1a1aa;
+  --description-color:            #71717a;
+  --placeholder-color:            #71717a;
+  --placeholder-background-color: #27272a;
+
+  --header-background-color:      #27272a;
+  --header-icon-fill-color:       #a1a1aa;
+  --header-bottom-border-color:   #3f3f46;
+
+  --group-background-color:       #1c1c1f;
+  --group-bottom-border-color:    #3f3f46;
+  --sticky-group-background-color:     #27272a;
+  --sticky-group-bottom-border-color:  #3f3f46;
+
+  --input-background-color:       #27272a;
+  --input-border-color:           #3f3f46;
+
+  --arrow-fill-color:             #71717a;
+  --arrow-hover-background-color: #27272a;
+
+  --dot-color:                    #71717a;
+  --feel-inactive-color:          #71717a;
+  --feel-hover-color:             #a1a1aa;
+  --feel-hover-background-color:  #27272a;
+
+  --dropdown-item-background-color:       #27272a;
+  --dropdown-item-hover-background-color: #3f3f46;
+  --dropdown-separator-background-color:  #3f3f46;
+}

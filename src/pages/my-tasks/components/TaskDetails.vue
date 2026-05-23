@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Tabs, Tab, TabList, TabPanels, TabPanel, Button, useToast, useConfirm } from 'primevue';
-import TaskData from './TaskData.vue';
-import TaskForm from './TaskForm.vue';
-import type { Task } from "../../../services/TasksService"
-import { $api } from '../../../services/api';
-import { onApprove } from '../../../utils/common';
+import TaskData from '@pages/my-tasks/components/TaskData.vue';
+import TaskForm from '@pages/my-tasks/components/TaskForm.vue';
+import type { Task } from "@services/TasksService"
+import { $api } from '@services/api';
+import { onApprove } from '@/utils/common';
 
 const toast = useToast();
 const confirm= useConfirm();

@@ -1,4 +1,4 @@
-import { BaseService } from './BaseService';
+import { BaseService } from '@services/BaseService';
 
 export interface InstancesOverTime {
   date: string;

@@ -1,4 +1,4 @@
-import { BaseService } from "./BaseService";
+import { BaseService } from "@services/BaseService";
 
 export class ModelApiService extends BaseService {
   constructor(resource: string) {

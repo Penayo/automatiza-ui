@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Button, Tag, useToast } from 'primevue';
-import TaskSchedule from './TaskSchedule.vue';
-import type { Task } from "../../../services/TasksService"
-import { $api } from '../../../services/api';
+import TaskSchedule from '@pages/my-tasks/components/TaskSchedule.vue';
+import type { Task } from "@services/TasksService"
+import { $api } from '@services/api';
 
 const props = defineProps<{
     task: Task | null,

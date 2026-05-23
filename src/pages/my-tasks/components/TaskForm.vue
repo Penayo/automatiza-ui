@@ -4,18 +4,18 @@ import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '../../../forms.scss';
 
 import { ref, onMounted, watch } from 'vue';
-import type { Task } from '../../../services/TasksService';
-import { $api } from '../../../services/api';
-import type { IForm } from '../../../services/FormsService';
+import type { Task } from '@services/TasksService';
+import { $api } from '@services/api';
+import type { IForm } from '@services/FormsService';
 import { Button, useConfirm, useToast } from 'primevue';
-import type { ProcessVariables } from "../../../services/ProcessesService";
+import type { ProcessVariables } from "@services/ProcessesService";
 
 
 const toVariableMap = (variables: { key: string; value: any }[] | undefined): Record<string, any> =>
     Object.fromEntries((variables || []).map(v => [v.key, v.value]));
-import { onApprove } from "../../../utils/common";
-import { parseApiError } from "../../../utils/error";
-import type { IAccess } from "../../../services/AuthService.ts";
+import { onApprove } from "@/utils/common";
+import { parseApiError } from "@/utils/error";
+import type { IAccess } from "@services/AuthService.ts";
 
 const toast = useToast();
 const confirm = useConfirm();

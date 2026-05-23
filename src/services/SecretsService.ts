@@ -1,5 +1,5 @@
-import type { PageRequest, PageResponse } from "./api";
-import { ModelApiService } from "./ModelAPI";
+import type { PageRequest, PageResponse } from "@services/api";
+import { ModelApiService } from "@services/ModelAPI";
 
 export interface ISecret {
     _id?: string;

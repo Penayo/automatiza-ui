@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import Page from '../components/Page.vue';
+import Page from '@components/Page.vue';
 import { InputText, Password, Button, useToast, Checkbox } from 'primevue';
 import { useRouter } from 'vue-router';
-import FormField from '../components/form/FormField.vue';
-import type { IAccess } from '../services/AuthService.ts';
-import { $api } from '../services/api';
+import FormField from '@components/form/FormField.vue';
+import type { IAccess } from '@services/AuthService.ts';
+import { $api } from '@services/api';
 
 const toast = useToast();
 const router = useRouter();

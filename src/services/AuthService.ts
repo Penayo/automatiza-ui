@@ -1,5 +1,5 @@
-import type { IUser } from "./UserService";
-import { ModelApiService } from "./ModelAPI";
+import type { IUser } from "@services/UserService";
+import { ModelApiService } from "@services/ModelAPI";
 import CryptoJS from 'crypto-js';
 
 const SECRET_KEY = 'your-secret-key'; // TODO: Use a secure key management in production, e.g., from environment variables

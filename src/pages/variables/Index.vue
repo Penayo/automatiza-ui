@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue' ;
-import Page from '../../components/Page.vue' ;
+import Page from '@components/Page.vue' ;
 import { DataTable, Column, Button, useToast } from 'primevue' ;
 import { useConfirm } from "primevue/useconfirm";
-import { $api, type IVariable } from '../../services/api' ;
-import { onDelete } from '../../utils/common';
+import { $api, type IVariable } from '@services/api' ;
+import { onDelete } from '@/utils/common';
 
 const confirm = useConfirm();
 const toast = useToast();

@@ -1,5 +1,5 @@
-import type { APIData } from "./BaseService";
-import { ModelApiService } from "./ModelAPI";
+import type { APIData } from "@services/BaseService";
+import { ModelApiService } from "@services/ModelAPI";
 
 export interface IForm extends APIData {
     id: string;

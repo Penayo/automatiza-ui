@@ -1,6 +1,6 @@
-import type { PageRequest, PageResponse } from "./api";
-import { ModelApiService } from "./ModelAPI";
-import type { INaturalPerson } from "./PersonService";
+import type { PageRequest, PageResponse } from "@services/api";
+import { ModelApiService } from "@services/ModelAPI";
+import type { INaturalPerson } from "@services/PersonService";
 
 export interface IUser {
     _id?: string;
