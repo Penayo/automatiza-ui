@@ -17,6 +17,16 @@ export interface ProcessDefinition extends APIData {
     createdAt: Date;
     description?: string;
     version?: number;
+    starterGroups?: string[];
+    starterUsers?: string[];
+    responsibleContacts?: string[];
+}
+
+export interface UpdateProcessMetaDto {
+    description?: string;
+    responsibleContacts?: string[];
+    starterGroups?: string[];
+    starterUsers?: string[];
 }
 
 export interface ProcessVariable {
@@ -115,7 +125,7 @@ export class ProcessesService extends ModelApiService {
         return response as Task[] ;
     }
 
-    async saveProcess(process: ProcessDefinition) {
+    async saveProcess(process: ProcessDefinition | DeployProcessDto) {
         return this.post('', process);
     }
 
@@ -150,6 +160,11 @@ export class ProcessesService extends ModelApiService {
             this.handleErrors(err);
             throw err;
         }
+    }
+
+    async updateProcessMeta(id: string, dto: UpdateProcessMetaDto): Promise<ProcessDefinition> {
+        const response = await this.put(id, dto);
+        return (response as any)?.data as ProcessDefinition;
     }
 
     async pauseInstance(instanceId: string, comment: string): Promise<ProcessInstance> {

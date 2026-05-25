@@ -42,16 +42,27 @@
 </template>
 
 <script setup lang="ts">
-	import { ref, onMounted, onUnmounted } from 'vue';
-	import { useRouter } from 'vue-router';
+	import { ref, computed, onMounted, onUnmounted } from 'vue';
+	import { useRouter, useRoute } from 'vue-router';
 	import { $api } from '@services/api';
 
 	defineProps({ sidebarOpen: Boolean });
 	defineEmits(['toggle-sidebar']);
 
-	const router      = useRouter();
-	const currentMenu = ref('/my-tasks');
+	const router       = useRouter();
+	const route        = useRoute();
 	const pendingCount = ref(0);
+
+	const menuItems = [
+		{ label: 'Dashboard', icon: 'pi pi-chart-line', path: '/dashboard' },
+		{ label: 'My Tasks',  icon: 'pi pi-list-check', path: '/my-tasks'  },
+		{ label: 'Processes', icon: 'pi pi-sitemap',    path: '/processes' },
+	];
+
+	// Highlight the item whose path matches or is a prefix of the current route
+	const currentMenu = computed(() =>
+		menuItems.find(m => route.path === m.path || route.path.startsWith(m.path + '/'))?.path ?? ''
+	);
 
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -73,13 +84,7 @@
 		if (pollTimer) clearInterval(pollTimer);
 	});
 
-	const menuItems = [
-		{ label: 'Dashboard',  icon: 'pi pi-chart-line', path: '/dashboard' },
-		{ label: 'My Tasks',   icon: 'pi pi-list-check', path: '/my-tasks'  },
-	];
-
 	function go(path: string) {
-		currentMenu.value = path;
 		router.push(path);
 	}
 </script>

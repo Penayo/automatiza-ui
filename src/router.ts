@@ -23,6 +23,8 @@ const routes = [
         name: 'TaskForm',
         component: () => import('./pages/frontoffice/my-tasks/_id.vue'),
       },
+      { path: 'processes', name: 'FrontofficeProcesses', component: () => import('./pages/frontoffice/processes/Index.vue') },
+      { path: 'processes/:id', name: 'FrontofficeProcessDetail', component: () => import('./pages/frontoffice/processes/_id.vue') },
     ],
   },
 
@@ -116,7 +118,7 @@ const router = createRouter({
 })
 
 // Navigation guard
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authService = new AuthService();
   const accessInfo = authService.getAccessInfo();
 

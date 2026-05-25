@@ -29,7 +29,7 @@ const fetchProcess = async () => {
         formSchema.value = await $api.processes.getStartForm(id as string);
     } catch (error) {
         console.log(error);
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el proceso', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load process', life: 3000 });
     } finally {
         loading.value = false;
     }
@@ -39,10 +39,10 @@ const handleSubmit = async (variables: Record<string, any>) => {
     try {
         const { id } = route.params;
         await $api.processes.startProcess(id as string, { variables });
-        toast.add({ severity: 'success', summary: 'Success', detail: 'Proceso iniciado exitosamente!', life: 3000 });
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Process started successfully!', life: 3000 });
         visible.value = false;
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al iniciar el proceso', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to start process', life: 3000 });
     }
 };
 
@@ -99,8 +99,8 @@ onMounted(async () => {
                     height="200"
                 />
                 <div class="flex flex-row justify-end p-3 gap-3">
-                    <Button severity="secondary" @click="cancelStart">Cancelar</Button>
-                    <Button @click="submitForm">Iniciar</Button>
+                    <Button severity="secondary" @click="cancelStart">Cancel</Button>
+                    <Button @click="submitForm">Start</Button>
                 </div>
             </div>
         </div>

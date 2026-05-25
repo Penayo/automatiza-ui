@@ -22,11 +22,12 @@ function returnDate() {
 </script>
 
 <template>
-    <div class="font-bold m-0 mb-3">
+    <div class="font-bold m-0 md:mb-3">
         <Dialog
             :header="(props.value ? 'Edit ' : 'Set ') + props.label"
             v-model:visible="visible"
-            style="width: 30vw"
+            class="w-[90%] md:w-100"
+            modal
         >
             <DatePicker showIcon class="w-full" v-model="date" />
             <template #footer>

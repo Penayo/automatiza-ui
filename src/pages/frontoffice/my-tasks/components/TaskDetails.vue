@@ -72,7 +72,7 @@ async function updateTask(key: string, value: string) {
             </p>
 
             <div class="flex flex-row justify-between items-start mt-3">
-                <div class="flex flex-row gap-6 flex-wrap">
+                <div class="flex flex-row md:gap-6 flex-wrap">
                     <TaskSchedule
                         label="Due date"
                         :value="props.currentTask?.dueDate"

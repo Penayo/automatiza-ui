@@ -18,13 +18,13 @@ const handleFileUpload = async (event: any) => {
         reader.onload = async (e) => {
         const bpmnXml = e.target?.result as string;
         const result = await $api.processes.saveProcess({ bpmnXml });
-        toast.add({ severity: 'success', summary: 'Success', detail: 'Proceso guardado exitosamente!', life: 3000 });
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Process saved successfully!', life: 3000 });
             $emit('created', result);
             visible.value = false;
         };
         reader.readAsText(file);
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al guardar el proceso', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save process', life: 3000 });
     } finally {
         loading.value = false;
     }
@@ -35,7 +35,7 @@ const handleFileUpload = async (event: any) => {
     <Dialog
         v-model:visible="visible"
         modal
-        header="Nuevo Proceso"
+        header="New Process"
         :style="{ width: '30rem' }"
         :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
         @after-hide="$router.go(-1)"
@@ -48,10 +48,10 @@ const handleFileUpload = async (event: any) => {
                 :maxFileSize="1000000"
                 @upload="handleFileUpload"
                 :loading="loading"
-                chooseLabel="Seleccionar archivo BPMN"
+                chooseLabel="Select BPMN file"
             />
             <small class="block mt-2 text-gray-500">
-                Seleccione un archivo BPMN (.bpmn o .xml) para cargar un nuevo proceso.
+                Select a BPMN file (.bpmn or .xml) to upload a new process.
             </small>
         </div>
     </Dialog>

@@ -12,15 +12,15 @@ export function onApprove(
 ) {
 	confirm.require({
 		message,
-		header: 'Confirmar',
+		header: 'Confirm Action',
 		icon: 'pi pi-exclamation-triangle',
 		rejectProps: {
-			label: 'Cancelar',
+			label: 'Cancel',
 			severity: 'secondary',
 			outlined: true
 		},
 		acceptProps: {
-			label: config?.acceptPropsLabel || 'Aceptar',
+			label: config?.acceptPropsLabel || 'Confirm',
 			severity: config?.acceptPropsSeverity
 		},
 		accept: callback,
@@ -31,7 +31,7 @@ export function onDelete<T>(
 	confirm: any,
 	item: T | null,
 	onAccept: (item: T) => void,
-	message = 'Esta seguro de elilminar el registro?'
+	message = 'Are you sure about deleting the record?'
 ) {
 	if (!item) return ;
 

@@ -33,6 +33,15 @@ export interface TasksDashboard {
 
 export type Period = 'day' | 'week' | 'month';
 
+export interface ProcessAnalytics {
+  totalInstances: number;
+  runningInstances: number;
+  completedInstances: number;
+  failedInstances: number;
+  avgCompletionMs: number;
+  completedOverTime: CompletedOverTime[];
+}
+
 class DashboardApiService extends BaseService {
   constructor() {
     super('dashboard');
@@ -61,6 +70,13 @@ class DashboardApiService extends BaseService {
   /** Personal KPIs for the logged-in user — calls the frontoffice-accessible endpoint */
   async getMyStats(period: Period = 'week'): Promise<TasksDashboard> {
     return this.get<TasksDashboard>('my-stats', { params: { period } }) as Promise<TasksDashboard>;
+  }
+
+  /** Admin: per-process analytics — calls GET /dashboard/process-analytics */
+  async getProcessAnalytics(processDefinitionId: string, period: Period = 'week'): Promise<ProcessAnalytics> {
+    return this.get<ProcessAnalytics>('process-analytics', {
+      params: { processDefinitionId, period },
+    }) as Promise<ProcessAnalytics>;
   }
 }
 
