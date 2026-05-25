@@ -15,10 +15,17 @@
 		<nav class="flex flex-col mt-4 text-base px-2 gap-2">
 			<PanelMenu :model="menuItems" class="w-full md:w-80 pt-1">
 				<template #item="{ item }">
-					<a v-ripple class="flex items-center px-4 py-2 cursor-pointer group">
+					<a v-ripple class="flex items-center px-4 py-2 cursor-pointer group" @click="item.command?.()">
 						<span :class="[item.icon, 'text-primary group-hover:text-inherit']" />
 						<span :class="['ml-2', { 'font-semibold': item.items }]">{{ item.label }}</span>
-						<Badge v-if="item.badge" class="ml-auto" :value="item.badge" />
+						<!-- Dynamic failed-instances badge on Process Instances item -->
+						<Badge
+							v-if="item.label === 'Process Instances' && failedCount > 0"
+							:value="failedCount"
+							severity="danger"
+							class="ml-auto"
+						/>
+						<Badge v-else-if="item.badge" class="ml-auto" :value="item.badge" />
 						<span v-if="item.shortcut" class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1">{{ item.shortcut }}</span>
 					</a>
 				</template>
@@ -35,62 +42,84 @@
 </template>
 
 <script setup lang="ts">
-	import { PanelMenu } from 'primevue';
-	import { ref } from 'vue';
+	import { Badge, PanelMenu } from 'primevue';
+	import { onMounted, onUnmounted, ref } from 'vue';
 	import { useRouter } from 'vue-router';
+	import { DashboardService } from '@services/DashboardService';
 
-	defineProps({
-		sidebarOpen: Boolean
-	})
+	defineProps({ sidebarOpen: Boolean });
+	const emit = defineEmits(['toggle-sidebar']);
 
-	const emit = defineEmits(['toggle-sidebar'])
-	const router = useRouter();
-	const currentMenu = ref('dashboard')
+	const router      = useRouter();
+	const currentMenu = ref('dashboard');
+	const failedCount = ref(0);
+
+	// Poll every 60 seconds so the badge stays fresh without a full page reload
+	let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+	async function refreshFailedCount() {
+		try {
+			failedCount.value = await DashboardService.getFailedInstancesCount();
+		} catch {
+			// silently ignore — badge is informational, not critical
+		}
+	}
+
+	onMounted(() => {
+		refreshFailedCount();
+		pollTimer = setInterval(refreshFailedCount, 60_000);
+	});
+
+	onUnmounted(() => {
+		if (pollTimer) clearInterval(pollTimer);
+	});
+
+	const nav = (path: string) => { currentMenu.value = path; router.push(path); };
 
 	const menuItems = ref([
 		{
 			label: 'Dashboards',
 			icon: 'pi pi-chart-pie',
 			items: [
-				{ label: 'Task Dashboard', icon: 'pi pi-chart-line', path: '/admin/dashboard', command: () => { currentMenu.value = '/admin/dashboard'; router.push('/admin/dashboard'); } },
-				{ label: 'Process Dashboard', icon: 'pi pi-chart-bar', path: '/admin/process-dashboard', command: () => { currentMenu.value = '/admin/process-dashboard'; router.push('/admin/process-dashboard'); } }
+				{ label: 'Task Dashboard',    icon: 'pi pi-chart-line', command: () => nav('/admin/dashboard') },
+				{ label: 'Process Dashboard', icon: 'pi pi-chart-bar',  command: () => nav('/admin/process-dashboard') },
 			]
 		},
 		{
 			label: 'Processes',
 			icon: 'pi pi-sitemap',
 			items: [
-				{ label: 'All Processes', icon: 'pi pi-sitemap', path: '/admin/processes', command: () => { currentMenu.value = '/admin/processes'; router.push('/admin/processes'); } },
-				{ label: 'Process Instances', icon: 'pi pi-server', path: '/admin/process-instances', command: () => { currentMenu.value = '/admin/process-instances'; router.push('/admin/process-instances'); } },
+				{ label: 'All Processes',      icon: 'pi pi-sitemap', command: () => nav('/admin/processes') },
+				{ label: 'Process Instances',  icon: 'pi pi-server',  command: () => nav('/admin/process-instances') },
 			]
 		},
 		{
 			label: 'Tasks',
 			icon: 'pi pi-list',
 			items: [
-				{ label: 'All Tasks', icon: 'pi pi-list-check', path: '/admin/tasks', command: () => { currentMenu.value = '/admin/tasks'; router.push('/admin/tasks'); } },
+				{ label: 'All Tasks', icon: 'pi pi-list-check', command: () => nav('/admin/tasks') },
 			]
 		},
 		{
 			label: 'Design',
 			icon: 'pi pi-palette',
 			items: [
-				{ label: 'Process', icon: 'pi pi-palette', path: '/admin/modeler', command: () => { currentMenu.value = '/admin/modeler'; router.push('/admin/modeler'); } },
-				{ label: 'Form', icon: 'pi pi-file-edit', path: '/admin/formbuilder', command: () => { currentMenu.value = '/admin/formbuilder'; router.push('/admin/formbuilder'); } }
+				{ label: 'Process', icon: 'pi pi-palette',   command: () => nav('/admin/modeler') },
+				{ label: 'Form',    icon: 'pi pi-file-edit', command: () => nav('/admin/formbuilder') },
 			]
 		},
 		{
 			label: 'System',
 			icon: 'pi pi-cog',
 			items: [
-				{ label: 'Audit Logs', icon: 'pi pi-eye', path: '/admin/audit', command: () => { currentMenu.value = '/admin/audit'; router.push('/admin/audit'); } },
-				{ label: 'Users', icon: 'pi pi-users', path: '/admin/users', command: () => { currentMenu.value = '/admin/users'; router.push('/admin/users'); } },
-				{ label: 'Roles', icon: 'pi pi-users', path: '/admin/roles', command: () => { currentMenu.value = '/admin/roles'; router.push('/admin/roles'); } },
-				{ label: 'Permissions', icon: 'pi pi-shield', path: '/admin/permissions', command: () => { currentMenu.value = '/admin/permissions'; router.push('/admin/permissions'); } },
-				{ label: 'Variables', icon: 'pi pi-wrench', path: '/admin/variables', command: () => { currentMenu.value = '/admin/variables'; router.push('/admin/variables'); } },
-				{ label: 'Secrets', icon: 'pi pi-wrench', path: '/admin/secrets', command: () => { currentMenu.value = '/admin/secrets'; router.push('/admin/secrets'); } },
-				{ label: 'API Keys', icon: 'pi pi-key', path: '/admin/api-keys', command: () => { currentMenu.value = '/admin/api-keys'; router.push('/admin/api-keys'); } }
+				{ label: 'Audit Logs',  icon: 'pi pi-eye',     command: () => nav('/admin/audit') },
+				{ label: 'Users',       icon: 'pi pi-users',   command: () => nav('/admin/users') },
+				{ label: 'Roles',       icon: 'pi pi-users',   command: () => nav('/admin/roles') },
+				{ label: 'Permissions', icon: 'pi pi-shield',  command: () => nav('/admin/permissions') },
+				{ label: 'Variables',   icon: 'pi pi-wrench',  command: () => nav('/admin/variables') },
+				{ label: 'Secrets',     icon: 'pi pi-wrench',  command: () => nav('/admin/secrets') },
+				{ label: 'API Keys',    icon: 'pi pi-key',     command: () => nav('/admin/api-keys') },
 			]
-		}
+		},
 	]);
 </script>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref } from 'vue';
 import { Button, Column, DataTable, DatePicker, InputText, Select, Tag, useToast } from 'primevue';
 import Page from '@components/Page.vue';
 import { $api } from '@services/api';
-import type { AuditLog } from '@services/AuditService';
+import type { AuditLog, AuditLogQuery } from '@services/AuditService';
 import { useRouter } from 'vue-router';
 
 const toast = useToast();
@@ -16,8 +16,10 @@ const expandedRows = ref<Record<string, boolean>>({});
 
 const filters = ref({
     processInstanceId: '',
+    actorUsername: '',
     category: null as string | null,
     level: null as string | null,
+    action: null as string | null,
     from: null as Date | null,
     to: null as Date | null,
 });
@@ -40,31 +42,56 @@ const levelOptions = [
     { label: 'Debug', value: 'debug' },
 ];
 
+const actionOptions = [
+    { label: 'All actions', value: null },
+    { label: 'Process started', value: 'PROCESS_STARTED' },
+    { label: 'Process completed', value: 'PROCESS_COMPLETED' },
+    { label: 'Process failed', value: 'PROCESS_FAILED' },
+    { label: 'Task created', value: 'TASK_CREATED' },
+    { label: 'Task completed', value: 'TASK_COMPLETED' },
+    { label: 'Task failed', value: 'TASK_FAILED' },
+    { label: 'Task assigned', value: 'TASK_ASSIGNED' },
+    { label: 'Task unassigned', value: 'TASK_UNASSIGNED' },
+    { label: 'Task claimed', value: 'TASK_CLAIMED' },
+];
+
 const levelSeverity = (level: string) => {
     if (level === 'error') return 'danger';
-    if (level === 'warn') return 'warn';
-    if (level === 'info') return 'success';
+    if (level === 'warn')  return 'warn';
+    if (level === 'info')  return 'success';
     return 'secondary';
 };
 
 const categorySeverity = (category: string) => {
     if (category === 'process') return 'info';
-    if (category === 'system') return 'secondary';
-    if (category === 'task') return 'warn';
+    if (category === 'system')  return 'secondary';
+    if (category === 'task')    return 'warn';
     return 'secondary';
+};
+
+const actionSeverity = (action: string) => {
+    if (action?.includes('FAILED'))    return 'danger';
+    if (action?.includes('COMPLETED')) return 'success';
+    if (action?.includes('STARTED'))   return 'info';
+    return 'secondary';
+};
+
+const buildQuery = (): AuditLogQuery => {
+    const q: AuditLogQuery = { page: pagination.value.page, limit: pagination.value.limit };
+    if (filters.value.processInstanceId) q.processInstanceId = filters.value.processInstanceId;
+    if (filters.value.actorUsername)     q.actorUsername     = filters.value.actorUsername;
+    if (filters.value.category)          q.category          = filters.value.category;
+    if (filters.value.level)             q.level             = filters.value.level;
+    if (filters.value.action)            q.action            = filters.value.action;
+    if (filters.value.from)              q.from              = filters.value.from.toISOString();
+    if (filters.value.to)                q.to                = filters.value.to.toISOString();
+    return q;
 };
 
 const fetchLogs = async () => {
     loading.value = true;
     try {
-        const query: Record<string, any> = { page: pagination.value.page, limit: pagination.value.limit };
-        if (filters.value.processInstanceId) query.processInstanceId = filters.value.processInstanceId;
-        if (filters.value.category) query.category = filters.value.category;
-        if (filters.value.level) query.level = filters.value.level;
-        if (filters.value.from) query.from = filters.value.from.toISOString();
-        if (filters.value.to) query.to = filters.value.to.toISOString();
-
-        const res = await $api.audit.getLogs(query);
+        const res = await $api.audit.getLogs(buildQuery());
         logs.value = res.data;
         totalRecords.value = res.total;
     } catch {
@@ -75,7 +102,7 @@ const fetchLogs = async () => {
 };
 
 const onPage = (event: any) => {
-    pagination.value.page = event.page + 1;
+    pagination.value.page  = event.page + 1;
     pagination.value.limit = event.rows;
     fetchLogs();
 };
@@ -86,9 +113,22 @@ const applyFilters = () => {
 };
 
 const clearFilters = () => {
-    filters.value = { processInstanceId: '', category: null, level: null, from: null, to: null };
+    filters.value = {
+        processInstanceId: '',
+        actorUsername: '',
+        category: null,
+        level: null,
+        action: null,
+        from: null,
+        to: null,
+    };
     pagination.value.page = 1;
     fetchLogs();
+};
+
+const exportCsv = () => {
+    const url = $api.audit.exportUrl(buildQuery());
+    window.open(url, '_blank');
 };
 
 const goToInstance = (id: string) => {
@@ -101,6 +141,7 @@ onMounted(fetchLogs);
 <template>
     <Page title="Audit Logs">
         <template #actions>
+            <Button variant="text" rounded icon="pi pi-download" label="Export CSV" size="small" @click="exportCsv" />
             <Button variant="text" rounded icon="pi pi-refresh" @click="fetchLogs" />
         </template>
 
@@ -110,11 +151,33 @@ onMounted(fetchLogs);
                 <label class="text-xs text-zinc-500">Process Instance ID</label>
                 <InputText
                     v-model="filters.processInstanceId"
-                    placeholder="Search by instance ID..."
-                    class="w-64"
+                    placeholder="Search by instance ID…"
+                    class="w-56"
                     @keyup.enter="applyFilters"
                 />
             </div>
+
+            <div class="flex flex-col gap-1">
+                <label class="text-xs text-zinc-500">Actor</label>
+                <InputText
+                    v-model="filters.actorUsername"
+                    placeholder="username or system"
+                    class="w-40"
+                    @keyup.enter="applyFilters"
+                />
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <label class="text-xs text-zinc-500">Action</label>
+                <Select
+                    v-model="filters.action"
+                    :options="actionOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    class="w-48"
+                />
+            </div>
+
             <div class="flex flex-col gap-1">
                 <label class="text-xs text-zinc-500">Category</label>
                 <Select
@@ -125,6 +188,7 @@ onMounted(fetchLogs);
                     class="w-40"
                 />
             </div>
+
             <div class="flex flex-col gap-1">
                 <label class="text-xs text-zinc-500">Level</label>
                 <Select
@@ -135,14 +199,17 @@ onMounted(fetchLogs);
                     class="w-36"
                 />
             </div>
+
             <div class="flex flex-col gap-1">
                 <label class="text-xs text-zinc-500">From</label>
                 <DatePicker v-model="filters.from" showTime hourFormat="24" placeholder="Start date" class="w-44" />
             </div>
+
             <div class="flex flex-col gap-1">
                 <label class="text-xs text-zinc-500">To</label>
                 <DatePicker v-model="filters.to" showTime hourFormat="24" placeholder="End date" class="w-44" />
             </div>
+
             <div class="flex gap-2">
                 <Button label="Search" icon="pi pi-search" @click="applyFilters" />
                 <Button label="Clear" icon="pi pi-times" severity="secondary" variant="outlined" @click="clearFilters" />
@@ -162,8 +229,8 @@ onMounted(fetchLogs);
             :rowsPerPageOptions="[25, 50, 100]"
             dataKey="_id"
             scrollable
-            scrollHeight="calc(100vh - 320px)"
-            tableStyle="min-width: 56rem"
+            scrollHeight="calc(100vh - 340px)"
+            tableStyle="min-width: 60rem"
             @page="onPage"
         >
             <Column expander style="width: 3rem" />
@@ -182,15 +249,33 @@ onMounted(fetchLogs);
                 </template>
             </Column>
 
-            <Column field="category" header="Category" style="width: 7rem">
+            <Column field="action" header="Action" style="width: 11rem">
                 <template #body="{ data }">
-                    <Tag :value="data.category" :severity="categorySeverity(data.category)" variant="outlined" />
+                    <Tag
+                        v-if="data.action"
+                        :value="data.action.replace(/_/g, ' ')"
+                        :severity="actionSeverity(data.action)"
+                        class="text-xs"
+                    />
+                    <span v-else class="text-zinc-400 text-xs">—</span>
                 </template>
             </Column>
 
-            <Column field="context" header="Context" style="width: 10rem">
+            <Column field="actorUsername" header="Actor" style="width: 9rem">
                 <template #body="{ data }">
-                    <span class="text-xs text-zinc-400">{{ data.context ?? '-' }}</span>
+                    <span v-if="data.actorUsername" class="flex items-center gap-1 text-xs">
+                        <i
+                            :class="data.actorUsername === 'system' ? 'pi pi-cog text-zinc-400' : 'pi pi-user text-zinc-500'"
+                        />
+                        {{ data.actorUsername }}
+                    </span>
+                    <span v-else class="text-zinc-400 text-xs">—</span>
+                </template>
+            </Column>
+
+            <Column field="category" header="Category" style="width: 7rem">
+                <template #body="{ data }">
+                    <Tag :value="data.category" :severity="categorySeverity(data.category)" variant="outlined" />
                 </template>
             </Column>
 
@@ -210,7 +295,7 @@ onMounted(fetchLogs);
                         class="font-mono text-xs p-0"
                         @click="goToInstance(data.processInstanceId)"
                     />
-                    <span v-else class="text-zinc-400 text-xs">-</span>
+                    <span v-else class="text-zinc-400 text-xs">—</span>
                 </template>
             </Column>
 

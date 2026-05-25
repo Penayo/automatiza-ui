@@ -17,7 +17,7 @@ const loading = ref(false);
 
 const searchTask = async () => {
     loading.value = true;
-    tasks.value = await $api.tasks.getAvailableTasks(search.value);
+    tasks.value = await $api.tasks.getUserTasks();
     loading.value = false;
 };
 

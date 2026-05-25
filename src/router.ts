@@ -62,9 +62,7 @@ const routes = [
         path: 'tasks',
         name: 'TasksIndex',
         component: () => import('./pages/admin/tasks/Index.vue'),
-        children: [
-          { path: ':id/complete', name: 'TaskComplete', component: () => import('./pages/admin/tasks/Complete.vue') },
-        ],
+        children: [],
       },
 
       // Design
@@ -121,8 +119,25 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authService = new AuthService();
   const accessInfo = authService.getAccessInfo();
-  const requiresPermission = to.meta.requiresPermission;
 
+  // ── Layer 1: Admin route guard ──────────────────────────────────────────────
+  // Any route under /admin requires the ADMIN role.
+  // Non-admin authenticated users are redirected to their task list.
+  if (to.path.startsWith('/admin')) {
+    const user = accessInfo?.user;
+    if (!user) {
+      next('/login');
+      return;
+    }
+    const isAdmin = Array.isArray(user.roles) && user.roles.includes('ADMIN');
+    if (!isAdmin) {
+      next('/my-tasks');
+      return;
+    }
+  }
+
+  // ── Layer 2: Fine-grained permission guard ──────────────────────────────────
+  const requiresPermission = to.meta.requiresPermission;
   if (requiresPermission) {
     const user = accessInfo?.user;
     if (!user) {

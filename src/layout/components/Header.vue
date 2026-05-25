@@ -1,10 +1,19 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useTheme } from '@/composables/useTheme';
+import { AuthService } from '@services/AuthService';
 
 defineProps({ sidebarOpen: Boolean })
 defineEmits(['toggle-sidebar'])
 
 const { isDark, toggle } = useTheme();
+
+const authService = new AuthService();
+const accessInfo  = authService.getAccessInfo();
+
+const displayName = computed(() => accessInfo?.user?.username ?? 'User');
+const isAdmin     = computed(() => Array.isArray(accessInfo?.user?.roles) && accessInfo!.user.roles.includes('ADMIN'));
+const roleBadge   = computed(() => isAdmin.value ? 'ADMIN' : 'USER');
 </script>
 
 <template>
@@ -45,13 +54,28 @@ const { isDark, toggle } = useTheme();
 				<i :class="isDark ? 'pi pi-sun text-lg' : 'pi pi-moon text-lg'" />
 			</button>
 
-			<!-- User info -->
-			<span class="font-semibold hidden sm:block" style="color: var(--layout-header-text);">John Doe</span>
-			<img
-				src="https://randomuser.me/api/portraits/men/32.jpg"
-				alt="Avatar"
-				class="w-9 h-9 rounded-full border-2 border-gray-300 dark:border-gray-600"
-			/>
+			<!-- Role badge -->
+			<span
+				class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-bold tracking-wide"
+				:class="isAdmin
+					? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+					: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'"
+			>
+				{{ roleBadge }}
+			</span>
+
+			<!-- Username -->
+			<span class="font-semibold hidden sm:block" style="color: var(--layout-header-text);">
+				{{ displayName }}
+			</span>
+
+			<!-- Avatar placeholder -->
+			<div
+				class="w-9 h-9 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-sm font-bold"
+				style="background-color: var(--layout-header-bg); color: var(--layout-header-text);"
+			>
+				{{ displayName.charAt(0).toUpperCase() }}
+			</div>
 		</div>
 	</header>
 </template>

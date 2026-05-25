@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
-import '../../forms.scss';
+import '@/forms.scss';
 
 import { onMounted, ref } from 'vue';
 import { Button, Dialog, useToast } from 'primevue';

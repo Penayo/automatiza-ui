@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Button, Dialog, Calendar } from 'primevue';
+import dayjs from 'dayjs';
+import localizedFormat from 'dayjs/plugin/localizedFormat'
+dayjs.extend(localizedFormat);
 
 const props = defineProps({
     label: String,
@@ -28,13 +31,13 @@ function returnDate() {
             <Calendar showIcon class="w-full" v-model="date" />
             <template #footer>
                 <Button label='Cancel' severity="secondary" size="small" @click="visible = false"></Button>
-                <Button label='Guardar' @click="returnDate" size="small" severity="success"></Button>
+                <Button label='Save' @click="returnDate" size="small" severity="success"></Button>
             </template>
         </Dialog>
-        <div class="flex gap-2">
-            <span class="mt-2">{{ props.label }}: </span>
-            <Button v-if="props.enabled" size="small" icon="pi pi-calendar-plus" text :label="props.value ? 'Modificar' : 'Agregar'" outlined @click="visible = true" />
+        <div class="flex flex-row gap-2">
+            <span class="mt-1">{{ props.label }}: </span>
+            <div v-if="props.value" class="font-thin mt-1">{{ dayjs(props.value).format('LL') }}</div>
+            <Button v-if="props.enabled" size="small" icon="pi pi-calendar-plus" text :label="props.value ? 'Change' : 'Add'" outlined @click="visible = true" />
         </div>
-        <div v-if="props.value" class="text-normal">{{ props.value }}</div>
     </div>
 </template>

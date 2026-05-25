@@ -4,9 +4,9 @@ import { Splitter, SplitterPanel } from 'primevue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
-import TaskDetails from '@pages/frontoffice/my-tasks/components/TaskDetails.vue';
+import TaskDetails from '@pages/admin/tasks/components/TaskDetails.vue';
 import type { Task } from '@services/TasksService';
-import TaskList from '@pages/frontoffice/my-tasks/components/TaskList.vue';
+import TaskList from '@pages/admin/tasks/components/TaskList.vue';
 
 const taskListRef = ref();
 const selected = ref<Task | null>(null);

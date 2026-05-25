@@ -93,6 +93,12 @@ html {
     --vf-shadow-dropdown: 0px 0px 0px 0px rgba(0,0,0,0);
 }
 
+.p-splitter {
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    height: 100%;
+}
+
 .p-splitter-gutter-handle {
     width: 1px !important;
 }

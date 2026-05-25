@@ -1,43 +1,73 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Button, Tag, useToast } from 'primevue';
+import { Tag, useToast } from 'primevue';
 import TaskSchedule from '@pages/frontoffice/my-tasks/components/TaskSchedule.vue';
 import type { Task } from "@services/TasksService"
 import { $api } from '@services/api';
 
-const props = defineProps<{
-    task: Task | null,
-}>();
-const emit = defineEmits(['refresh']);
-
+const props = defineProps<{ task: Task | null }>();
+const emit  = defineEmits(['refresh']);
 const toast = useToast();
 
 async function updateTask(key: string, value: string) {
-    // Implement API call to update task
     try {
-        await $api.tasks.put(props.task?.id as string, {
-            [key]: value
-        });
-        toast.add({ severity: 'success', summary: 'Tarea actualizada', detail: `${key} ha sido actualizada correctamente.`, life: 3000 });
+        await $api.tasks.put(props.task?.id as string, { [key]: value });
+        toast.add({ severity: 'success', summary: 'Task updated', detail: `${key} updated successfully.`, life: 3000 });
         emit('refresh');
-    } catch (error) {
-        console.error('Error updating task:', error);
-        toast.add({ severity: 'error', summary: 'Error', detail: `No se pudo actualizar ${key}.`, life: 3000 });
+    } catch {
+        toast.add({ severity: 'error', summary: 'Error', detail: `Could not update ${key}.`, life: 3000 });
     }
 }
 </script>
 
 <template>
-    <div class="p-4">
-        <div class="font-bold m-0 mb-3">Estado: <Tag :severity="props.task?.status === 'COMPLETED' ? 'success' : 'warning'">{{ props.task?.status }}</Tag></div>
-        <div class="font-bold m-0 mb-3">{{ props.task?.status === 'COMPLETED' ? 'Completado Por:' : 'Tomado Por:' }} <div class="text-normal">{{ props.task?.claimedBy }}</div></div>
-        <div class="font-bold m-0 mb-3">Fecha de Creación: <div class="text-normal">{{ props.task?.createdAt }}</div></div>
-        <div class="font-bold m-0 mb-3">Completado en fecha: <div class="text-normal">{{ props.task?.completedAt }}</div></div>
-        <TaskSchedule label="Fecha de Vencimiento" :value="props.task?.dueDate" @date-set="d => updateTask('dueDate', d?.toISOString())" :enabled="props.task?.status !== 'COMPLETED'" />
-        <TaskSchedule label="Fecha de Seguimiento" :value="props.task?.followUpDate" @date-set="d => updateTask('followUpDate', d?.toISOString())" :enabled="props.task?.status !== 'COMPLETED'" />
-        <div class="font-bold m-0 mb-3">Grupos Candidatos: <div class="text-normal">{{ props.task?.candidateGroups }}</div></div>
-        <div class="font-bold m-0 mb-3">Usuarios Candidatos: <div class="text-normal">{{ props.task?.candidateUsers }}</div></div>
-        <h3 class="font-bold m-0 mb-3">Documentation</h3>
-        <div>{{ props.task?.documentation }}</div>
+    <div class="p-4 space-y-3 text-sm">
+        <div class="flex items-center gap-2">
+            <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">Status</span>
+            <Tag :severity="props.task?.status === 'COMPLETED' ? 'success' : 'warning'">{{ props.task?.status }}</Tag>
+        </div>
+
+        <div class="flex items-start gap-2">
+            <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">
+                {{ props.task?.status === 'COMPLETED' ? 'Completed by' : 'Claimed by' }}
+            </span>
+            <span>{{ props.task?.claimedBy ?? '—' }}</span>
+        </div>
+
+        <div class="flex items-start gap-2">
+            <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">Created</span>
+            <span>{{ props.task?.createdAt ? new Date(props.task.createdAt).toLocaleString() : '—' }}</span>
+        </div>
+
+        <div class="flex items-start gap-2">
+            <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">Completed at</span>
+            <span>{{ props.task?.completedAt ? new Date(props.task.completedAt).toLocaleString() : '—' }}</span>
+        </div>
+
+        <TaskSchedule
+            label="Due date"
+            :value="props.task?.dueDate"
+            @date-set="d => updateTask('dueDate', d?.toISOString())"
+            :enabled="props.task?.status !== 'COMPLETED'" />
+
+        <TaskSchedule
+            label="Follow-up date"
+            :value="props.task?.followUpDate"
+            @date-set="d => updateTask('followUpDate', d?.toISOString())"
+            :enabled="props.task?.status !== 'COMPLETED'" />
+
+        <div class="flex items-start gap-2">
+            <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">Candidate groups</span>
+            <span>{{ props.task?.candidateGroups?.join(', ') || '—' }}</span>
+        </div>
+
+        <div class="flex items-start gap-2">
+            <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">Candidate users</span>
+            <span>{{ props.task?.candidateUsers?.join(', ') || '—' }}</span>
+        </div>
+
+        <div v-if="props.task?.documentation">
+            <p class="font-semibold text-zinc-600 dark:text-zinc-400 mb-1">Documentation</p>
+            <p class="text-zinc-700 dark:text-zinc-300">{{ props.task.documentation }}</p>
+        </div>
     </div>
 </template>

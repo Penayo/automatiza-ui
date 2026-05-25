@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form } from "@bpmn-io/form-js";
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
-import '../../../../forms.scss';
+import '@/forms.scss';
 
 import { ref, onMounted, watch } from 'vue';
 import { useTheme } from '@/composables/useTheme';

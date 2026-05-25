@@ -5,6 +5,7 @@ import TaskForm from '@pages/frontoffice/my-tasks/components/TaskForm.vue';
 import type { Task } from "@services/TasksService"
 import { $api } from '@services/api';
 import { onApprove } from '@/utils/common';
+import TaskSchedule from './TaskSchedule.vue';
 
 const toast = useToast();
 const confirm= useConfirm();
@@ -40,6 +41,20 @@ async function unclaimTask() {
     onApprove(confirm, 'Esta seguro de liberar la tarea?', onConfirm)
 }
 
+async function updateTask(key: string, value: string) {
+    // Implement API call to update task
+    try {
+        await $api.tasks.put(props.currentTask?.id as string, {
+            [key]: value
+        });
+        toast.add({ severity: 'success', summary: 'Tarea actualizada', detail: `${key} ha sido actualizada correctamente.`, life: 3000 });
+        emit('refresh');
+    } catch (error) {
+        console.error('Error updating task:', error);
+        toast.add({ severity: 'error', summary: 'Error', detail: `No se pudo actualizar ${key}.`, life: 3000 });
+    }
+}
+
 </script>
 
 <template>
@@ -62,19 +77,29 @@ async function unclaimTask() {
 
             <h3 class="text-sm font-bold">{{ props.currentTask.processInfo.name }}</h3>            
             <div class="flex flex-row justify-between">
-                <div class=""></div>
+                <div class="flex flex-row gap-6 mt-4">
+                    <TaskSchedule
+                        label="Duedate"
+                        :value="props.currentTask?.dueDate" @date-set="d => updateTask('dueDate', d?.toISOString())"
+                        :enabled="props.currentTask?.status !== 'COMPLETED'" />
+
+                    <TaskSchedule
+                        label="Follow up"
+                        :value="props.currentTask?.followUpDate" @date-set="d => updateTask('followUpDate', d?.toISOString())"
+                        :enabled="props.currentTask?.status !== 'COMPLETED'" />                        
+                </div>
                 <div class="">
-                    <Button v-if="!props.currentTask?.assignee" rounded text @click="claimTask">Asignarme</Button>
-                    <Button v-else rounded text @click="unclaimTask">Liberar</Button>
+                    <Button v-if="!props.currentTask?.assignee" size="small" @click="claimTask">Claim</Button>
+                    <Button v-else size="small" @click="unclaimTask">Unclaim</Button>
                 </div>
             </div>
         </div>
 
         <Tabs value="0">
             <TabList>
-                <Tab value="0">Formulario</Tab>
-                <Tab value="1">Datos de la tarea</Tab>
-                <Tab value="2">Historial de cambios</Tab>
+                <Tab value="0">Form</Tab>
+                <Tab value="1">Task Info</Tab>
+                <Tab value="2">Changes History</Tab>
             </TabList>
             <TabPanels>
                 <TabPanel value="0">

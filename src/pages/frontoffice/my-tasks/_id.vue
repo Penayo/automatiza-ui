@@ -7,10 +7,9 @@ import type { Task } from '@services/TasksService';
 import { $api } from '@services/api';
 import { parseApiError } from '@/utils/error';
 
-const route = useRoute();
-const toast = useToast();
-
-const task = ref<Task | null>(null);
+const route   = useRoute();
+const toast   = useToast();
+const task    = ref<Task | null>(null);
 const loading = ref(false);
 
 const fetchTask = async () => {
@@ -38,13 +37,12 @@ onMounted(fetchTask);
 
             <div v-else-if="!task" class="flex flex-col items-center justify-center py-20 text-zinc-500">
                 <i class="pi pi-exclamation-circle text-4xl mb-3" />
-                <p>Tarea no encontrada.</p>
+                <p>Task not found.</p>
             </div>
 
             <div v-else>
                 <h1 class="text-2xl font-semibold text-white">{{ task.name }}</h1>
                 <p class="text-sm text-zinc-400 mt-1 mb-8">{{ task.processInfo?.name }}</p>
-
                 <TaskForm :task="task" @refresh="fetchTask" />
             </div>
 
