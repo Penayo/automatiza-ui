@@ -72,7 +72,8 @@ const routes = [
       { path: 'formbuilder', name: 'FormsBuilder', component: () => import('./pages/admin/forms/Index.vue') },
 
       // System
-      { path: 'audit', name: 'AuditLogs', component: () => import('./pages/admin/audit/Index.vue') },
+      { path: 'audit',    name: 'AuditLogs', component: () => import('./pages/admin/audit/Index.vue') },
+      { path: 'messages', name: 'AdminMessages', component: () => import('./pages/admin/messages/Index.vue') },
 
       // Users
       { path: 'users', name: 'UsersIndex', component: () => import('./pages/admin/users/Index.vue'), meta: { requiresPermission: 'manage_users' } },
