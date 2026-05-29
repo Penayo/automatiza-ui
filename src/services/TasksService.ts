@@ -2,6 +2,11 @@ import type { APIData } from "@services/BaseService";
 import type { IForm } from "@services/FormsService";
 import { ModelApiService } from "@services/ModelAPI";
 
+export interface TaskFormResponse {
+    formSchema: IForm | null;
+    formData:   Record<string, any>;
+}
+
 export interface TaskVariable {
     key: string;
     value: any;
@@ -33,6 +38,11 @@ export interface Task extends APIData {
     claimedBy?: string;
     claimedAt?: Date;
     documentation?: string;
+    shareLink?: {
+        token:      string;
+        usedAt?:    string;
+        expiresAt?: string;
+    };
 }
 
 export interface CompleteTaskDto {
@@ -105,11 +115,10 @@ export class TasksService extends ModelApiService {
         }
     }
 
-    async getTaskForm(taskId: string): Promise<IForm> {
+    async getTaskForm(taskId: string): Promise<TaskFormResponse> {
         const url = `${taskId}/form`;
         try {
-            const response = await this.get<IForm>(url);
-            return response as IForm;
+            return await this.get<TaskFormResponse>(url) as TaskFormResponse;
         } catch (err) {
             this.handleErrors(err);
             throw err;
@@ -133,6 +142,51 @@ export class TasksService extends ModelApiService {
         try {
             const response = await this.get<T>(url, { params: { tsearch: search } });
             return response as T[];
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
+    }
+
+    // ── Task recovery (admin) ────────────────────────────────────────────────
+
+    /**
+     * Merge key/value pairs into the task variables AND the owning process
+     * instance variables. Returns the updated maps for both.
+     */
+    async updateVariables(
+        taskId: string,
+        variables: Record<string, any>,
+    ): Promise<{ taskVariables: Record<string, any>; processVariables: Record<string, any> }> {
+        try {
+            const response = await this.put(taskId + '/variables', { variables });
+            return (response as any)?.data ?? response as any;
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
+    }
+
+    /**
+     * Re-execute a FAILED automated task.
+     * Resets status and reruns the execution strategy server-side.
+     */
+    async deleteTask(taskId: string): Promise<{ status: string }> {
+        try {
+            await this.delete(taskId);
+            return { status: 'deleted' };
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
+    }
+
+    async retryTask(taskId: string): Promise<{ status: string; message: string }> {
+        try {
+            const response = await this.post<{ status: string; message: string }>(
+                `${taskId}/retry`,
+            );
+            return response as { status: string; message: string };
         } catch (err) {
             this.handleErrors(err);
             throw err;

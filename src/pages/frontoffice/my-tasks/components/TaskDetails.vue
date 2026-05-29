@@ -13,6 +13,22 @@ const confirm = useConfirm();
 const props = defineProps<{ currentTask: Task | null }>();
 const emit  = defineEmits(['refresh']);
 
+function getShareLink(task: Task | null): string | null {
+    if (!task?.shareLink?.token || task.shareLink?.usedAt) return null;
+    return `${window.location.origin}/task-form/${task.shareLink.token}`;
+}
+
+async function copyShareLink(task: Task) {
+    const link = getShareLink(task);
+    if (!link) return;
+    try {
+        await navigator.clipboard.writeText(link);
+        toast.add({ severity: 'success', summary: 'Copied', detail: 'Share link copied to clipboard.', life: 3000 });
+    } catch {
+        toast.add({ severity: 'info', summary: 'Share link', detail: link, life: 8000 });
+    }
+}
+
 async function claimTask() {
     onApprove(confirm, 'Are you sure you want to claim this task?', async () => {
         try {
@@ -86,7 +102,24 @@ async function updateTask(key: string, value: string) {
                         :enabled="props.currentTask?.status !== 'COMPLETED'" />
                 </div>
 
-                <div class="shrink-0">
+                <div class="shrink-0 flex items-center gap-2">
+                    <!-- Share link: shown when task has no candidates and token not yet used -->
+                    <Button
+                        v-if="getShareLink(props.currentTask)"
+                        v-tooltip.left="'Copy external form link'"
+                        size="small"
+                        severity="secondary"
+                        icon="pi pi-share-alt"
+                        @click="copyShareLink(props.currentTask)"
+                    />
+                    <!-- Token already used badge -->
+                    <span
+                        v-else-if="props.currentTask?.shareLink?.token && props.currentTask?.shareLink?.usedAt"
+                        class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400"
+                    >
+                        <i class="pi pi-check text-[10px]" /> Submitted
+                    </span>
+
                     <Button v-if="!props.currentTask?.assignee" size="small" @click="claimTask">Claim</Button>
                     <Button v-else size="small" severity="secondary" @click="unclaimTask">Release</Button>
                 </div>

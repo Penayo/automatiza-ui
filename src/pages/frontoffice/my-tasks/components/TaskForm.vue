@@ -15,6 +15,7 @@ import type { ProcessVariables } from "@services/ProcessesService";
 import { onApprove } from "@/utils/common";
 import { parseApiError } from "@/utils/error";
 import type { IAccess } from "@services/AuthService.ts";
+import { resolveFormFiles } from '@/utils/form-files';
 
 const toast    = useToast();
 const confirm  = useConfirm();
@@ -23,6 +24,7 @@ const props = defineProps<{ task: Task | null }>();
 const emit  = defineEmits(['refresh']);
 
 const formSchema  = ref<IForm | null>(null);
+const formData    = ref<Record<string, any>>({});
 const formRef     = ref(null);
 const formViewer  = ref<Form>();
 const loading     = ref<boolean>(false);
@@ -59,8 +61,9 @@ function submitForm() {
 async function getTaskForm() {
     try {
         loading.value = true;
-        const data = await $api.tasks.getTaskForm(props.task?.id as string);
-        formSchema.value = data;
+        const { formSchema: schema, formData: data } = await $api.tasks.getTaskForm(props.task?.id as string);
+        formSchema.value = schema;
+        formData.value   = data ?? {};
     } catch (error) {
         const errorInfo = parseApiError(error);
         toast.add({ ...errorInfo, life: 3000 });
@@ -94,14 +97,32 @@ watch(formSchema, () => {
     const form = new Form({ container: formRef.value });
     formViewer.value = form;
 
-    form.importSchema(formSchema.value, formSchema.value.metadata).then(() => {
+    form.importSchema(formSchema.value, formData.value).then(() => {
         if (!isTaskAssignedToUser()) {
             formViewer.value?.setProperty('readOnly', true);
         }
     });
 
-    form.on('submit', (event: { data: ProcessVariables; errors: Error[] }) => {
-        completeTask(event.data);
+    form.on('submit', async (event: { data: ProcessVariables; errors: Error[] }) => {
+        console.log('[TaskForm] form submitted, raw event.data:', event.data);
+        try {
+            const prefix = props.task?.processInstanceId;
+            const resolvedData = await resolveFormFiles(
+                event.data as Record<string, any>,
+                $api.files,
+                form,
+                prefix,
+            );
+            completeTask(resolvedData);
+        } catch (err: any) {
+            console.error('[TaskForm] file upload failed, aborting submit:', err);
+            toast.add({
+                severity: 'error',
+                summary:  'File upload failed',
+                detail:   err?.response?.data?.message ?? err?.message ?? 'Could not upload file. Check the console for details.',
+                life:     8000,
+            });
+        }
     });
 });
 

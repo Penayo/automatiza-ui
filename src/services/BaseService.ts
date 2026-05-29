@@ -81,7 +81,7 @@ export class BaseService {
     if (!id) throw Error("Id was not provided");
 
     try {
-      await axios.delete(this.getUrl(id));
+      await axios.delete(this.getUrl(id), { headers: { ...this.getAuthorizationHeader() } });
       return true;
     } catch (err) {
       this.handleErrors(err);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Accordion, AccordionContent, AccordionHeader, AccordionPanel, Panel } from 'primevue';
+import { Accordion, AccordionContent, AccordionHeader, AccordionPanel, Badge, Button, useToast, useConfirm } from 'primevue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
@@ -7,60 +7,166 @@ import { $api } from '@services/api';
 import type { Task } from '@services/TasksService';
 import JsonEditor from 'vue3-ts-jsoneditor';
 import { ref, watch } from 'vue';
+import EditVariablesDialog from '@pages/admin/tasks/components/EditVariablesDialog.vue';
 
-const props = defineProps<{
-    processInstanceId?: string;
-}>();
+const props = defineProps<{ processInstanceId?: string }>();
 
-const tasks = ref<Task[]>([]);
-const selectedTask = ref<Task | null>(null);
-const loading = ref(false);
+const toast   = useToast();
+const confirm = useConfirm();
+const tasks      = ref<Task[]>([]);
+const loading    = ref(false);
+const retryingId = ref<string | null>(null);
 
-const getTasks = async () => {
-    const selectedCopy = selectedTask.value
+// ── Retry ─────────────────────────────────────────────────────────────────────
 
-    loading.value = true;
-    tasks.value = await $api.processes.getInstanceTasks(props.processInstanceId as string);
-    loading.value = false;
-    
-    if (selectedCopy) {
-        setTimeout(() => {
-            selectedTask.value = tasks.value.find(task => task.id == selectedCopy?.id) as Task;
-        }, 700)
+async function retryTask(task: Task, event: MouseEvent) {
+    event.stopPropagation();
+    retryingId.value = task.id;
+    try {
+        await $api.tasks.retryTask(task.id);
+        toast.add({ severity: 'success', summary: 'Retry triggered', detail: `"${task.name}" is being re-executed.`, life: 4000 });
+        setTimeout(loadTasks, 1500);
+    } catch (err: any) {
+        toast.add({ severity: 'error', summary: 'Retry failed', detail: err?.response?.data?.message ?? 'Could not retry task.', life: 4000 });
+    } finally {
+        retryingId.value = null;
     }
+}
+
+// ── Edit Variables ────────────────────────────────────────────────────────────
+
+const variablesDialogVisible = ref(false);
+const variablesTask          = ref<Task | null>(null);
+
+function openVariables(task: Task, event: MouseEvent) {
+    event.stopPropagation();
+    variablesTask.value          = task;
+    variablesDialogVisible.value = true;
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+
+function confirmDelete(task: Task, event: MouseEvent) {
+    event.stopPropagation();
+    confirm.require({
+        message: `Delete task "${task.name}"? This cannot be undone and will NOT advance the process.`,
+        header: 'Delete Task',
+        icon: 'pi pi-exclamation-triangle',
+        rejectLabel: 'Cancel',
+        acceptLabel: 'Delete',
+        acceptClass: 'p-button-danger',
+        accept: async () => {
+            try {
+                await $api.tasks.deleteTask(task.id);
+                toast.add({ severity: 'success', summary: 'Task deleted', life: 3000 });
+                await loadTasks();
+            } catch {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Could not delete task.', life: 4000 });
+            }
+        },
+    });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const statusSeverity: Record<string, 'success' | 'danger' | 'warn' | 'info' | 'secondary'> = {
+    COMPLETED: 'success',
+    FAILED:    'danger',
+    WAITING:   'warn',
+    SCHEDULED: 'warn',
+    CREATED:   'info',
+    RUNNING:   'info',
 };
 
-watch(() => props.processInstanceId, async (newVal) => {
-    if (newVal) {
-        await getTasks();
-    }
-}, { immediate: true });
+function taskIcon(type: string) {
+    if (type === 'bpmn:UserTask')         return 'pi pi-user';
+    if (type === 'bpmn:ServiceTask')      return 'pi pi-cog';
+    if (type === 'bpmn:ScriptTask')       return 'pi pi-code';
+    if (type === 'bpmn:BusinessRuleTask') return 'pi pi-table';
+    return 'pi pi-bolt';
+}
 
+async function loadTasks() {
+    if (!props.processInstanceId) return;
+    loading.value = true;
+    try {
+        tasks.value = await $api.processes.getInstanceTasks(props.processInstanceId) as Task[];
+    } finally {
+        loading.value = false;
+    }
+}
+
+watch(() => props.processInstanceId, loadTasks, { immediate: true });
+
+defineExpose({ reload: loadTasks });
 </script>
 
 <template>
     <Accordion class="-mx-3" multiple>
-        <AccordionPanel v-for="task in tasks" :value="task.id">
+        <AccordionPanel v-for="task in tasks" :key="task.id" :value="task.id">
             <AccordionHeader>
-                <div class="flex items-center gap-2">
-                    <i v-if="task.type == 'bpmn:UserTask'" class="pi pi-users pi-briefcase"></i>
-                    <i v-else class="pi pi-cog"></i>
-                    <span class="font-bold">{{ task.name }}</span>
+                <div class="flex items-center gap-2 w-full pr-2">
+                    <i :class="[taskIcon(task.type), 'text-surface-400 shrink-0']" />
+                    <span class="font-bold">{{ task.name ?? task.taskDefinitionId }}</span>
+                    <div class="ml-auto flex items-center gap-2 shrink-0">
+                        <Badge
+                            :value="task.status"
+                            :severity="statusSeverity[task.status] ?? 'secondary'"
+                            class="font-mono text-xs"
+                        />
+                        <!-- Retry — only on FAILED tasks -->
+                        <Button
+                            v-if="task.status === 'FAILED'"
+                            icon="pi pi-refresh"
+                            size="small"
+                            severity="warn"
+                            text
+                            label="Retry"
+                            v-tooltip.top="'Retry task'"
+                            :loading="retryingId === task.id"
+                            @click="retryTask(task, $event)"
+                        />
+                        <!-- Edit variables -->
+                        <Button
+                            icon="pi pi-sliders-h"
+                            size="small"
+                            severity="secondary"
+                            text
+                            rounded
+                            v-tooltip.top="'Edit variables'"
+                            @click="openVariables(task, $event)"
+                        />
+                        <!-- Delete -->
+                        <Button
+                            icon="pi pi-trash"
+                            size="small"
+                            severity="danger"
+                            text
+                            rounded
+                            v-tooltip.top="'Delete task'"
+                            @click="confirmDelete(task, $event)"
+                        />
+                    </div>
                 </div>
             </AccordionHeader>
             <AccordionContent>
-                <p class="m-0">
-                    <json-editor
-                        :modelValue="task"
-                        :mainMenuBar="false"
-                        :navigationBar="false"
-                        :statusBar="false"
-                        :darkTheme="true"
-                        :readOnly="true"
-                        height="250"
-                    />
-                </p>
+                <JsonEditor
+                    :modelValue="task"
+                    :mainMenuBar="false"
+                    :navigationBar="false"
+                    :statusBar="false"
+                    :darkTheme="true"
+                    :readOnly="true"
+                    height="300"
+                />
             </AccordionContent>
         </AccordionPanel>
     </Accordion>
+
+    <!-- Variables dialog -->
+    <EditVariablesDialog
+        v-model:visible="variablesDialogVisible"
+        :task="variablesTask"
+        @saved="loadTasks"
+    />
 </template>

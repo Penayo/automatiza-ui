@@ -1,0 +1,161 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   DMN Modeler theme
+   Default = light. Dark overrides scoped to .dark ancestor (Tailwind).
+───────────────────────────────────────────────────────────────────────── */
+
+/* ── Container ──────────────────────────────────────────────────────────── */
+.dmn-modeler-container {
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  background: #fafafa;   /* zinc-50 */
+  color: #18181b;        /* zinc-900 */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DARK MODE
+   Override the dmn-js shared CSS-variable palette so ALL internal components
+   (decision table, DRD, literal expression, selects, inputs) adapt at once.
+══════════════════════════════════════════════════════════════════════════ */
+.dark .dmn-modeler-container {
+  background: #18181b;
+  color: #d4d4d8;
+
+  /* ── Base palette tokens ──────────────────────────────────────────────── */
+  --color-white:               #18181b;   /* zinc-900  — replaces "white" backgrounds */
+  --color-black:               #f4f4f5;   /* zinc-100  — replaces "black" text */
+  --color-black-opacity-10:    rgba(255 255 255 / 8%);
+  --color-black-opacity-20:    rgba(255 255 255 / 12%);
+
+  /* Grey scale (15 = darkest → 97 = lightest) inverted for dark backgrounds */
+  --color-grey-225-10-15:      #d4d4d8;   /* zinc-300  — main text / dark borders  */
+  --color-grey-225-10-35:      #a1a1aa;   /* zinc-400  — secondary text            */
+  --color-grey-225-10-55:      #71717a;   /* zinc-500  — muted / drag handles      */
+  --color-grey-225-10-75:      #3f3f46;   /* zinc-700  — borders / separators      */
+  --color-grey-225-10-80:      #3f3f46;   /* zinc-700                              */
+  --color-grey-225-10-85:      #27272a;   /* zinc-800  — subtle backgrounds        */
+  --color-grey-225-10-90:      #27272a;   /* zinc-800                              */
+  --color-grey-225-10-95:      #1c1c1f;   /* between zinc-800 and 900              */
+  --color-grey-225-10-97:      #1c1c1f;   /* zinc-900ish — alt row background      */
+
+  /* Keep blues readable on dark bg — only brighten the focus shadow */
+  --color-blue-205-100-80:     hsl(205 100% 65%);
+  --color-blue-205-100-95:     hsl(205 100% 20%);
+
+  /* Derived tokens that reference color-grey directly — explicit override
+     so we don't rely solely on cascade order                             */
+  --input-border-color:              #3f3f46;
+  --input-color:                     #d4d4d8;
+  --select-options-background-color: #27272a;
+  --select-options-border-color:     #3f3f46;
+  --select-options-color:            #d4d4d8;
+  --separator-color:                 #3f3f46;
+}
+
+/* ── DRD: canvas background ─────────────────────────────────────────────── */
+.dark .dmn-modeler-container .djs-container > svg {
+  background: #18181b;
+}
+
+/* ── DRD: element fills / strokes ──────────────────────────────────────── */
+.dark .dmn-modeler-container .djs-element .djs-visual rect {
+  fill:   #3f3f46 !important;   /* zinc-700 */
+  stroke: #52525b !important;   /* zinc-600 */
+}
+.dark .dmn-modeler-container .djs-element .djs-visual circle {
+  fill:   #27272a !important;
+  stroke: #3f3f46 !important;
+}
+.dark .dmn-modeler-container .djs-element .djs-visual polygon {
+  fill:   none    !important;
+  stroke: #a1a1aa !important;
+}
+.dark .dmn-modeler-container .djs-element .djs-visual path {
+  stroke: #d1d5db !important;
+}
+
+/* ── DRD: labels ────────────────────────────────────────────────────────── */
+.dark .dmn-modeler-container .djs-label {
+  fill: #c2c9d6 !important;
+}
+
+/* ── DRD: palette ───────────────────────────────────────────────────────── */
+.dark .dmn-modeler-container .djs-palette {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+}
+.dark .dmn-modeler-container .djs-palette path,
+.dark .dmn-modeler-container .djs-palette .entry {
+  stroke: #d1d5db !important;
+  color:  #d1d5db;
+}
+
+/* ── DRD: context pad ───────────────────────────────────────────────────── */
+.dark .dmn-modeler-container .djs-context-pad .entry {
+  background-color: #27272a;
+  border-color:     #3f3f46;
+}
+.dark .dmn-modeler-container .djs-context-pad .entry:hover {
+  background-color: #3f3f46;
+}
+
+/* ── Decision table: top-level bg ───────────────────────────────────────── */
+.dark .dmn-modeler-container .dmn-decision-table-container {
+  background: #18181b;
+  color: #d4d4d8;
+}
+
+/* ── Decision table: "view DRD" button ──────────────────────────────────── */
+.dark .dmn-modeler-container .view-drd-button {
+  background: #27272a;
+  border-color: #3f3f46;
+  color: #d4d4d8;
+}
+.dark .dmn-modeler-container .view-drd-button:hover {
+  background: #3f3f46;
+}
+
+/* ── Decision table: simple-mode toggle ─────────────────────────────────── */
+.dark .dmn-modeler-container .simple-mode-button {
+  background: #27272a;
+  border-color: #3f3f46;
+  color: #a1a1aa;
+}
+
+/* ── Decision table: hit-policy cell ────────────────────────────────────── */
+.dark .dmn-modeler-container .hit-policy {
+  background: #27272a;
+  color: #a1a1aa;
+}
+
+/* ── Decision table: name / expression-language area ────────────────────── */
+.dark .dmn-modeler-container .dmn-definitions {
+  background: #18181b;
+  border-color: #3f3f46;
+  color: #d4d4d8;
+}
+
+/* ── Decision table: inputs ─────────────────────────────────────────────── */
+.dark .dmn-modeler-container input,
+.dark .dmn-modeler-container textarea {
+  background: #27272a;
+  color: #d4d4d8;
+  border-color: #3f3f46;
+}
+.dark .dmn-modeler-container input::placeholder,
+.dark .dmn-modeler-container textarea::placeholder {
+  color: #71717a;
+}
+
+/* ── Scrollbar (Webkit) ─────────────────────────────────────────────────── */
+.dark .dmn-modeler-container ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.dark .dmn-modeler-container ::-webkit-scrollbar-track {
+  background: #18181b;
+}
+.dark .dmn-modeler-container ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}

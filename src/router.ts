@@ -7,8 +7,9 @@ import AdminLayout from '@layout/AdminLayout.vue';
 
 const routes = [
   // ─── No-layout routes ────────────────────────────────────────────────────
-  { path: '/login', name: 'Login', component: () => import('./pages/Login.vue') },
-  { path: '/unauthorized', name: 'Unauthorized', component: () => import('./pages/unauthorized.vue') },
+  { path: '/login',           name: 'Login',        component: () => import('./pages/Login.vue') },
+  { path: '/unauthorized',    name: 'Unauthorized',  component: () => import('./pages/unauthorized.vue') },
+  { path: '/task-form/:token', name: 'PublicTaskForm', component: () => import('./pages/TaskFormPage.vue') },
 
   // ─── Frontoffice (end-user clean URLs) ───────────────────────────────────
   {
@@ -68,8 +69,26 @@ const routes = [
       },
 
       // Design
-      { path: 'modeler', name: 'CamundaModeler', component: () => import('./pages/admin/modeler/Index.vue') },
-      { path: 'formbuilder', name: 'FormsBuilder', component: () => import('./pages/admin/forms/Index.vue') },
+      { path: 'modeler',     name: 'CamundaModeler', component: () => import('./pages/admin/modeler/Index.vue') },
+      { path: 'formbuilder', name: 'FormsBuilder',   component: () => import('./pages/admin/forms/Index.vue') },
+
+      // Decisions (DMN)
+      { path: 'decisions',        name: 'DecisionsList',   component: () => import('./pages/admin/decisions/Index.vue') },
+      { path: 'decisions/new',    name: 'DecisionNew',     component: () => import('./pages/admin/decisions/Modeler.vue') },
+      { path: 'decisions/:id',    name: 'DecisionEdit',    component: () => import('./pages/admin/decisions/Modeler.vue') },
+
+      // Form Variables
+      { path: 'form-variables',   name: 'FormVariablesIndex', component: () => import('./pages/admin/form-variables/Index.vue') },
+
+      // Reports
+      { path: 'reports',          name: 'ReportsList', component: () => import('./pages/admin/reports/Index.vue') },
+      { path: 'reports/new',      name: 'ReportNew',   component: () => import('./pages/admin/reports/Designer.vue') },
+      { path: 'reports/:id',      name: 'ReportEdit',  component: () => import('./pages/admin/reports/Designer.vue') },
+
+      // Email Templates
+      { path: 'email-templates',       name: 'EmailTemplatesList', component: () => import('./pages/admin/email-templates/Index.vue') },
+      { path: 'email-templates/new',   name: 'EmailTemplateNew',   component: () => import('./pages/admin/email-templates/Designer.vue') },
+      { path: 'email-templates/:id',   name: 'EmailTemplateEdit',  component: () => import('./pages/admin/email-templates/Designer.vue') },
 
       // System
       { path: 'audit',    name: 'AuditLogs', component: () => import('./pages/admin/audit/Index.vue') },

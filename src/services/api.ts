@@ -22,6 +22,11 @@ import { SecretsService } from "@services/SecretsService.ts";
 import { ApiKeyService } from "@services/ApiKeyService.ts";
 import { AuditService } from "@services/AuditService.ts";
 import { MessagesService } from "@services/MessagesService";
+import { DecisionsService } from "@services/DecisionsService";
+import { FormVariablesService } from "@services/FormVariablesService";
+import { ReportsService } from "@services/ReportsService";
+import { EmailTemplatesService } from "@services/EmailTemplatesService";
+import { FilesService } from "@services/FilesService";
 
 export type PageRequest = {
 	page?: number;
@@ -47,4 +52,9 @@ export const $api = {
 	apiKeys: new ApiKeyService(),
 	audit: new AuditService(),
 	messages: new MessagesService(),
+	decisions: new DecisionsService(),
+	formVariables: new FormVariablesService(),
+	reports: new ReportsService(),
+	emailTemplates: new EmailTemplatesService(),
+	files: new FilesService(),
 }

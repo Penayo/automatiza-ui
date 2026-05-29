@@ -11,6 +11,7 @@ import Aura from '@primeuix/themes/aura';
 import ToastService from 'primevue/toastservice';
 import ConfirmationService from 'primevue/confirmationservice';
 import DialogService from 'primevue/dialogservice';
+import Tooltip from 'primevue/tooltip';
 
 // Vue Form
 import Vueform from '@vueform/vueform'
@@ -68,6 +69,7 @@ app.use(PrimeVue, {
 		}
 	}
 });
+app.directive('tooltip', Tooltip)
 app.use(ToastService)
 app.use(ConfirmationService)
 app.use(DialogService)

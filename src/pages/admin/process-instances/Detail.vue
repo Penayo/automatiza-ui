@@ -16,6 +16,7 @@ const route = useRoute();
 const visible = ref(true);
 const instance = ref<ProcessInstance>();
 const loading = ref(false);
+const taskListRef = ref<InstanceType<typeof TaskList> | null>(null);
 
 const fetchInstance = async () => {
   loading.value = true;
@@ -92,7 +93,7 @@ onMounted(fetchInstance);
             </TabPanel>
 
             <TabPanel value="1">
-              <TaskList :processInstanceId="instance?.id" />
+              <TaskList ref="taskListRef" :processInstanceId="instance?.id" />
             </TabPanel>
 
             <TabPanel value="3">
@@ -100,13 +101,22 @@ onMounted(fetchInstance);
             </TabPanel>
 
             <TabPanel value="4">
-              <div v-if="instance?.exceptions?.length" class="col-12">
-                <h3>Excepciones</h3>
-                <div v-for="exception in instance.exceptions" :key="exception.taskId" class="p-2 rounded mb-2">
-                  <p><strong>Task ID:</strong> {{ exception.taskId }}</p>
-                  <p><strong>Fecha:</strong> {{ new Date(exception.createdAt).toLocaleString() }}</p>
-                  <pre class="p-2 bg-red-100 rounded">{{ JSON.stringify(exception.error, null, 2) }}</pre>
+              <div v-if="instance?.exceptions?.length" class="flex flex-col gap-4 mt-2">
+                <div
+                  v-for="exception in instance.exceptions"
+                  :key="exception.taskId"
+                  class="border border-red-200 dark:border-red-900/40 rounded-lg p-4 flex flex-col gap-2"
+                >
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-xs text-surface-400 font-mono">{{ exception.taskId }}</span>
+                    <span class="text-xs text-surface-500">{{ new Date(exception.createdAt).toLocaleString() }}</span>
+                  </div>
+                  <pre class="text-xs bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 p-3 rounded overflow-x-auto whitespace-pre-wrap break-all">{{ JSON.stringify(exception.error, null, 2) }}</pre>
                 </div>
+              </div>
+
+              <div v-else class="flex items-center justify-center h-24 text-surface-400 text-sm">
+                No exceptions recorded.
               </div>
             </TabPanel>
           </TabPanels>

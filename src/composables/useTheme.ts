@@ -33,6 +33,9 @@ function init() {
 
 function applyToHtml(val: boolean) {
   document.documentElement.classList.toggle('dark', val)
+  // Some third-party editors (e.g. @lab2view/vue-email-editor) detect dark mode
+  // via the data-theme attribute rather than a CSS class — keep them in sync.
+  document.documentElement.setAttribute('data-theme', val ? 'dark' : 'light')
 }
 
 // Persist every change to localStorage AND apply to <html> so Tailwind dark: variants work everywhere
