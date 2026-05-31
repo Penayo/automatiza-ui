@@ -19,6 +19,10 @@ export class TaskPublicService extends BaseService {
         return this.get<TaskFormData>(token) as Promise<TaskFormData>;
     }
 
+    async save(token: string, variables: Record<string, any>): Promise<{ success: boolean }> {
+        return this.put(`${token}/save`, { variables }) as Promise<{ success: boolean }>;
+    }
+
     async complete(token: string, variables: Record<string, any>): Promise<{ success: boolean }> {
         return this.post<{ success: boolean }>(`${token}/complete`, { variables }) as Promise<{ success: boolean }>;
     }

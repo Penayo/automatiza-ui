@@ -1,0 +1,70 @@
+[
+  {
+    "$schema": "https://unpkg.com/@camunda/zeebe-element-templates-json-schema/resources/schema.json",
+    "name": "Report Generator",
+    "id": "io.processlinker:report:v1",
+    "description": "Generate a PDF from a pdfme report template, upload it to R2, and store a file reference as a process variable.",
+    "appliesTo": ["bpmn:Task"],
+    "elementType": { "value": "bpmn:ServiceTask" },
+    "groups": [
+      { "id": "template", "label": "Report Template" },
+      { "id": "data",     "label": "Input Data" },
+      { "id": "output",   "label": "Output" },
+      { "id": "advanced", "label": "Advanced" }
+    ],
+    "properties": [
+      {
+        "type": "Hidden",
+        "value": "io.processlinker:report:v1",
+        "binding": { "type": "zeebe:taskDefinition:type" }
+      },
+
+      {
+        "label": "Report Key",
+        "description": "The key of the report definition configured in the Report Designer.",
+        "group": "template",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "reportKey" },
+        "constraints": { "notEmpty": true }
+      },
+
+      {
+        "label": "Inputs",
+        "description": "Data to inject into the report template. FEEL expression returning an object (one page) or an array of objects (multi-page). E.g. = { clientName: clientName, total: invoiceTotal }",
+        "group": "data",
+        "type": "String",
+        "feel": "required",
+        "binding": { "type": "zeebe:input", "name": "inputs" },
+        "constraints": { "notEmpty": true }
+      },
+
+      {
+        "label": "Output Variable",
+        "description": "Process variable name where the generated file (StoredFile) is saved. Use it in downstream tasks to send as email attachment or reference in other services.",
+        "group": "output",
+        "type": "String",
+        "feel": "optional",
+        "value": "generatedReport",
+        "binding": { "type": "zeebe:input", "name": "outputVariable" }
+      },
+      {
+        "label": "Filename",
+        "description": "Optional filename for the uploaded PDF. FEEL supported. Defaults to <reportKey>-<timestamp>.pdf",
+        "group": "output",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "filename" }
+      },
+
+      {
+        "label": "Retries",
+        "description": "Number of retry attempts on failure",
+        "group": "advanced",
+        "type": "Number",
+        "value": 1,
+        "binding": { "type": "zeebe:input", "name": "retries" }
+      }
+    ]
+  }
+]

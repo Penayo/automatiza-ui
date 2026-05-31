@@ -22,17 +22,20 @@ const route = useRoute();
 const token = route.params.token as string;
 
 // ── State ─────────────────────────────────────────────────────────────────────
-const data      = ref<TaskFormData | null>(null);
-const loading   = ref(true);
+const data       = ref<TaskFormData | null>(null);
+const loading    = ref(true);
 const submitting = ref(false);
+const saving     = ref(false);
+const saved      = ref(false);   // shows brief "Saved" confirmation
 
 type PageState = 'loading' | 'form' | 'done' | 'used' | 'notfound' | 'error';
 const state     = ref<PageState>('loading');
 const errorMsg  = ref('');
 
 // bpmn-io form
-const formRef    = ref<HTMLElement | null>(null);
-const formViewer = ref<Form>();
+const formRef         = ref<HTMLElement | null>(null);
+const formViewer      = ref<Form>();
+const currentFormData = ref<Record<string, any>>({});
 
 // Key-value fallback (when no BPMN form schema)
 interface KVRow { key: string; value: string }
@@ -70,6 +73,9 @@ watch(state, (s) => {
         const form = new Form({ container: formRef.value });
         formViewer.value = form;
         form.importSchema(data.value!.formSchema, data.value!.formData ?? {});
+        form.on('changed', (event: { data: Record<string, any> }) => {
+            currentFormData.value = event.data;
+        });
         form.on('submit', async (event: { data: Record<string, any>; errors: any[] }) => {
             console.log('[TaskFormPage] form submitted, raw event.data:', event.data);
             try {
@@ -83,6 +89,32 @@ watch(state, (s) => {
         });
     }, 0);
 });
+
+// ── Save progress ─────────────────────────────────────────────────────────────
+async function saveProgress(variables: Record<string, any>) {
+    saving.value = true;
+    saved.value  = false;
+    try {
+        const resolvedData = await resolveFormFiles(variables, filesService, formViewer.value);
+        await $taskPublic.save(token, resolvedData);
+        saved.value = true;
+        setTimeout(() => { saved.value = false; }, 3000);
+    } catch (err: any) {
+        errorMsg.value = err?.response?.data?.message ?? err?.message ?? 'Could not save progress. Please try again.';
+        state.value    = 'error';
+    } finally {
+        saving.value = false;
+    }
+}
+
+function saveForm() {
+    // Use currentFormData tracked via the `changed` event (no validation triggered).
+    // Falls back to formData seed if the user hasn't changed anything yet.
+    const vars = formViewer.value
+        ? { ...(data.value?.formData ?? {}), ...currentFormData.value }
+        : buildVariables();
+    saveProgress(vars);
+}
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 async function submit(variables: Record<string, any>) {
@@ -209,18 +241,35 @@ onMounted(load);
                         <!-- bpmn-io form -->
                         <div v-if="data.formSchema" class="p-6">
                             <div ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
-                            <div class="flex justify-end mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800">
-                                <button
-                                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity"
-                                    style="background: var(--p-primary-500, #6366f1)"
-                                    :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
-                                    :disabled="submitting"
-                                    @click="submitForm"
-                                >
-                                    <i v-if="submitting" class="pi pi-spin pi-spinner" />
-                                    <i v-else class="pi pi-send" />
-                                    {{ submitting ? 'Submitting…' : 'Submit' }}
-                                </button>
+                            <div class="flex items-center justify-between mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800">
+                                <!-- Save confirmation -->
+                                <span v-if="saved" class="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                                    <i class="pi pi-check-circle" /> Progress saved
+                                </span>
+                                <span v-else />
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors"
+                                        :class="saving ? 'opacity-60 cursor-not-allowed border-surface-200 dark:border-zinc-700 text-surface-400' : 'border-surface-300 dark:border-zinc-600 text-surface-700 dark:text-surface-200 hover:bg-surface-50 dark:hover:bg-zinc-800'"
+                                        :disabled="saving || submitting"
+                                        @click="saveForm"
+                                    >
+                                        <i v-if="saving" class="pi pi-spin pi-spinner" />
+                                        <i v-else class="pi pi-save" />
+                                        {{ saving ? 'Saving…' : 'Save progress' }}
+                                    </button>
+                                    <button
+                                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity"
+                                        style="background: var(--p-primary-500, #6366f1)"
+                                        :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
+                                        :disabled="submitting || saving"
+                                        @click="submitForm"
+                                    >
+                                        <i v-if="submitting" class="pi pi-spin pi-spinner" />
+                                        <i v-else class="pi pi-send" />
+                                        {{ submitting ? 'Submitting…' : 'Submit' }}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -262,18 +311,34 @@ onMounted(load);
                                 <i class="pi pi-plus text-[10px]" /> Add field
                             </button>
 
-                            <div class="flex justify-end pt-4 border-t border-surface-100 dark:border-zinc-800">
-                                <button
-                                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity"
-                                    style="background: var(--p-primary-500, #6366f1)"
-                                    :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
-                                    :disabled="submitting"
-                                    @click="submitForm"
-                                >
-                                    <i v-if="submitting" class="pi pi-spin pi-spinner" />
-                                    <i v-else class="pi pi-send" />
-                                    {{ submitting ? 'Submitting…' : 'Submit' }}
-                                </button>
+                            <div class="flex items-center justify-between pt-4 border-t border-surface-100 dark:border-zinc-800">
+                                <span v-if="saved" class="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                                    <i class="pi pi-check-circle" /> Progress saved
+                                </span>
+                                <span v-else />
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors"
+                                        :class="saving ? 'opacity-60 cursor-not-allowed border-surface-200 dark:border-zinc-700 text-surface-400' : 'border-surface-300 dark:border-zinc-600 text-surface-700 dark:text-surface-200 hover:bg-surface-50 dark:hover:bg-zinc-800'"
+                                        :disabled="saving || submitting"
+                                        @click="saveForm"
+                                    >
+                                        <i v-if="saving" class="pi pi-spin pi-spinner" />
+                                        <i v-else class="pi pi-save" />
+                                        {{ saving ? 'Saving…' : 'Save progress' }}
+                                    </button>
+                                    <button
+                                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity"
+                                        style="background: var(--p-primary-500, #6366f1)"
+                                        :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
+                                        :disabled="submitting || saving"
+                                        @click="submitForm"
+                                    >
+                                        <i v-if="submitting" class="pi pi-spin pi-spinner" />
+                                        <i v-else class="pi pi-send" />
+                                        {{ submitting ? 'Submitting…' : 'Submit' }}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

@@ -23,13 +23,16 @@ const confirm  = useConfirm();
 const props = defineProps<{ task: Task | null }>();
 const emit  = defineEmits(['refresh']);
 
-const formSchema  = ref<IForm | null>(null);
-const formData    = ref<Record<string, any>>({});
-const formRef     = ref(null);
-const formViewer  = ref<Form>();
-const loading     = ref<boolean>(false);
-const userInfo    = ref<IAccess | null>(null);
-const completed   = ref<boolean>(false);   // ← confirmation state
+const formSchema      = ref<IForm | null>(null);
+const formData        = ref<Record<string, any>>({});
+const formRef         = ref(null);
+const formViewer      = ref<Form>();
+const loading         = ref<boolean>(false);
+const saving          = ref<boolean>(false);
+const saved           = ref<boolean>(false);
+const userInfo        = ref<IAccess | null>(null);
+const completed       = ref<boolean>(false);
+const currentFormData = ref<Record<string, any>>({});
 
 // ── Task completion ──────────────────────────────────────────────────────────
 
@@ -45,6 +48,29 @@ async function completeTask(variables: any) {
         toast.add({ ...errorInfo, life: 6000 });
     } finally {
         loading.value = false;
+    }
+}
+
+async function saveTask() {
+    if (!props.task?.id) return;
+    saving.value = true;
+    saved.value  = false;
+    try {
+        const vars = { ...formData.value, ...currentFormData.value };
+        const prefix = props.task.processInstanceId;
+        const resolvedVars = await resolveFormFiles(vars, $api.files, formViewer.value, prefix);
+        await $api.tasks.updateVariables(props.task.id, resolvedVars);
+        saved.value = true;
+        setTimeout(() => { saved.value = false; }, 3000);
+    } catch (err: any) {
+        toast.add({
+            severity: 'error',
+            summary:  'Save failed',
+            detail:   err?.response?.data?.message ?? err?.message ?? 'Could not save progress.',
+            life:     5000,
+        });
+    } finally {
+        saving.value = false;
     }
 }
 
@@ -103,6 +129,10 @@ watch(formSchema, () => {
         }
     });
 
+    form.on('changed', (event: { data: Record<string, any> }) => {
+        currentFormData.value = event.data;
+    });
+
     form.on('submit', async (event: { data: ProcessVariables; errors: Error[] }) => {
         console.log('[TaskForm] form submitted, raw event.data:', event.data);
         try {
@@ -153,9 +183,31 @@ onMounted(() => {});
     <!-- ── Form panel ─────────────────────────────────────────────────────── -->
     <div v-else>
         <div ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
-        <div class="flex flex-row gap-2 justify-end p-3">
-            <Button size="small" severity="secondary" :disabled="!isTaskAssignedToUser()">Save</Button>
-            <Button size="small" :loading="loading" @click="submitForm" :disabled="!isTaskAssignedToUser()">Submit</Button>
+        <div class="flex flex-row items-center justify-between p-3">
+            <!-- Saved confirmation -->
+            <span v-if="saved" class="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                <i class="pi pi-check-circle" /> Progress saved
+            </span>
+            <span v-else />
+            <div class="flex gap-2">
+                <Button
+                    size="small"
+                    severity="secondary"
+                    icon="pi pi-save"
+                    label="Save"
+                    :loading="saving"
+                    :disabled="!isTaskAssignedToUser() || loading"
+                    @click="saveTask"
+                />
+                <Button
+                    size="small"
+                    icon="pi pi-send"
+                    label="Submit"
+                    :loading="loading"
+                    :disabled="!isTaskAssignedToUser() || saving"
+                    @click="submitForm"
+                />
+            </div>
         </div>
     </div>
 </template>

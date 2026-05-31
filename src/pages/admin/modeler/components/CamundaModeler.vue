@@ -19,6 +19,13 @@ const emit = defineEmits(['save']);
 
 const modeler = ref<any>(null);
 const containerRef = ref<HTMLElement | null>(null);
+const isFullscreen = ref(false);
+
+function toggleFullscreen() {
+	isFullscreen.value = !isFullscreen.value;
+	// Give the DOM one frame to apply the new dimensions, then tell bpmn-js
+	setTimeout(() => modeler.value?.get('canvas')?.resized(), 50);
+}
 
 const INITIAL_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
@@ -43,10 +50,13 @@ async function loadTemplates() {
 		'email-connector',
 		'sendgrid-connector',
 		'whatsapp-connector',
-		'openai-connector'
+		'openai-connector',
+		'dropbox-sign-connector',
+		'report-connector'
 	];
 
 	for (const name of templateNames) {
+		console.log(name)
 		templatePromises.push(import(`../camunda/element-templates/${name}.json`));
 	}
 
@@ -102,6 +112,7 @@ onMounted(async () => {
 		});
 
 		const TEMPLATES = await loadTemplates();
+		console.log(TEMPLATES)
 		bpmnModeler.get('elementTemplates').set(TEMPLATES);
 		bpmnModeler.on('elementTemplates.errors', event => {
 			showTemplateErrors(event.errors);
@@ -141,7 +152,7 @@ const menuItems = [
 		}
 	},
 	{
-		label: 'Options',
+		label: 'Optionssss',
 		items: [
 			{
 				label: 'New Form',
@@ -160,9 +171,31 @@ const menuItems = [
 </script>
 
 <template>
-	<Menubar :model="menuItems" />
-	<div class="bpmn-modeler-container" style="display: flex; height: calc(100vh - 95px);">
-		<div ref="containerRef" id="canvas" class="canvas" style="width: 70%; height: 100%;" />
-		<div id="properties" class="properties-panel" style="width: 30%; height: 100%; border-left: 1px solid #ccc;" />
+	<div
+		class="bpmn-modeler-container"
+		:style="isFullscreen
+			? 'position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;'
+			: 'display:flex;flex-direction:column;height:calc(100vh - 200px);'"
+	>
+		<Menubar :model="menuItems" style="flex-shrink:0;" />
+
+		<div style="display:flex;flex:1;min-height:0;">
+			<div ref="containerRef" id="canvas" class="canvas" style="width: 70%; height: 100%;" />
+			<div id="properties" class="properties-panel" style="width: 30%; height: 100%; border-left: 1px solid #ccc;" />
+		</div>
+
+		<!-- Fullscreen toggle -->
+		<button
+			@click="toggleFullscreen"
+			:title="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
+			style="
+				position: absolute; bottom: 16px; right: 16px; z-index: 10;
+				width: 36px; height: 36px; border-radius: 8px; border: none; cursor: pointer;
+				display: flex; align-items: center; justify-content: center;
+				background: var(--p-primary-500, #6366f1); color: white; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+			"
+		>
+			<i :class="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" />
+		</button>
 	</div>
 </template>

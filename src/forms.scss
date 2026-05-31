@@ -133,9 +133,20 @@
   padding-top: 12px !important;
 }
 
+/* Form field text — displayed values (not inputs) */
+.formjs-dark .fjs-form-field,
+.formjs-dark .fjs-form-field-text,
+.formjs-dark .fjs-form-field-text *,
+.formjs-dark .fjs-form-field .fjs-form-field-label,
+.formjs-dark .fjs-form-field p,
+.formjs-dark .fjs-form-field span:not(.fjs-hint):not(.fjs-description) {
+  color: var(--fj-text) !important;
+}
+
 /* Labels, help text, descriptions */
 .formjs-dark label,
 .formjs-dark .fjs-label,
+.formjs-dark .fjs-form-field-label,
 .formjs-dark .fjs-description,
 .formjs-dark .fjs-hint {
   color: var(--fj-muted) !important;
