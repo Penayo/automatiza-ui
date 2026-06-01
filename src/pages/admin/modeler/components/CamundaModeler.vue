@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import Menubar from 'primevue/menubar';
+import { SpeedDial } from 'primevue';
+import DocsDrawer from '@components/DocsDrawer.vue';
+import ReportListDialog       from './dialogs/ReportListDialog.vue';
+import FormListDialog         from './dialogs/FormListDialog.vue';
+import EmailTemplatesListDialog from './dialogs/EmailTemplatesListDialog.vue';
+import FormVariablesListDialog  from './dialogs/FormVariablesListDialog.vue';
+import DmnListDialog          from './dialogs/DmnListDialog.vue';
 import 'camunda-bpmn-js/dist/assets/camunda-platform-modeler.css';
 import '@bpmn-io/properties-panel/assets/properties-panel.css';
 import '../styles.css';
@@ -20,6 +27,21 @@ const emit = defineEmits(['save']);
 const modeler = ref<any>(null);
 const containerRef = ref<HTMLElement | null>(null);
 const isFullscreen = ref(false);
+const docsVisible  = ref(false);
+
+const showReports       = ref(false);
+const showForms         = ref(false);
+const showEmailTemplates = ref(false);
+const showFormVariables = ref(false);
+const showDmn           = ref(false);
+
+const speedDialItems = [
+    { label: 'Report List',          icon: 'pi pi-file-pdf',  command: () => showReports.value = true },
+    { label: 'Form List',            icon: 'pi pi-file-edit', command: () => showForms.value = true },
+    { label: 'Email Templates',      icon: 'pi pi-envelope',  command: () => showEmailTemplates.value = true },
+    { label: 'Form Variables',       icon: 'pi pi-list',      command: () => showFormVariables.value = true },
+    { label: 'DMN Decisions',        icon: 'pi pi-table',     command: () => showDmn.value = true },
+];
 
 function toggleFullscreen() {
 	isFullscreen.value = !isFullscreen.value;
@@ -175,7 +197,7 @@ const menuItems = [
 		class="bpmn-modeler-container"
 		:style="isFullscreen
 			? 'position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;'
-			: 'display:flex;flex-direction:column;height:calc(100vh - 200px);'"
+			: 'display:flex;flex-direction:column;height:calc(100vh - 153px);'"
 	>
 		<Menubar :model="menuItems" style="flex-shrink:0;" />
 
@@ -184,18 +206,49 @@ const menuItems = [
 			<div id="properties" class="properties-panel" style="width: 30%; height: 100%; border-left: 1px solid #ccc;" />
 		</div>
 
-		<!-- Fullscreen toggle -->
-		<button
-			@click="toggleFullscreen"
-			:title="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
-			style="
-				position: absolute; bottom: 16px; right: 16px; z-index: 10;
-				width: 36px; height: 36px; border-radius: 8px; border: none; cursor: pointer;
-				display: flex; align-items: center; justify-content: center;
-				background: var(--p-primary-500, #6366f1); color: white; box-shadow: 0 2px 8px rgba(0,0,0,.25);
-			"
-		>
-			<i :class="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" />
-		</button>
+		<!-- Toolbar: speed-dial + docs + fullscreen -->
+		<div style="position:absolute;bottom:16px;right:16px;z-index:10;display:flex;align-items:end;gap:6px;">
+			<SpeedDial
+				:model="speedDialItems"
+				direction="up"
+				:style="{ position: 'relative' }"
+				:pt="{
+					button: { style: 'width:48px;height:48px;border-radius:8px;background:var(--p-surface-600,#52525b);color:white;box-shadow:0 2px 8px rgba(0,0,0,.25);border:none;' },
+					menu:   { style: 'bottom:44px;right:0;left:auto;min-width:180px;' },
+				}"
+				:tooltipOptions="{ position: 'left', event: 'hover' }"
+				buttonIcon="pi pi-list"
+				v-tooltip.left="'Quick access'"
+			/>
+			<button
+				@click="docsVisible = true"
+				title="Documentation"
+				style="
+					width:36px;height:36px;border-radius:8px;border:none;cursor:pointer;
+					display:flex;align-items:center;justify-content:center;
+					background:var(--p-surface-700,#3f3f46);color:white;box-shadow:0 2px 8px rgba(0,0,0,.25);
+				"
+			>
+				<i class="pi pi-question-circle" />
+			</button>
+			<button
+				@click="toggleFullscreen"
+				:title="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
+				style="
+					width:36px;height:36px;border-radius:8px;border:none;cursor:pointer;
+					display:flex;align-items:center;justify-content:center;
+					background:var(--p-primary-500,#6366f1);color:white;box-shadow:0 2px 8px rgba(0,0,0,.25);
+				"
+			>
+				<i :class="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" />
+			</button>
+		</div>
+
+		<DocsDrawer               v-model:visible="docsVisible" />
+		<ReportListDialog         v-model:visible="showReports" />
+		<FormListDialog           v-model:visible="showForms" />
+		<EmailTemplatesListDialog v-model:visible="showEmailTemplates" />
+		<FormVariablesListDialog  v-model:visible="showFormVariables" />
+		<DmnListDialog            v-model:visible="showDmn" />
 	</div>
 </template>

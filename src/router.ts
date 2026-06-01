@@ -128,6 +128,9 @@ const routes = [
       { path: 'api-keys', name: 'ApiKeysIndex', component: () => import('./pages/admin/api-keys/Index.vue') },
       { path: 'api-keys/new', name: 'ApiKeysNew', component: () => import('./pages/admin/api-keys/New.vue') },
       { path: 'api-keys/:id/edit', name: 'ApiKeysEdit', component: () => import('./pages/admin/api-keys/Edit.vue') },
+
+      // Documentation
+      { path: 'docs/:page?', name: 'DocsPage', component: () => import('./pages/admin/docs/Index.vue') },
     ],
   },
 ]

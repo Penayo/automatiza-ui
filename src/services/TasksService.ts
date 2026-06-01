@@ -43,6 +43,7 @@ export interface Task extends APIData {
         usedAt?:    string;
         expiresAt?: string;
     };
+    serviceConfig?: Record<string, any>;
 }
 
 export interface CompleteTaskDto {
@@ -175,6 +176,19 @@ export class TasksService extends ModelApiService {
         try {
             await this.delete(taskId);
             return { status: 'deleted' };
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
+    }
+
+    async updateServiceConfig(
+        taskId: string,
+        serviceConfig: Record<string, any>,
+    ): Promise<Record<string, any>> {
+        try {
+            const response = await this.put(taskId + '/service-config', { serviceConfig });
+            return (response as any)?.data ?? response as any;
         } catch (err) {
             this.handleErrors(err);
             throw err;

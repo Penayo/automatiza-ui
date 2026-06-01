@@ -9,7 +9,8 @@
       "@pages/*":      ["src/pages/*"],
       "@components/*": ["src/components/*"],
       "@layout/*":     ["src/layout/*"],
-      "@services/*":   ["src/services/*"]
+      "@services/*":   ["src/services/*"],
+      "@docs/*":       ["src/docs/*"]
     },
 
     /* Linting */

@@ -8,6 +8,7 @@ import type { Task } from '@services/TasksService';
 import JsonEditor from 'vue3-ts-jsoneditor';
 import { ref, watch } from 'vue';
 import EditVariablesDialog from '@pages/admin/tasks/components/EditVariablesDialog.vue';
+import EditServiceConfigDialog from '@pages/admin/tasks/components/EditServiceConfigDialog.vue';
 
 const props = defineProps<{ processInstanceId?: string }>();
 
@@ -42,6 +43,17 @@ function openVariables(task: Task, event: MouseEvent) {
     event.stopPropagation();
     variablesTask.value          = task;
     variablesDialogVisible.value = true;
+}
+
+// ── Edit Service Config ───────────────────────────────────────────────────────
+
+const serviceConfigDialogVisible = ref(false);
+const serviceConfigTask          = ref<Task | null>(null);
+
+function openServiceConfig(task: Task, event: MouseEvent) {
+    event.stopPropagation();
+    serviceConfigTask.value          = task;
+    serviceConfigDialogVisible.value = true;
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -126,6 +138,16 @@ defineExpose({ reload: loadTasks });
                             :loading="retryingId === task.id"
                             @click="retryTask(task, $event)"
                         />
+                        <!-- Edit service config -->
+                        <Button
+                            icon="pi pi-cog"
+                            size="small"
+                            severity="secondary"
+                            text
+                            rounded
+                            v-tooltip.top="'Edit service config'"
+                            @click="openServiceConfig(task, $event)"
+                        />
                         <!-- Edit variables -->
                         <Button
                             icon="pi pi-sliders-h"
@@ -167,6 +189,13 @@ defineExpose({ reload: loadTasks });
     <EditVariablesDialog
         v-model:visible="variablesDialogVisible"
         :task="variablesTask"
+        @saved="loadTasks"
+    />
+
+    <!-- Service config dialog -->
+    <EditServiceConfigDialog
+        v-model:visible="serviceConfigDialogVisible"
+        :task="serviceConfigTask"
         @saved="loadTasks"
     />
 </template>

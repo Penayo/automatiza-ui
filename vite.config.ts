@@ -16,6 +16,7 @@ export default defineConfig({
       '@components': fileURLToPath(new URL('./src/components', import.meta.url)),
       '@layout':     fileURLToPath(new URL('./src/layout', import.meta.url)),
       '@services':   fileURLToPath(new URL('./src/services', import.meta.url)),
+      '@docs':       fileURLToPath(new URL('./src/docs', import.meta.url)),
     }
   },
   optimizeDeps: {

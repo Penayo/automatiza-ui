@@ -120,7 +120,7 @@ onMounted(fetchProcess);
                 @saved="onInfoSaved"
             />
 
-            <div v-else-if="activeTab === 'diagram'" class="h-full" style="min-height: calc(100vh - 120px)">
+            <div v-else-if="activeTab === 'diagram'" class="h-full" style="min-height: calc(100vh - 190px)">
                 <CamundaModeler v-if="process" :process="process" @save="saveDiagram" />
             </div>
 

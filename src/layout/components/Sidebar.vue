@@ -113,6 +113,16 @@
 			]
 		},
 		{
+			label: 'Documentation',
+			icon: 'pi pi-book',
+			items: [
+				{ label: 'FEEL Expressions',   icon: 'pi pi-code',     command: () => nav('/admin/docs/feel-expressions') },
+				{ label: 'Timer Events',        icon: 'pi pi-clock',    command: () => nav('/admin/docs/timer-events') },
+				{ label: 'Process Variables',   icon: 'pi pi-database', command: () => nav('/admin/docs/process-variables') },
+				{ label: 'Service Tasks',       icon: 'pi pi-cog',      command: () => nav('/admin/docs/service-tasks') },
+			]
+		},
+		{
 			label: 'System',
 			icon: 'pi pi-cog',
 			items: [
