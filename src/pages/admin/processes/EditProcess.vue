@@ -19,8 +19,8 @@ const activeTab = ref<'info' | 'diagram' | 'instances' | 'stats'>('info');
 
 const tabs = [
     { key: 'info',      label: 'Info',      icon: 'pi pi-info-circle' },
-    { key: 'diagram',   label: 'Diagram',   icon: 'pi pi-sitemap'    },
     { key: 'instances', label: 'Instances', icon: 'pi pi-list'       },
+    { key: 'diagram',   label: 'Diagram',   icon: 'pi pi-sitemap'    },
     { key: 'stats',     label: 'Stats',     icon: 'pi pi-chart-bar'  },
 ] as const;
 
@@ -120,14 +120,15 @@ onMounted(fetchProcess);
                 @saved="onInfoSaved"
             />
 
-            <div v-else-if="activeTab === 'diagram'" class="h-full" style="min-height: calc(100vh - 190px)">
-                <CamundaModeler v-if="process" :process="process" @save="saveDiagram" />
-            </div>
-
             <ProcessInstances
                 v-else-if="activeTab === 'instances' && process"
                 :process-id="process.processId"
+                :process-definition-id="process.id!"
             />
+
+            <div v-else-if="activeTab === 'diagram'" class="h-full" style="min-height: calc(100vh - 190px)">
+                <CamundaModeler v-if="process" :process="process" @save="saveDiagram" />
+            </div>
 
             <ProcessStats
                 v-else-if="activeTab === 'stats' && process"
@@ -136,4 +137,7 @@ onMounted(fetchProcess);
 
         </div>
     </div>
+
+    <!-- Child route outlet — renders Detail dialog when an instance is selected -->
+    <RouterView />
 </template>

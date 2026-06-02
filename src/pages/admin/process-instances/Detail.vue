@@ -22,8 +22,8 @@ const fetchInstance = async () => {
   loading.value = true;
   instance.value = undefined;
   try {
-    const { id } = route.params;
-    instance.value = await $api.processes.getInstance(id as string);
+    const id = (route.params.instanceId ?? route.params.id) as string;
+    instance.value = await $api.processes.getInstance(id);
   } catch (error) {
     console.log(error);
     toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar la instancia', life: 3000 });

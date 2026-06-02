@@ -48,7 +48,14 @@ const routes = [
           { path: ':id/start', name: 'ProcessStart', component: () => import('./pages/admin/processes/Start.vue') },
         ],
       },
-      { path: 'processes/:id', name: 'ProcessEdit', component: () => import('./pages/admin/processes/EditProcess.vue') },
+      {
+        path: 'processes/:id',
+        name: 'ProcessEdit',
+        component: () => import('./pages/admin/processes/EditProcess.vue'),
+        children: [
+          { path: 'instances/:instanceId', name: 'ProcessEditInstanceDetail', component: () => import('./pages/admin/process-instances/Detail.vue') },
+        ],
+      },
 
       // Process Instances
       {

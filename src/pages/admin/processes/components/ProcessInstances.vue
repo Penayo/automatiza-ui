@@ -1,17 +1,25 @@
 <script setup lang="ts">
+import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
+import '@/forms.scss';
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useToast, Button, Select, DataTable, Column, Tag } from 'primevue';
+import { useRouter, useRoute } from 'vue-router';
+import { useToast, Button, Select, DataTable, Column, Tag, Dialog } from 'primevue';
+import { Form } from '@bpmn-io/form-js';
+import JsonEditor from 'vue3-ts-jsoneditor';
 import { $api } from '@services/api';
 import type { ProcessInstance, ProcessInstanceQuery } from '@services/ProcessesService';
+import type { IForm } from '@services/FormsService';
 import type { PageResponse } from '@services/api';
 
 const props = defineProps<{
     /** BPMN processId field — used as the filter for the instances query */
     processId: string;
+    /** Database id of the ProcessDefinition — used to start a new instance */
+    processDefinitionId?: string;
 }>();
 
 const router = useRouter();
+const route  = useRoute();
 const toast  = useToast();
 
 const instances   = ref<PageResponse<ProcessInstance>>();
@@ -68,7 +76,74 @@ function onStatusChange() {
 }
 
 function openDetail(id: string) {
-    router.push({ name: 'ProcessInstanceDetail', params: { id } });
+    // Navigate to child route — Detail dialog renders inside EditProcess via <RouterView />
+    const processId = route.params.id as string;
+    if (processId) {
+        router.push({ name: 'ProcessEditInstanceDetail', params: { id: processId, instanceId: id } });
+    } else {
+        router.push({ name: 'ProcessInstanceDetail', params: { id } });
+    }
+}
+
+// ── Start Process ─────────────────────────────────────────────────────────────
+
+const startDialogVisible = ref(false);
+const startLoading       = ref(false);
+const starting           = ref(false);
+const startFormRef       = ref<HTMLElement | null>(null);
+const startFormSchema    = ref<IForm | null>(null);
+const startFormViewer    = ref<InstanceType<typeof Form> | null>(null);
+const startVars          = ref('{}');
+
+async function openStartDialog() {
+    if (!props.processDefinitionId) return;
+    startDialogVisible.value = true;
+    startLoading.value       = true;
+    startFormSchema.value    = null;
+    startVars.value          = '{}';
+    try {
+        startFormSchema.value = await $api.processes.getStartForm(props.processDefinitionId);
+    } catch {
+        // no start form — fall back to JSON editor
+    } finally {
+        startLoading.value = false;
+    }
+}
+
+function onStartDialogShow() {
+    if (!startFormSchema.value || !startFormRef.value) return;
+    const form = new Form({ container: startFormRef.value });
+    startFormViewer.value = form;
+    form.importSchema(startFormSchema.value, {});
+    form.on('submit', (event: { data: Record<string, any>; errors: unknown[] }) => {
+        submitStart(event.data);
+    });
+}
+
+async function submitStart(variables: Record<string, any>) {
+    starting.value = true;
+    try {
+        await $api.processes.startProcess(props.processDefinitionId!, { variables });
+        toast.add({ severity: 'success', summary: 'Started', detail: 'Process instance created.', life: 3000 });
+        startDialogVisible.value = false;
+        await fetch();
+    } catch (err: any) {
+        toast.add({ severity: 'error', summary: 'Error', detail: err?.message ?? 'Failed to start process.', life: 4000 });
+    } finally {
+        starting.value = false;
+    }
+}
+
+function handleStartSubmit() {
+    if (startFormViewer.value && startFormSchema.value) {
+        startFormViewer.value.submit();
+    } else {
+        try {
+            submitStart(JSON.parse(startVars.value));
+        } catch {
+            toast.add({ severity: 'error', summary: 'Invalid JSON', detail: 'Fix the variables JSON before starting.', life: 3000 });
+        }
+    }
 }
 
 onMounted(fetch);
@@ -97,6 +172,15 @@ onMounted(fetch);
                 icon="pi pi-external-link"
                 @click="router.push({ name: 'ProcessInstancesIndex' })"
             />
+            <div class="ml-auto">
+                <Button
+                    v-if="processDefinitionId"
+                    label="Start Process"
+                    icon="pi pi-play"
+                    severity="success"
+                    @click="openStartDialog"
+                />
+            </div>
         </div>
 
         <!-- Table -->
@@ -145,4 +229,45 @@ onMounted(fetch);
             </template>
         </DataTable>
     </div>
+
+    <!-- Start Process dialog -->
+    <Dialog
+        v-model:visible="startDialogVisible"
+        modal
+        header="Start Process"
+        :style="{ width: '42rem' }"
+        :dismissableMask="true"
+        @show="onStartDialogShow"
+    >
+        <div v-if="startLoading" class="flex justify-center py-8">
+            <i class="pi pi-spin pi-spinner text-3xl text-surface-400" />
+        </div>
+
+        <div v-else>
+            <div v-if="startFormSchema" ref="startFormRef" class="formjs-dark" />
+            <div v-else class="space-y-3">
+                <p class="text-sm text-surface-500">No start form configured. Provide initial variables as JSON (optional).</p>
+                <JsonEditor
+                    mode="text"
+                    v-model:text="startVars"
+                    :mainMenuBar="false"
+                    :navigationBar="false"
+                    :darkTheme="true"
+                    height="200"
+                />
+            </div>
+        </div>
+
+        <template #footer>
+            <Button label="Cancel" severity="secondary" text @click="startDialogVisible = false" />
+            <Button
+                v-if="!startLoading"
+                label="Start"
+                icon="pi pi-play"
+                severity="success"
+                :loading="starting"
+                @click="handleStartSubmit"
+            />
+        </template>
+    </Dialog>
 </template>

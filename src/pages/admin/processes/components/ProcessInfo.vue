@@ -5,7 +5,7 @@ import { $api } from '@services/api';
 import type { ProcessDefinition, UpdateProcessMetaDto } from '@services/ProcessesService';
 
 const props = defineProps<{
-    processId?:  string;          // required only when readonly=false
+    processId?:  string;
     initialMeta: UpdateProcessMetaDto;
     readonly?:   boolean;
 }>();
@@ -16,7 +16,6 @@ const emit = defineEmits<{
 
 const toast = useToast();
 
-// Local copy — reactive to parent updates, but only mutated in edit mode
 const meta = ref<UpdateProcessMetaDto>({ ...props.initialMeta });
 watch(() => props.initialMeta, (v) => { meta.value = { ...v }; }, { deep: true });
 
@@ -25,7 +24,7 @@ const contactInput = ref('');
 const groupInput   = ref('');
 const userInput    = ref('');
 
-// ── Chip helpers (edit mode only) ─────────────────────────────────────────────
+// ── Chip helpers ──────────────────────────────────────────────────────────────
 
 function removeFromList(list: string[], i: number) { list.splice(i, 1); }
 
@@ -47,7 +46,7 @@ function addUser() {
     userInput.value = '';
 }
 
-// ── Save (edit mode only) ─────────────────────────────────────────────────────
+// ── Save ──────────────────────────────────────────────────────────────────────
 
 async function save() {
     saving.value = true;
@@ -69,7 +68,6 @@ async function save() {
         <!-- ── Description ───────────────────────────────────────────────── -->
         <div class="space-y-1.5">
             <label class="text-xs font-medium text-surface-400 uppercase tracking-wide">Description</label>
-
             <p v-if="readonly" class="text-sm text-surface-700 dark:text-surface-300 leading-relaxed">
                 {{ meta.description || '—' }}
             </p>
@@ -86,14 +84,10 @@ async function save() {
         <!-- ── Responsible Contacts ───────────────────────────────────────── -->
         <div class="space-y-1.5">
             <label class="text-xs font-medium text-surface-400 uppercase tracking-wide">Responsible Contacts</label>
-
-            <!-- Edit: input + add button -->
             <div v-if="!readonly" class="flex gap-2">
                 <InputText v-model="contactInput" placeholder="email or name" class="flex-1" @keyup.enter="addContact" />
                 <Button icon="pi pi-plus" severity="secondary" @click="addContact" />
             </div>
-
-            <!-- Chips -->
             <div class="flex flex-wrap gap-2 mt-1">
                 <span
                     v-for="(c, i) in meta.responsibleContacts"
@@ -111,16 +105,13 @@ async function save() {
         <!-- ── Starter Roles ──────────────────────────────────────────────── -->
         <div class="space-y-1.5">
             <label class="text-xs font-medium text-surface-400 uppercase tracking-wide">Starter Roles</label>
-            <p v-if="!readonly" class="text-xs text-surface-500">Roles allowed to start this process. Leave empty for open access.</p>
-            <p v-else class="text-xs text-surface-500">Roles allowed to start this process.</p>
-
-            <!-- Edit: input + add button -->
+            <p class="text-xs text-surface-500">
+                {{ readonly ? 'Roles allowed to start this process.' : 'Roles allowed to start this process. Leave empty for open access.' }}
+            </p>
             <div v-if="!readonly" class="flex gap-2">
                 <InputText v-model="groupInput" placeholder="ROLE_NAME" class="flex-1" @keyup.enter="addGroup" />
                 <Button icon="pi pi-plus" severity="secondary" @click="addGroup" />
             </div>
-
-            <!-- Chips -->
             <div class="flex flex-wrap gap-2 mt-1">
                 <span
                     v-for="(g, i) in meta.starterGroups"
@@ -137,16 +128,13 @@ async function save() {
         <!-- ── Starter Users ──────────────────────────────────────────────── -->
         <div class="space-y-1.5">
             <label class="text-xs font-medium text-surface-400 uppercase tracking-wide">Starter Users</label>
-            <p v-if="!readonly" class="text-xs text-surface-500">Specific usernames allowed to start this process.</p>
-            <p v-else class="text-xs text-surface-500">Specific users allowed to start this process.</p>
-
-            <!-- Edit: input + add button -->
+            <p class="text-xs text-surface-500">
+                {{ readonly ? 'Specific users allowed to start this process.' : 'Specific usernames allowed to start this process.' }}
+            </p>
             <div v-if="!readonly" class="flex gap-2">
                 <InputText v-model="userInput" placeholder="username" class="flex-1" @keyup.enter="addUser" />
                 <Button icon="pi pi-plus" severity="secondary" @click="addUser" />
             </div>
-
-            <!-- Chips -->
             <div class="flex flex-wrap gap-2 mt-1">
                 <span
                     v-for="(u, i) in meta.starterUsers"
@@ -160,7 +148,7 @@ async function save() {
             </div>
         </div>
 
-        <!-- ── Save (edit mode only) ──────────────────────────────────────── -->
+        <!-- ── Save ──────────────────────────────────────────────────────── -->
         <div v-if="!readonly" class="flex justify-end pt-2">
             <Button label="Save" icon="pi pi-save" :loading="saving" @click="save" />
         </div>

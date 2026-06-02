@@ -43,11 +43,20 @@ A plain string **without** `=` is treated as a literal value and is **not** eval
 
 ```
 = "Hello, " + name
-= string length(name)
-= upper case(city)
-= lower case(email)
+= string length(name)           → number of characters
+= upper case(city)              → "ASUNCIÓN"
+= lower case(email)             → "user@example.com"
 = contains(description, "urgent")
-= substring(code, 1, 3)
+= starts with(code, "PY")
+= ends with(filename, ".pdf")
+= substring(code, 1, 3)        → first 3 chars (1-based)
+= substring before(path, "/")  → part before first /
+= substring after(path, "/")   → part after first /
+= string join(list, ", ")       → join list items
+= split(fullName, " ")          → ["Gustavo", "Penayo"]
+= trim(rawInput)
+= replace(text, "foo", "bar")
+= string(number)                → convert to string
 ```
 
 ---
@@ -78,9 +87,18 @@ A plain string **without** `=` is treated as a literal value and is **not** eval
 
 ```
 = count(items)
-= sum(items.price)
+= sum(items)
 = min(scores)
 = max(scores)
+= mean(scores)
+= append(items, newItem)
+= flatten(nestedList)
+= reverse(items)
+= sublist(items, 2, 3)          → 3 items starting at position 2 (1-based)
+= distinct values(items)
+= list contains(items, "value")
+= index of(items, "value")
+= concatenate(list1, list2)
 = some item in items satisfies item.price > 100
 = every item in items satisfies item.inStock = true
 = [x for x in items if x.active = true]
@@ -108,6 +126,22 @@ Use dot notation to access fields inside objects:
 = date and time("2026-01-31T10:00:00")
 = duration("P30D")
 = date(now()) = date("2026-06-01")
+= day of week(today())          → "Monday"
+= month of year(today())        → 6
+= day of year(today())          → 152
+= week of year(today())         → 22
+```
+
+## Numeric functions
+
+```
+= floor(3.7)       → 3
+= ceiling(3.2)     → 4
+= abs(-5)          → 5
+= decimal(3.14159, 2)  → 3.14
+= modulo(10, 3)    → 1
+= sqrt(16)         → 4
+= number("42")     → 42
 ```
 
 ---
