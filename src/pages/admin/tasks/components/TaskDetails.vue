@@ -6,6 +6,7 @@ import type { Task } from "@services/TasksService"
 import { $api } from '@services/api';
 import { onApprove } from '@/utils/common';
 import TaskSchedule from './TaskSchedule.vue';
+import DocumentsTab from '@components/data/DocumentsTab.vue';
 
 function getShareLink(task: Task): string | null {
     if (!task.shareLink?.token || task.shareLink?.usedAt) return null;
@@ -131,6 +132,7 @@ async function updateTask(key: string, value: string) {
                 <Tab value="0">Form</Tab>
                 <Tab value="1">Task details</Tab>
                 <Tab value="2">History</Tab>
+                <Tab value="3">Documents</Tab>
             </TabList>
             <TabPanels>
                 <TabPanel value="0">
@@ -144,6 +146,9 @@ async function updateTask(key: string, value: string) {
                         <i class="pi pi-history text-3xl mb-2" />
                         <p class="text-sm">Change history coming soon.</p>
                     </div>
+                </TabPanel>
+                <TabPanel value="3">
+                    <DocumentsTab :variables="props.currentTask?.variables" />
                 </TabPanel>
             </TabPanels>
         </Tabs>

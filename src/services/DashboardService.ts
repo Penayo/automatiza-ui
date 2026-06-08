@@ -34,12 +34,13 @@ export interface TasksDashboard {
 export type Period = 'day' | 'week' | 'month';
 
 export interface ProcessAnalytics {
-  totalInstances: number;
-  runningInstances: number;
-  completedInstances: number;
-  failedInstances: number;
-  avgCompletionMs: number;
-  completedOverTime: CompletedOverTime[];
+  instancesOverTime:       { count: number; date: string }[];
+  completionRate:          { total: number; completed: number; failed: number; processName: string; completionRate: number }[];
+  avgProcessDuration:      { minMs: number; maxMs: number; totalCompleted: number; avgMs: number };
+  bottleneckAnalysis:      { count: number; taskDefinitionId: string; taskName: string; avgMs: number }[];
+  activeInstances:         { id: string; status: string; createdAt: string }[];
+  failureRateByDefinition: { total: number; failed: number; processName: string; failureRate: number }[];
+  instanceFlowHeatmap:     { count: number; processName: string; taskName: string }[];
 }
 
 class DashboardApiService extends BaseService {
@@ -73,9 +74,9 @@ class DashboardApiService extends BaseService {
   }
 
   /** Admin: per-process analytics — calls GET /dashboard/process-analytics */
-  async getProcessAnalytics(processDefinitionId: string, period: Period = 'week'): Promise<ProcessAnalytics> {
+  async getProcessAnalytics(processId: string, period: Period = 'week'): Promise<ProcessAnalytics> {
     return this.get<ProcessAnalytics>('process-analytics', {
-      params: { processDefinitionId, period },
+      params: { processId, period },
     }) as Promise<ProcessAnalytics>;
   }
 }

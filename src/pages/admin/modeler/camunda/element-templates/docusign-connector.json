@@ -1,0 +1,159 @@
+[
+  {
+    "$schema": "https://unpkg.com/@camunda/zeebe-element-templates-json-schema/resources/schema.json",
+    "name": "DocuSign — Send Envelope",
+    "id": "io.processlinker:esign:docusign:v1",
+    "description": "Send a document or template to one or more signers via DocuSign. The task completes immediately after sending; use an Intermediate Message Catch Event (message: envelope.completed) to wait for all signatures.",
+    "appliesTo": ["bpmn:Task"],
+    "elementType": { "value": "bpmn:ServiceTask" },
+    "groups": [
+      { "id": "authentication", "label": "Authentication"  },
+      { "id": "document",       "label": "Document"        },
+      { "id": "signers",        "label": "Signers"         },
+      { "id": "message",        "label": "Email Content"   },
+      { "id": "correlation",    "label": "Process Correlation" },
+      { "id": "advanced",       "label": "Advanced"        }
+    ],
+    "properties": [
+      {
+        "type": "Hidden",
+        "value": "io.processlinker:esign:docusign:v1",
+        "binding": { "type": "zeebe:taskDefinition:type" }
+      },
+
+      {
+        "label": "Integration Key",
+        "description": "DocuSign application/client ID. Use a secret reference: {{secrets.DOCUSIGN_INTEGRATION_KEY}}",
+        "group": "authentication",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "integrationKey" },
+        "constraints": { "notEmpty": true }
+      },
+      {
+        "label": "Account ID",
+        "description": "DocuSign Account ID (UUID). Use a secret reference: {{secrets.DOCUSIGN_ACCOUNT_ID}}",
+        "group": "authentication",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "accountId" },
+        "constraints": { "notEmpty": true }
+      },
+      {
+        "label": "User ID",
+        "description": "DocuSign User GUID to impersonate via JWT grant. Must have granted consent to the integration key. Use a secret: {{secrets.DOCUSIGN_USER_ID}}",
+        "group": "authentication",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "userId" },
+        "constraints": { "notEmpty": true }
+      },
+      {
+        "label": "RSA Private Key",
+        "description": "PEM-encoded RSA private key registered for the integration key in DocuSign. Use a secret: {{secrets.DOCUSIGN_RSA_PRIVATE_KEY}}",
+        "group": "authentication",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "rsaPrivateKey" },
+        "constraints": { "notEmpty": true }
+      },
+      {
+        "label": "Environment",
+        "description": "Use 'demo' for sandbox testing; 'production' for live sending.",
+        "group": "authentication",
+        "type": "Dropdown",
+        "value": "demo",
+        "choices": [
+          { "name": "Demo (sandbox)", "value": "demo"       },
+          { "name": "Production",     "value": "production" }
+        ],
+        "binding": { "type": "zeebe:input", "name": "environment" }
+      },
+
+      {
+        "label": "Document Source",
+        "description": "How to provide the document to sign",
+        "group": "document",
+        "type": "Dropdown",
+        "value": "r2Key",
+        "choices": [
+          { "name": "R2 file variable (from form upload)", "value": "r2Key"      },
+          { "name": "DocuSign template ID",               "value": "templateId" }
+        ],
+        "binding": { "type": "zeebe:input", "name": "documentSource" }
+      },
+      {
+        "label": "Document Variable",
+        "description": "Process variable containing the uploaded file (StoredFile object or R2 key string). E.g. = contractFile",
+        "group": "document",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "documentKey" }
+      },
+      {
+        "label": "Template ID",
+        "description": "DocuSign template ID (if using a pre-built template instead of an uploaded document)",
+        "group": "document",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "templateId" }
+      },
+
+      {
+        "label": "Signers",
+        "description": "FEEL array of signers. For direct documents: [{name: clientName, email: clientEmail}]. For templates, include roleName: [{name: clientName, email: clientEmail, roleName: \"Signer 1\"}]",
+        "group": "signers",
+        "type": "String",
+        "feel": "required",
+        "binding": { "type": "zeebe:input", "name": "signers" },
+        "constraints": { "notEmpty": true }
+      },
+
+      {
+        "label": "Email Subject",
+        "description": "Subject line of the DocuSign invitation email. FEEL supported.",
+        "group": "message",
+        "type": "String",
+        "feel": "optional",
+        "value": "Please sign the document",
+        "binding": { "type": "zeebe:input", "name": "emailSubject" }
+      },
+
+      {
+        "label": "Message Name",
+        "description": "Must match the message name on the Intermediate Message Catch Event that waits for the signature.",
+        "group": "correlation",
+        "type": "String",
+        "feel": "optional",
+        "value": "envelope.completed",
+        "binding": { "type": "zeebe:input", "name": "messageName" }
+      },
+      {
+        "label": "Envelope ID Variable",
+        "description": "Process variable name where the DocuSign envelope ID is stored. The Intermediate Catch Event must correlate on this field.",
+        "group": "correlation",
+        "type": "String",
+        "feel": "optional",
+        "value": "envelopeId",
+        "binding": { "type": "zeebe:input", "name": "envelopeIdVariable" }
+      },
+
+      {
+        "label": "Webhook HMAC Key",
+        "description": "HMAC secret configured in DocuSign Connect for webhook signature verification. Use a secret: {{secrets.DOCUSIGN_WEBHOOK_HMAC_KEY}}",
+        "group": "advanced",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "webhookHmacKey" }
+      },
+      {
+        "label": "Retries",
+        "description": "Number of retry attempts on API failure",
+        "group": "advanced",
+        "type": "Number",
+        "value": 2,
+        "binding": { "type": "zeebe:input", "name": "retries" }
+      }
+    ]
+  }
+]

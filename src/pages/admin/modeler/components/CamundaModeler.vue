@@ -74,6 +74,7 @@ async function loadTemplates() {
 		'whatsapp-connector',
 		'openai-connector',
 		'dropbox-sign-connector',
+		'docusign-connector',
 		'report-connector'
 	];
 
@@ -209,6 +210,7 @@ const menuItems = [
 		<!-- Toolbar: speed-dial + docs + fullscreen -->
 		<div style="position:absolute;bottom:16px;right:16px;z-index:10;display:flex;align-items:end;gap:6px;">
 			<SpeedDial
+				class="modeler-speeddial"
 				:model="speedDialItems"
 				direction="up"
 				:style="{ position: 'relative' }"
@@ -252,3 +254,16 @@ const menuItems = [
 		<DmnListDialog            v-model:visible="showDmn" />
 	</div>
 </template>
+
+<style>
+/* SpeedDial action buttons — light gray with dark text in dark mode */
+:root.dark .modeler-speeddial .p-speeddial-action {
+    background: #e4e4e7 !important;
+    color: #18181b !important;
+    border: none !important;
+}
+:root.dark .modeler-speeddial .p-speeddial-action:hover {
+    background: #ffffff !important;
+    color: #18181b !important;
+}
+</style>

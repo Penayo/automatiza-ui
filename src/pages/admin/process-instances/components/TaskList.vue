@@ -9,6 +9,7 @@ import JsonEditor from 'vue3-ts-jsoneditor';
 import { ref, watch } from 'vue';
 import EditVariablesDialog from '@pages/admin/tasks/components/EditVariablesDialog.vue';
 import EditServiceConfigDialog from '@pages/admin/tasks/components/EditServiceConfigDialog.vue';
+import ReplayFromTaskDialog from '@pages/admin/tasks/components/ReplayFromTaskDialog.vue';
 
 const props = defineProps<{ processInstanceId?: string }>();
 
@@ -18,7 +19,7 @@ const tasks      = ref<Task[]>([]);
 const loading    = ref(false);
 const retryingId = ref<string | null>(null);
 
-// ── Retry ─────────────────────────────────────────────────────────────────────
+// ── Retry (quick, no variable changes) ────────────────────────────────────────
 
 async function retryTask(task: Task, event: MouseEvent) {
     event.stopPropagation();
@@ -32,6 +33,19 @@ async function retryTask(task: Task, event: MouseEvent) {
     } finally {
         retryingId.value = null;
     }
+}
+
+// ── Replay dialog ─────────────────────────────────────────────────────────────
+
+const replayDialogVisible = ref(false);
+const replayTask          = ref<Task | null>(null);
+const replayMode          = ref<'retry' | 'replay'>('replay');
+
+function openReplayDialog(task: Task, mode: 'retry' | 'replay', event: MouseEvent) {
+    event.stopPropagation();
+    replayTask.value          = task;
+    replayMode.value          = mode;
+    replayDialogVisible.value = true;
 }
 
 // ── Edit Variables ────────────────────────────────────────────────────────────
@@ -126,17 +140,39 @@ defineExpose({ reload: loadTasks });
                             :severity="statusSeverity[task.status] ?? 'secondary'"
                             class="font-mono text-xs"
                         />
-                        <!-- Retry — only on FAILED tasks -->
+                        <!-- Quick retry — FAILED automated tasks only -->
                         <Button
-                            v-if="task.status === 'FAILED'"
+                            v-if="task.status === 'FAILED' && task.type !== 'bpmn:UserTask'"
                             icon="pi pi-refresh"
                             size="small"
                             severity="warn"
                             text
                             label="Retry"
-                            v-tooltip.top="'Retry task'"
+                            v-tooltip.top="'Quick retry — same variables'"
                             :loading="retryingId === task.id"
                             @click="retryTask(task, $event)"
+                        />
+                        <!-- Retry with variable overrides — FAILED automated tasks -->
+                        <Button
+                            v-if="task.status === 'FAILED' && task.type !== 'bpmn:UserTask'"
+                            icon="pi pi-sliders-v"
+                            size="small"
+                            severity="warn"
+                            text
+                            rounded
+                            v-tooltip.top="'Retry with variable overrides'"
+                            @click="openReplayDialog(task, 'retry', $event)"
+                        />
+                        <!-- Replay from checkpoint — COMPLETED or FAILED automated tasks -->
+                        <Button
+                            v-if="['COMPLETED', 'FAILED'].includes(task.status) && task.type !== 'bpmn:UserTask'"
+                            icon="pi pi-history"
+                            size="small"
+                            severity="secondary"
+                            text
+                            rounded
+                            v-tooltip.top="'Replay from this task (rewinds process)'"
+                            @click="openReplayDialog(task, 'replay', $event)"
                         />
                         <!-- Edit service config -->
                         <Button
@@ -197,5 +233,13 @@ defineExpose({ reload: loadTasks });
         v-model:visible="serviceConfigDialogVisible"
         :task="serviceConfigTask"
         @saved="loadTasks"
+    />
+
+    <!-- Replay / retry-with-overrides dialog -->
+    <ReplayFromTaskDialog
+        v-model:visible="replayDialogVisible"
+        :task="replayTask"
+        :mode="replayMode"
+        @done="loadTasks"
     />
 </template>

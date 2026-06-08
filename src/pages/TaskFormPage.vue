@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@bpmn-io/form-js';
+import { DocumentListModule } from '@/form-fields/DocumentListField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
@@ -9,7 +10,7 @@ import { $taskPublic } from '@services/TaskPublicService';
 import type { TaskFormData } from '@services/TaskPublicService';
 import { useTheme } from '@/composables/useTheme';
 import { FilesService } from '@services/FilesService';
-import { resolveFormFiles } from '@/utils/form-files';
+import { resolveFormFiles } from '@/form-fields/form-js-submit';
 
 const filesService = new FilesService();
 
@@ -70,7 +71,7 @@ watch(state, (s) => {
     if (s !== 'form' || !data.value?.formSchema) return;
     setTimeout(() => {
         if (!formRef.value) return;
-        const form = new Form({ container: formRef.value });
+        const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule] });
         formViewer.value = form;
         form.importSchema(data.value!.formSchema, data.value!.formData ?? {});
         form.on('changed', (event: { data: Record<string, any> }) => {
@@ -228,7 +229,7 @@ onMounted(load);
                     <!-- Task title + description -->
                     <div class="mb-6">
                         <h1 class="text-xl font-semibold text-surface-900 dark:text-surface-50">
-                            {{ data.taskName }}
+                            {{ data.taskName }} Form
                         </h1>
                         <p v-if="data.documentation" class="text-sm text-surface-500 mt-1 leading-relaxed">
                             {{ data.documentation }}

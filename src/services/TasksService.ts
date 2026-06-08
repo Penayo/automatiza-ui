@@ -26,6 +26,7 @@ export interface Task extends APIData {
     type: string;
     status: string;
     variables: TaskVariable[];
+    inputVariables: TaskVariable[];
     createdAt: Date;
     completedAt?: Date;
     candidateGroups: string[];
@@ -195,10 +196,24 @@ export class TasksService extends ModelApiService {
         }
     }
 
-    async retryTask(taskId: string): Promise<{ status: string; message: string }> {
+    async retryTask(taskId: string, variables?: Record<string, any>): Promise<{ status: string; message: string }> {
         try {
             const response = await this.post<{ status: string; message: string }>(
                 `${taskId}/retry`,
+                variables ? { variables } : {},
+            );
+            return response as { status: string; message: string };
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
+    }
+
+    async replayFromTask(taskId: string, variables?: Record<string, any>): Promise<{ status: string; message: string }> {
+        try {
+            const response = await this.post<{ status: string; message: string }>(
+                `${taskId}/replay`,
+                variables ? { variables } : {},
             );
             return response as { status: string; message: string };
         } catch (err) {

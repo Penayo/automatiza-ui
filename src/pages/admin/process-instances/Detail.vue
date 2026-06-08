@@ -10,13 +10,17 @@ import TaskList from '@pages/admin/process-instances/components/TaskList.vue';
 import PauseProcessInstance from '@pages/admin/process-instances/components/PauseProcessInstance.vue';
 import ResumeProcessInstance from '@pages/admin/process-instances/components/ResumeProcessInstance.vue';
 import ProcessInstanceLog from '@pages/admin/process-instances/components/ProcessInstanceLog.vue';
+import DocumentsTab from '@components/data/DocumentsTab.vue';
+import DiagramTab from '@pages/admin/process-instances/components/DiagramTab.vue';
 
 const toast = useToast();
 const route = useRoute();
 const visible = ref(true);
 const instance = ref<ProcessInstance>();
 const loading = ref(false);
-const taskListRef = ref<InstanceType<typeof TaskList> | null>(null);
+
+const diagramTabRef = ref<InstanceType<typeof DiagramTab> | null>(null);
+const dialogRef     = ref<any>(null);
 
 const fetchInstance = async () => {
   loading.value = true;
@@ -37,12 +41,14 @@ onMounted(fetchInstance);
 
 <template>
   <Dialog
+    ref="dialogRef"
     v-model:visible="visible"
     maximizable
     modal
-    :header="instance ? instance.processDefinition.name : 'Detalles de la Instancia'"
+    :header="instance ? instance.processDefinition.name : 'Instance Details'"
     :style="{ width: '60rem', 'min-height': '40rem' }"
     :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
+    @show="dialogRef?.maximize()"
     @after-hide="$router.go(-1)"
   >
     <div v-if="loading" class="flex justify-center">
@@ -50,28 +56,29 @@ onMounted(fetchInstance);
     </div>
 
     <div v-else>
-      <Toolbar v-if="instance?.status !== 'COMPLETED'">
-          <template #start>
-          </template>
-
-          <template #center>
-          </template>
-
-          <template #end>
-            <PauseProcessInstance v-if="instance?.status == 'RUNNING'" :instance-id="instance?.id" @paused="fetchInstance" />
-            <ResumeProcessInstance v-if="instance?.status == 'PAUSED'" :instance-id="instance?.id" @resumed="fetchInstance" />
-          </template>
-      </Toolbar>
-
       <Tabs value="0">
         <TabList>
             <Tab value="0">Instance Data</Tab>
             <Tab value="1">Tasks</Tab>
+            <Tab value="2" @click="diagramTabRef?.loadTasks()">Diagram</Tab>
             <Tab value="3">Log</Tab>
             <Tab value="4">Exceptions</Tab>
+            <Tab value="5">Documents</Tab>
         </TabList>
-        <TabPanels class="overflow-y-auto" style="height: calc(100vh - 270px)">
+        <TabPanels class="overflow-y-auto" style="height: calc(100vh - 140px)">
             <TabPanel value="0">
+              <Toolbar v-if="instance?.status !== 'COMPLETED'">
+                  <template #start>
+                  </template>
+
+                  <template #center>
+                  </template>
+
+                  <template #end>
+                    <PauseProcessInstance v-if="instance?.status == 'RUNNING'" :instance-id="instance?.id" @paused="fetchInstance" />
+                    <ResumeProcessInstance v-if="instance?.status == 'PAUSED'" :instance-id="instance?.id" @resumed="fetchInstance" />
+                  </template>
+              </Toolbar>              
               <div  class="flex flex-col mt-4 gap-4">
                 <div class="flex flex-col gap-3 text-zinc-600 dark:text-zinc-200">
 
@@ -96,6 +103,10 @@ onMounted(fetchInstance);
               <TaskList ref="taskListRef" :processInstanceId="instance?.id" />
             </TabPanel>
 
+            <TabPanel value="2" class="p-0! overflow-hidden!" style="height:100%;">
+              <DiagramTab ref="diagramTabRef" :instance="instance" style="height:100%;" />
+            </TabPanel>
+
             <TabPanel value="3">
               <ProcessInstanceLog :processInstanceId="instance?.id" />
             </TabPanel>
@@ -118,6 +129,9 @@ onMounted(fetchInstance);
               <div v-else class="flex items-center justify-center h-24 text-surface-400 text-sm">
                 No exceptions recorded.
               </div>
+            </TabPanel>
+            <TabPanel value="5">
+              <DocumentsTab :variables="instance?.variables" />
             </TabPanel>
           </TabPanels>
       </Tabs>

@@ -121,7 +121,6 @@
 
 /* src/styles/formjs-dark.css - safe, non-layout-changing overrides */
 .formjs-dark {
-    --fj-bg: #0f1113;
     --fj-surface: #141619;
     --fj-text: #e6eef6;
     --fj-muted: #9aa6b2;
@@ -132,10 +131,8 @@
 }
 
 /* Root container color/background only */
-.formjs-dark,
 .formjs-dark .fjs,
 .formjs-dark .fjs-viewer {
-    background-color: var(--fj-bg);
     color: var(--fj-text);
 }
 

@@ -2,13 +2,23 @@ import type { IUser } from "@services/UserService";
 import { ModelApiService } from "@services/ModelAPI";
 import CryptoJS from 'crypto-js';
 
-const SECRET_KEY = 'your-secret-key'; // TODO: Use a secure key management in production, e.g., from environment variables
-
+const SECRET_KEY = import.meta.env.VITE_CRYPTO_KEY ?? 'fallback-dev-key';
 
 export interface ILogin {
-    username: string;
+    tenantSlug: string;
+    username?: string;
+    email?: string;
     password: string;
-    rememberMe: boolean;
+    rememberMe?: boolean;
+}
+
+export interface ISignup {
+    inviteToken: string;
+    tenantSlug: string;
+    tenantName: string;
+    username: string;
+    email: string;
+    password: string;
 }
 
 export interface IAccess {
@@ -22,15 +32,15 @@ export class AuthService extends ModelApiService {
     }
 
     async login(loginUser: ILogin): Promise<IAccess> {
-        try {
-            const { data } = await this.api.post(this.getUrl('login'), loginUser)
-            console.log('Login response data:', data);
-            localStorage.setItem('token', data.access_token)
+        const { data } = await this.api.post(this.getUrl('login'), loginUser);
+        localStorage.setItem('token', data.access_token);
+        return data as IAccess;
+    }
 
-            return data as IAccess;
-        } catch (err) {
-            throw err;
-        }
+    async signup(payload: ISignup): Promise<IAccess> {
+        const { data } = await this.api.post(this.getUrl('signup'), payload);
+        localStorage.setItem('token', data.access_token);
+        return data as IAccess;
     }
 
     saveAccessInfo(access: IAccess) {
@@ -39,10 +49,17 @@ export class AuthService extends ModelApiService {
     }
 
     getAccessInfo(): IAccess | null {
-        const accessInfo = localStorage.getItem('accessInfo')
+        const accessInfo = localStorage.getItem('accessInfo');
         if (!accessInfo) return null;
 
-        const bytes  = CryptoJS.AES.decrypt(accessInfo, SECRET_KEY);
-        return JSON.parse(bytes.toString(CryptoJS.enc.Utf8)) as IAccess;
+        try {
+            const bytes = CryptoJS.AES.decrypt(accessInfo, SECRET_KEY);
+            return JSON.parse(bytes.toString(CryptoJS.enc.Utf8)) as IAccess;
+        } catch {
+            // Stale or encrypted-with-different-key data — clear it and force re-login
+            localStorage.removeItem('accessInfo');
+            localStorage.removeItem('token');
+            return null;
+        }
     }
 };

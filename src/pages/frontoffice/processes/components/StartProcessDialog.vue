@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@bpmn-io/form-js';
+import { DocumentListModule } from '@/form-fields/DocumentListField';
 import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast, Button, Dialog } from 'primevue';
@@ -50,7 +51,7 @@ function buildVariables(): Record<string, string> {
 
 function mountForm() {
     if (!props.formSchema || !formRef.value) return;
-    const form = new Form({ container: formRef.value });
+    const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule] });
     formViewer.value = form;
     form.importSchema(props.formSchema, props.formSchema.metadata ?? {});
     form.on('submit', (event: { data: Record<string, any>; errors: any[] }) => {

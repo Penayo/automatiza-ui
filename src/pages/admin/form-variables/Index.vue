@@ -171,11 +171,13 @@ onMounted(load);
                     <InputText
                         v-model="form.key"
                         placeholder="e.g. countries"
-                        :disabled="!!editingId"
                         class="font-mono"
                     />
                     <p class="text-xs text-surface-400">
                         Used in form builder: <code class="bg-surface-100 dark:bg-zinc-800 px-1 rounded">= {{ form.key || 'key' }}</code>
+                    </p>
+                    <p v-if="editingId" class="text-xs text-amber-500">
+                        Changing the key will break any form that already references the old key in its <code class="bg-surface-100 dark:bg-zinc-800 px-1 rounded">valuesExpression</code>.
                     </p>
                 </div>
 

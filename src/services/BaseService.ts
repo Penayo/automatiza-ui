@@ -69,7 +69,7 @@ export class BaseService {
     try {
       config = config ?? {}
       config.headers = { ...this.getAuthorizationHeader() }
-      const response = await axios.patch(this.getUrl(id), data, config);
+      const response = await axios.put(this.getUrl(id), data, config);
       return response;
     } catch (err) {
       this.handleErrors(err);

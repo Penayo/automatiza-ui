@@ -1,3 +1,132 @@
+/* ── DocumentList custom field ────────────────────────────────────────────── */
+.fjs-document-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.fjs-document-list--disabled { opacity: 0.6; pointer-events: none; }
+
+.fjs-doc-list-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fj-muted, #6b7280);
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.fjs-doc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--fj-border, #e5e7eb);
+  background: var(--fj-input-bg, #fff);
+  transition: border-color 0.15s;
+
+  &:hover { border-color: var(--fj-border-hover, #9ca3af); }
+}
+
+.fjs-doc-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--fj-text, #111827);
+  min-width: 0;
+  flex: 1;
+
+  i { font-size: 1rem; flex-shrink: 0; }
+}
+
+.fjs-doc-icon--done    { color: #22c55e; }
+.fjs-doc-icon--pending { color: var(--fj-muted, #9ca3af); }
+
+.fjs-doc-uploaded {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.fjs-doc-filename {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--fj-text, #111827);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fjs-doc-size {
+  font-size: 0.72rem;
+  color: var(--fj-muted, #6b7280);
+  white-space: nowrap;
+}
+
+.fjs-doc-view {
+  color: var(--fj-muted, #6b7280);
+  font-size: 0.8rem;
+  text-decoration: none;
+  &:hover { color: var(--fj-text, #111827); }
+}
+
+.fjs-doc-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.1rem 0.25rem;
+  color: #ef4444;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  line-height: 1;
+  &:hover { background: rgba(239, 68, 68, 0.1); }
+}
+
+.fjs-doc-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  border: 1px dashed var(--fj-border, #d1d5db);
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--fj-muted, #6b7280);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: var(--fj-focus, #07bf9b);
+    color: var(--fj-focus, #07bf9b);
+  }
+
+  i { font-size: 0.85rem; }
+}
+
+.fjs-doc-empty {
+  font-size: 0.8rem;
+  color: var(--fj-muted, #9ca3af);
+  text-align: center;
+  padding: 1rem 0;
+}
+
+/* dark mode overrides */
+.formjs-dark {
+  .fjs-doc-row   { background: var(--fj-input-bg, #09090b); }
+  .fjs-doc-label { color: var(--fj-text, #e6eef6); }
+  .fjs-doc-filename { color: var(--fj-text, #e6eef6); }
+}
+
+/* ── End DocumentList ─────────────────────────────────────────────────────── */
+
 .form-editor-container {
   height: calc(100vh - 7rem);
   border: 1px solid var(--surface-border);
@@ -19,7 +148,7 @@
 .formjs-dark {
   --fj-btn-bg-hover: #171b32;
   --fj-btn-bg: #040717;
-  --fj-bg: #27272a;           /* overall background */
+  --fj-bg: #18181b;           /* overall background */
   --fj-surface: #1f2937;      /* panel / surface (matches bg) */
   --fj-text: #e6eef6;         /* readable text (kept light for contrast) */
   --fj-muted: #9aa6b2;        /* secondary text */
@@ -31,12 +160,40 @@
   --fj-danger: #ff6b6b;       /* validation / error accent (kept default) */
 }
 
+/* Override form-js's own CSS variable theming system so all its internal
+   rules (which use --cds-* / --color-* vars) automatically go dark. */
+.formjs-dark .fjs-container {
+  /* Carbon Design System tokens that form-js reads */
+  --cds-field:                    var(--fj-input-bg);
+  --cds-field-01:                 var(--fj-input-bg);
+  --cds-background:               var(--fj-bg);
+  --cds-layer:                    var(--fj-input-bg);
+  --cds-layer-01:                 var(--fj-input-bg);
+  --cds-text-primary:             var(--fj-text);
+  --cds-text-secondary:           var(--fj-muted);
+  --cds-text-placeholder:         var(--fj-placeholder);
+  --cds-text-disabled:            var(--fj-muted);
+  --cds-border-strong:            var(--fj-border);
+  --cds-border-strong-01:         var(--fj-border);
+  --cds-border-subtle:            var(--fj-border);
+  --cds-icon-primary:             var(--fj-muted);
+  /* Direct color vars used as fallbacks inside form-js */
+  --color-background:             var(--fj-input-bg);
+  --color-background-pre:         var(--fj-bg);
+  --color-text:                   var(--fj-text);
+  --color-text-light:             var(--fj-muted);
+  --color-text-lighter:           var(--fj-muted);
+  --color-text-lightest:          var(--fj-placeholder);
+
+  background-color: var(--fj-bg) !important;
+}
+
 /* Root background + text color for viewer/editor containers */
 .formjs-dark,
 .formjs-dark .fjs,
 .formjs-dark .fjs-container,
 .formjs-dark .fjs-editor {
-  // background-color: var(--fj-bg) !important;
+  background-color: var(--fj-bg) !important;
   color: var(--fj-text) !important;
 }
 

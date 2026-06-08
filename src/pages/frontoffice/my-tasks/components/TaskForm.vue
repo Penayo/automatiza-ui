@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form } from "@bpmn-io/form-js";
+import { DocumentListModule } from '@/form-fields/DocumentListField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
@@ -15,7 +16,7 @@ import type { ProcessVariables } from "@services/ProcessesService";
 import { onApprove } from "@/utils/common";
 import { parseApiError } from "@/utils/error";
 import type { IAccess } from "@services/AuthService.ts";
-import { resolveFormFiles } from '@/utils/form-files';
+import { resolveFormFiles } from '@/form-fields/form-js-submit';
 
 const toast    = useToast();
 const confirm  = useConfirm();
@@ -120,7 +121,7 @@ watch(formSchema, () => {
 
     if (!formSchema.value || !props.task) return;
 
-    const form = new Form({ container: formRef.value });
+    const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule] });
     formViewer.value = form;
 
     form.importSchema(formSchema.value, formData.value).then(() => {

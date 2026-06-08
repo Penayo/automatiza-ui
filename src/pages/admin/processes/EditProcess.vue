@@ -24,6 +24,7 @@ const tabs = [
     { key: 'stats',     label: 'Stats',     icon: 'pi pi-chart-bar'  },
 ] as const;
 
+
 // ── Derived props for child components ────────────────────────────────────────
 
 /** Initial meta snapshot passed down to ProcessInfo */
@@ -53,8 +54,17 @@ async function saveDiagram(xml: string) {
     if (!process.value) return;
     try {
         process.value.bpmnXml = xml;
-        await $api.processes.saveProcess(process.value);
-        toast.add({ severity: 'success', summary: 'Saved', detail: 'Diagram saved successfully.', life: 3000 });
+        const saved = await $api.processes.saveProcess(process.value) as ProcessDefinition | null;
+
+        // Backend always creates a new ProcessDefinition document (new id, incremented version).
+        // Update local state so subsequent starts/stats use the new version.
+        if (saved?.id) {
+            process.value = saved;
+            // Replace URL so the page stays bound to the latest version's id.
+            router.replace({ name: 'ProcessEdit', params: { id: saved.id } });
+        }
+
+        toast.add({ severity: 'success', summary: 'Saved', detail: `Diagram saved — v${saved?.version ?? ''}.`, life: 3000 });
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not save diagram.', life: 3000 });
     }
@@ -132,7 +142,7 @@ onMounted(fetchProcess);
 
             <ProcessStats
                 v-else-if="activeTab === 'stats' && process"
-                :process-definition-id="process.id!"
+                :process-definition-id="process.processId"
             />
 
         </div>

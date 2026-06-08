@@ -5,6 +5,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useToast, Button, Select, DataTable, Column, Tag, Dialog } from 'primevue';
 import { Form } from '@bpmn-io/form-js';
+import { DocumentListModule } from '@/form-fields/DocumentListField';
 import JsonEditor from 'vue3-ts-jsoneditor';
 import { $api } from '@services/api';
 import type { ProcessInstance, ProcessInstanceQuery } from '@services/ProcessesService';
@@ -112,7 +113,7 @@ async function openStartDialog() {
 
 function onStartDialogShow() {
     if (!startFormSchema.value || !startFormRef.value) return;
-    const form = new Form({ container: startFormRef.value });
+    const form = new Form({ container: startFormRef.value, additionalModules: [DocumentListModule] });
     startFormViewer.value = form;
     form.importSchema(startFormSchema.value, {});
     form.on('submit', (event: { data: Record<string, any>; errors: unknown[] }) => {

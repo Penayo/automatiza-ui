@@ -8,6 +8,7 @@ import AdminLayout from '@layout/AdminLayout.vue';
 const routes = [
   // ─── No-layout routes ────────────────────────────────────────────────────
   { path: '/login',           name: 'Login',        component: () => import('./pages/Login.vue') },
+  { path: '/signup',          name: 'Signup',        component: () => import('./pages/Signup.vue') },
   { path: '/unauthorized',    name: 'Unauthorized',  component: () => import('./pages/unauthorized.vue') },
   { path: '/task-form/:token', name: 'PublicTaskForm', component: () => import('./pages/TaskFormPage.vue') },
 
