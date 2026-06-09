@@ -13,7 +13,6 @@ export interface ILogin {
 }
 
 export interface ISignup {
-    inviteToken: string;
     tenantSlug: string;
     tenantName: string;
     username: string;

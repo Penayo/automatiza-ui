@@ -49,15 +49,29 @@ async function mountDesigner() {
 
     // ── 3. Instantiate Designer (can throw for bad template / domContainer) ───
     try {
-        const { text, image, table, line, rectangle, ellipse, barcodes } = schemas as any;
+        const {
+            text, image, table, line, rectangle, ellipse, barcodes,
+            date, dateTime, time, checkbox, radioGroup, select,
+            signature, svg, multiVariableText, list,
+        } = schemas as any;
 
         const PLUGINS: Record<string, any> = {
-            Text:      text,
-            Image:     image,
-            Table:     table,
-            Line:      line,
-            Rectangle: rectangle,
-            Ellipse:   ellipse,
+            Text:              text,
+            Image:             image,
+            Table:             table,
+            Line:              line,
+            Rectangle:         rectangle,
+            Ellipse:           ellipse,
+            Date:              date,
+            DateTime:          dateTime,
+            Time:              time,
+            Checkbox:          checkbox,
+            RadioGroup:        radioGroup,
+            Select:            select,
+            Signature:         signature,
+            SVG:               svg,
+            MultiVariableText: multiVariableText,
+            List:              list,
             ...(barcodes ?? {}),
         };
 
@@ -95,11 +109,15 @@ function getTemplate(): Record<string, any> | null {
     return designer.value?.getTemplate() ?? props.template ?? null;
 }
 
-defineExpose({ getTemplate });
+function updateTemplate(tpl: Record<string, any>) {
+    designer.value?.updateTemplate(tpl);
+}
+
+defineExpose({ getTemplate, updateTemplate });
 </script>
 
 <template>
-    <div class="w-full h-full relative">
+    <div class="w-full h-[calc(100vh)] relative">
         <!-- ── Error: package not installed ───────────────────────────────── -->
         <div
             v-if="loadError?.kind === 'missing'"
@@ -131,3 +149,13 @@ defineExpose({ getTemplate });
         <div v-else ref="containerRef" class="w-full h-full" />
     </div>
 </template>
+
+<style>
+/* pdfme left sidebar: when many plugins exceed the sidebar height the auto
+   scrollbar was overlapping the 45px-wide icon buttons. Force only Y scroll. */
+.pdfme-designer-left-sidebar {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    width: 70px !important;
+}
+</style>

@@ -11,7 +11,6 @@ const toast   = useToast();
 const router  = useRouter();
 const loading = ref(false);
 
-const inviteToken = ref('');
 const tenantSlug  = ref('');
 const tenantName  = ref('');
 const username    = ref('');
@@ -23,7 +22,6 @@ const handleSignup = (event: Event) => {
     loading.value = true;
 
     $api.authService.signup({
-        inviteToken: inviteToken.value,
         tenantSlug:  tenantSlug.value,
         tenantName:  tenantName.value,
         username:    username.value,
@@ -48,18 +46,6 @@ const handleSignup = (event: Event) => {
         <div class="flex flex-col items-center justify-center min-h-screen">
             <form @submit="handleSignup" class="p-8 rounded shadow-md w-full max-w-md flex flex-col gap-4 border border-emerald-500">
                 <h2 class="text-2xl font-bold mb-2 text-center">Create your organization</h2>
-                <p class="text-sm text-center text-gray-400 mb-2">You'll need an invite token to get started.</p>
-
-                <FormField label="Invite token" label-for="inviteToken">
-                    <InputText
-                        class="w-full"
-                        id="inviteToken"
-                        v-model="inviteToken"
-                        placeholder="Provided by your administrator"
-                        autocomplete="off"
-                        type="password"
-                    />
-                </FormField>
 
                 <FormField label="Organization name" label-for="tenantName">
                     <InputText
