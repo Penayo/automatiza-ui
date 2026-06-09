@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useToast, useConfirm, Button, DataTable, Column, Tag } from 'primevue';
+import { useToast, useConfirm, Button, DataTable, Column, Tag, InputText } from 'primevue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { $api } from '@services/api';
@@ -16,6 +16,16 @@ const confirm = useConfirm();
 
 const decisions = ref<DecisionDefinition[]>([]);
 const loading   = ref(false);
+const search    = ref('');
+
+const filtered = computed(() => {
+    const q = search.value.trim().toLowerCase();
+    if (!q) return decisions.value;
+    return decisions.value.filter(d =>
+        d.name?.toLowerCase().includes(q) ||
+        d.decisionId?.toLowerCase().includes(q)
+    );
+});
 
 async function load() {
     loading.value = true;
@@ -61,18 +71,35 @@ onMounted(load);
                 <h1 class="text-2xl font-semibold" style="color: var(--layout-title-color)">Decision Definitions</h1>
                 <p class="text-sm text-surface-400 mt-0.5">DMN decision tables used by Business Rule Tasks</p>
             </div>
-            <Button
-                label="New Decision"
-                icon="pi pi-plus"
-                @click="router.push({ name: 'DecisionNew' })"
-            />
+            <div class="flex items-center gap-2">
+                <InputText
+                    v-model="search"
+                    placeholder="Search decisions..."
+                    size="small"
+                    style="width: 220px"
+                />
+                <Button
+                    icon="pi pi-refresh"
+                    size="small"
+                    text
+                    rounded
+                    v-tooltip.top="'Refresh'"
+                    @click="load"
+                />
+                <Button
+                    label="New Decision"
+                    icon="pi pi-plus"
+                    size="small"
+                    @click="router.push({ name: 'DecisionNew' })"
+                />
+            </div>
         </div>
 
         <!-- Table -->
         <DataTable
-            :value="decisions"
+            :value="filtered"
             :loading="loading"
-            emptyMessage="No decisions yet. Click 'New Decision' to create one."
+            emptyMessage="No decisions found."
             size="small"
             :paginator="decisions.length > 20"
             :rows="20"

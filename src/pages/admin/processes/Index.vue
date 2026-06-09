@@ -47,6 +47,24 @@ const openEdit  = (id: string) => $router.push({ name: 'ProcessEdit', params: { 
 const openStart = (id: string, e: MouseEvent) => { e.stopPropagation(); $router.push({ name: 'ProcessStart', params: { id } }); };
 const openNew   = () => $router.push({ name: 'ProcessNew' });
 
+const copyLink = async (id: string, e: MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/start/${id}`;
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    }
+    toast.add({ severity: 'success', summary: 'Copied', detail: 'Start form link copied to clipboard', life: 2000 });
+};
+
 onMounted(fetchData);
 </script>
 
@@ -155,6 +173,14 @@ onMounted(fetchData);
                             @click="deployProcess(proc, $event)"
                         >
                             <i class="pi pi-upload" /> Deploy
+                        </button>
+                        <div class="w-px h-4 bg-surface-200 dark:bg-surface-700" />
+                        <button
+                            class="flex-1 flex items-center justify-center gap-1.5 text-xs text-surface-500 py-2.5 hover:text-emerald-500 transition-colors"
+                            v-tooltip.top="'Copy shareable start form link'"
+                            @click="copyLink(proc.id!, $event)"
+                        >
+                            <i class="pi pi-link" /> Link
                         </button>
                     </div>
                 </div>

@@ -1,0 +1,4 @@
+onlyBuiltDependencies:
+  - bpmn-js-properties-panel
+  - esbuild
+  - canvas

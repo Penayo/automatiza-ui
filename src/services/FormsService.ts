@@ -40,6 +40,10 @@ export class FormsService extends ModelApiService {
         return data as IForm[];
     }
 
+    async findById(id: string): Promise<IForm> {
+        return this.get<IForm>(id) as Promise<IForm>;
+    }
+
     async findByName(formName: string): Promise<IForm> {
         const url = `${formName}`;
         try {
@@ -52,9 +56,7 @@ export class FormsService extends ModelApiService {
     }
 
     save(formData: IForm) {
-        delete formData._id;
-        delete formData.__v;
-
-        return this.post("", formData)
+        const { _id, __v, createdAt, updatedAt, tenantId, ...payload } = formData as any;
+        return this.post("", payload);
     }
 };

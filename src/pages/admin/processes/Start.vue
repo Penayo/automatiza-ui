@@ -2,7 +2,7 @@
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { onMounted, ref } from 'vue';
+import { onMounted, watch, ref } from 'vue';
 import { Button, Dialog, useToast } from 'primevue';
 import { useRoute } from 'vue-router';
 import JsonEditor from 'vue3-ts-jsoneditor';
@@ -68,10 +68,14 @@ const submitForm = () => {
 
 const cancelStart = () => visible.value = false
 
-onMounted(async () => {
-    await fetchProcess();
-    buildForm()
-});
+watch(formSchema, (schema) => {
+    if (!schema) return;
+    setTimeout(() => {
+        if (formRef.value) buildForm();
+    }, 0);
+}, { once: true });
+
+onMounted(fetchProcess);
 </script>
 
 <template>

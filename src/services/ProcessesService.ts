@@ -126,7 +126,7 @@ export class ProcessesService extends ModelApiService {
     }
 
     async saveProcess(process: ProcessDefinition | DeployProcessDto) {
-        return this.post('', process);
+        return this.post('', { bpmnXml: process.bpmnXml });
     }
 
     async deployProcess(id: string) {

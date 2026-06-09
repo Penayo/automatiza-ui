@@ -45,14 +45,14 @@ watch(visible, (v) => { if (v) load(); });
                 <template #body>
                     <Button icon="pi pi-pencil" text rounded size="small" severity="secondary"
                         v-tooltip.top="'Open Form Builder'"
-                        @click="router.push({ name: 'FormsBuilder' }); visible = false" />
+                        @click="router.push({ name: 'FormsList' }); visible = false" />
                 </template>
             </Column>
         </DataTable>
 
         <template #footer>
             <Button label="Form Builder" icon="pi pi-file-edit" size="small"
-                @click="router.push({ name: 'FormsBuilder' }); visible = false" />
+                @click="router.push({ name: 'FormsList' }); visible = false" />
         </template>
     </Dialog>
 </template>

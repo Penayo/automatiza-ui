@@ -7,7 +7,10 @@ import 'dmn-js/dist/assets/dmn-js-shared.css';
 import 'dmn-js/dist/assets/dmn-js-drd.css';
 import 'dmn-js/dist/assets/dmn-js-decision-table.css';
 import 'dmn-js/dist/assets/dmn-js-literal-expression.css';
+import 'dmn-js-properties-panel/dist/assets/properties-panel.css';
+import '@bpmn-io/properties-panel/assets/properties-panel.css';
 import './styles.css';
+import { DmnPropertiesPanelModule, DmnPropertiesProviderModule } from 'dmn-js-properties-panel';
 import { useTheme } from '@/composables/useTheme';
 
 const { isDark } = useTheme();
@@ -20,9 +23,10 @@ const emit = defineEmits<{
     'save': [xml: string];
 }>();
 
-const containerRef = ref<HTMLElement | null>(null);
-const modeler      = ref<any>(null);
-const error        = ref<string | null>(null);
+const containerRef      = ref<HTMLElement | null>(null);
+const propertiesPanelRef = ref<HTMLElement | null>(null);
+const modeler           = ref<any>(null);
+const error             = ref<string | null>(null);
 
 const INITIAL_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
@@ -66,10 +70,25 @@ async function saveXml() {
     emit('save', xml);
 }
 
+async function getXml(): Promise<string> {
+    if (!modeler.value) return '';
+    const { xml } = await modeler.value.saveXML({ format: true });
+    return xml;
+}
+
 onMounted(async () => {
-    if (!containerRef.value) return;
+    if (!containerRef.value || !propertiesPanelRef.value) return;
     try {
-        modeler.value = new DmnModelerLib({ container: containerRef.value });
+        modeler.value = new DmnModelerLib({
+            container: containerRef.value,
+            drd: {
+                propertiesPanel: { parent: propertiesPanelRef.value },
+                additionalModules: [
+                    DmnPropertiesPanelModule,
+                    DmnPropertiesProviderModule,
+                ],
+            },
+        });
         await importXml(props.xml ?? INITIAL_XML);
     } catch (err: any) {
         error.value = err?.message ?? 'Failed to initialise DMN modeler';
@@ -85,7 +104,7 @@ watch(() => props.xml, (newXml) => {
     if (newXml) importXml(newXml);
 });
 
-defineExpose({ saveXml });
+defineExpose({ saveXml, getXml, importXml });
 </script>
 
 <template>
@@ -95,11 +114,18 @@ defineExpose({ saveXml });
             <i class="pi pi-exclamation-circle mr-1" />{{ error }}
         </div>
 
-        <!-- Canvas — dmn-modeler-container gives our CSS hook for theming -->
-        <div
-            ref="containerRef"
-            class="flex-1 w-full dmn-modeler-container"
-            :class="isDark ? 'dmn-dark' : 'dmn-light'"
-        />
+        <!-- Canvas + Properties panel -->
+        <div class="flex flex-1 min-h-0">
+            <div
+                ref="containerRef"
+                class="flex-1 min-w-0 dmn-modeler-container"
+                :class="isDark ? 'dmn-dark' : 'dmn-light'"
+            />
+            <div
+                ref="propertiesPanelRef"
+                class="dmn-properties-panel border-l border-surface-200 dark:border-surface-700 overflow-y-auto shrink-0"
+                style="width: 280px;"
+            />
+        </div>
     </div>
 </template>

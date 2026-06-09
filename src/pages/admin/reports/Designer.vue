@@ -6,7 +6,10 @@ import { $api } from '@services/api';
 import type { ReportDefinition } from '@services/ReportsService';
 import PdfDesigner from './components/PdfDesigner.vue';
 import PdfPreview  from './components/PdfPreview.vue';
+import JsonEditor from 'vue3-ts-jsoneditor';
+import { useTheme } from '@/composables/useTheme';
 
+const { isDark } = useTheme();
 const route  = useRoute();
 const router = useRouter();
 const toast  = useToast();
@@ -180,26 +183,31 @@ onMounted(load);
             </div>
 
             <!-- JSON tab -->
-            <div v-if="activeTab === 'json'" class="flex-1 min-h-0 flex flex-col gap-3 p-4 h-[calc(100vh-100px)]">
-                <div class="flex items-center justify-between shrink-0">
+            <div v-if="activeTab === 'json'" class="flex-1 min-h-0 flex flex-col">
+                <div class="flex items-center justify-between px-4 py-2 border-b border-surface-200 dark:border-surface-700 shrink-0">
                     <p class="text-xs text-surface-400">
                         Read and edit the raw pdfme template JSON. Click "Apply" to push changes back to the designer.
                     </p>
-                    <Button
-                        label="Apply to designer"
-                        icon="pi pi-arrow-left"
-                        size="small"
-                        :disabled="!!jsonError"
-                        @click="applyJsonToDesigner"
+                    <div class="flex items-center gap-2">
+                        <span v-if="jsonError" class="text-xs text-red-500">{{ jsonError }}</span>
+                        <Button
+                            label="Apply to designer"
+                            icon="pi pi-arrow-left"
+                            size="small"
+                            @click="applyJsonToDesigner"
+                        />
+                    </div>
+                </div>
+                <div class="flex-1 min-h-0 json-editor-fill">
+                    <JsonEditor
+                        v-model:text="jsonText"
+                        mode="text"
+                        :mainMenuBar="false"
+                        :navigationBar="false"
+                        :darkTheme="isDark"
+                        @change="jsonError = ''"
                     />
                 </div>
-                <p v-if="jsonError" class="text-xs text-red-500 shrink-0">{{ jsonError }}</p>
-                <textarea
-                    v-model="jsonText"
-                    class="flex-1 w-full font-mono text-xs p-3 rounded border border-surface-300 dark:border-surface-600 bg-surface-50 dark:bg-zinc-900 text-surface-800 dark:text-surface-100 resize-none outline-none focus:ring-2 focus:ring-primary-400"
-                    spellcheck="false"
-                    @input="jsonError = ''"
-                />
             </div>
 
             <!-- Preview tab -->
@@ -240,3 +248,9 @@ onMounted(load);
 
     </div>
 </template>
+
+<style scoped>
+.json-editor-fill :deep(.vue-ts-json-editor) {
+    height: 100% !important;
+}
+</style>

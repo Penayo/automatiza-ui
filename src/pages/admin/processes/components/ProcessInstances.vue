@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
-import { ref, onMounted } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useToast, Button, Select, DataTable, Column, Tag, Dialog } from 'primevue';
 import { Form } from '@bpmn-io/form-js';
@@ -112,7 +112,12 @@ async function openStartDialog() {
 }
 
 function onStartDialogShow() {
-    if (!startFormSchema.value || !startFormRef.value) return;
+    // Schema may not be loaded yet — the watch below handles that case.
+    if (startFormSchema.value && startFormRef.value) mountStartForm();
+}
+
+function mountStartForm() {
+    if (!startFormRef.value) return;
     const form = new Form({ container: startFormRef.value, additionalModules: [DocumentListModule] });
     startFormViewer.value = form;
     form.importSchema(startFormSchema.value, {});
@@ -120,6 +125,12 @@ function onStartDialogShow() {
         submitStart(event.data);
     });
 }
+
+watch(startFormSchema, (schema) => {
+    if (!schema) return;
+    // Wait for the v-if="startFormSchema" div to render before mounting.
+    setTimeout(() => mountStartForm(), 0);
+});
 
 async function submitStart(variables: Record<string, any>) {
     starting.value = true;

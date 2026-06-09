@@ -105,7 +105,7 @@
 			icon: 'pi pi-palette',
 			items: [
 				{ label: 'Process',   icon: 'pi pi-palette',   command: () => nav('/admin/modeler') },
-				{ label: 'Form',      icon: 'pi pi-file-edit', command: () => nav('/admin/formbuilder') },
+				{ label: 'Form',      icon: 'pi pi-file-edit', command: () => nav('/admin/forms') },
 				{ label: 'Decision',      icon: 'pi pi-table',     command: () => nav('/admin/decisions') },
 				{ label: 'Form Variables', icon: 'pi pi-list',      command: () => nav('/admin/form-variables') },
 				{ label: 'Reports',        icon: 'pi pi-file-pdf',  command: () => nav('/admin/reports') },

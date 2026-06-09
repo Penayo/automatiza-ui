@@ -41,4 +41,8 @@ export class DecisionsService extends ModelApiService {
     remove(id: string): Promise<void> {
         return this.delete(id);
     }
+
+    evaluate(id: string, variables: Record<string, any>): Promise<{ outputs: Record<string, any>; matchedRules: number[] }> {
+        return this.post<{ outputs: Record<string, any>; matchedRules: number[] }>(`${id}/evaluate`, { variables });
+    }
 }

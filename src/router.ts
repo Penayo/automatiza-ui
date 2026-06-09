@@ -11,6 +11,7 @@ const routes = [
   { path: '/signup',          name: 'Signup',        component: () => import('./pages/Signup.vue') },
   { path: '/unauthorized',    name: 'Unauthorized',  component: () => import('./pages/unauthorized.vue') },
   { path: '/task-form/:token', name: 'PublicTaskForm', component: () => import('./pages/TaskFormPage.vue') },
+  { path: '/start/:processId',  name: 'ProcessStartForm', component: () => import('./pages/StartFormPage.vue') },
 
   // ─── Frontoffice (end-user clean URLs) ───────────────────────────────────
   {
@@ -78,7 +79,10 @@ const routes = [
 
       // Design
       { path: 'modeler',     name: 'CamundaModeler', component: () => import('./pages/admin/modeler/Index.vue') },
-      { path: 'formbuilder', name: 'FormsBuilder',   component: () => import('./pages/admin/forms/Index.vue') },
+      { path: 'forms',          name: 'FormsList', component: () => import('./pages/admin/forms/FormsIndex.vue') },
+      { path: 'forms/new',      name: 'FormsNew',  component: () => import('./pages/admin/forms/Index.vue') },
+      { path: 'forms/:id/edit', name: 'FormsEdit', component: () => import('./pages/admin/forms/Index.vue') },
+      { path: 'formbuilder', redirect: { name: 'FormsList' } },
 
       // Decisions (DMN)
       { path: 'decisions',        name: 'DecisionsList',   component: () => import('./pages/admin/decisions/Index.vue') },
