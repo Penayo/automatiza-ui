@@ -5,10 +5,10 @@ export interface IForm extends APIData {
     id: string;
     name: string;
     description?: string;
-    type: 'default' | 'form' | 'Form';
+    type: 'default' | 'form' | 'Form' | 'jsonschema';
     version: number;
     schemaVersion: number;
-    components: Array<{
+    components?: Array<{
         type: string;
         id: string;
         label?: string;
@@ -23,6 +23,9 @@ export interface IForm extends APIData {
         };
         [key: string]: any;
     }>;
+    jsonSchema?: Record<string, any>;
+    uiSchema?: Record<string, any>;
+    errorSchema?: Record<string, any>;
     metadata?: { key: string; value: any }[];
     processDefinitionId?: string;
     taskDefinitionId?: string;

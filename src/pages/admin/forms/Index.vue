@@ -1,22 +1,14 @@
 <script setup lang="ts">
-import '@bpmn-io/form-js/dist/assets/form-js.css';
-import '@bpmn-io/form-js/dist/assets/form-js-editor.css';
-import '@/forms.scss';
-import { FormEditor } from '@bpmn-io/form-js-editor';
-import { Form } from '@bpmn-io/form-js';
-import { DocumentListModule, DocumentListEditorModule } from '@/form-fields/DocumentListField';
-import JsonEditor from 'vue3-ts-jsoneditor';
-
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
+import { onMounted, nextTick, ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useTheme } from '@/composables/useTheme';
-import { Button, InputText, Textarea, Dialog, SelectButton, Tag, useToast } from 'primevue';
+import { Button, InputText, Textarea, Dialog, useToast } from 'primevue';
 import { $api } from '@services/api';
 import type { IForm } from '@services/FormsService';
-import type { FormVariable } from '@services/FormVariablesService';
 import FormField from '@components/form/FormField.vue';
+import FormDesignerTab from './components/FormDesignerTab.vue';
+import FormJsonTab     from './components/FormJsonTab.vue';
+import FormPreviewTab  from './components/FormPreviewTab.vue';
 
-const { isDark } = useTheme();
 const route  = useRoute();
 const router = useRouter();
 const toast  = useToast();
@@ -28,136 +20,50 @@ const form    = ref<IForm | null>(null);
 const loading = ref(false);
 const saving  = ref(false);
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
-type Tab = 'designer' | 'json' | 'preview';
-const activeTab = ref<Tab>('designer');
-const jsonText  = ref('');
-const jsonError = ref('');
-
-// ── Editor ────────────────────────────────────────────────────────────────────
-const editorRef = ref<HTMLDivElement>();
-const editor    = ref<FormEditor | null>(null);
-
+// ── Schema helpers ────────────────────────────────────────────────────────────
 const EMPTY_SCHEMA = { type: 'default', components: [] };
 
-function getSchema(): any {
-    return editor.value?.getSchema?.() ?? form.value ?? EMPTY_SCHEMA;
+function toFormJsSchema(f: IForm): object {
+    return { id: f.id, type: f.type ?? 'default', schemaVersion: f.schemaVersion, components: f.components ?? [] };
+}
+
+const initialSchema = computed(() =>
+    form.value ? toFormJsSchema(form.value) : EMPTY_SCHEMA,
+);
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+type Tab = 'designer' | 'json' | 'preview';
+const activeTab       = ref<Tab>('designer');
+const designerRef     = ref<InstanceType<typeof FormDesignerTab> | null>(null);
+const schemaSnapshot  = ref<object>(EMPTY_SCHEMA);
+
+// Called on every designer edit via commandStack.changed — keeps schemaSnapshot live.
+function onDesignerSchemaChange(schema: any) {
+    schemaSnapshot.value = schema;
 }
 
 function switchTab(tab: Tab) {
-    if (tab === 'json') {
-        jsonText.value = JSON.stringify(getSchema(), null, 2);
-        jsonError.value = '';
-    }
-    if (tab === 'preview') {
-        previewSchema.value = getSchema();
-        mountPreview(previewSchema.value);
+    // Also capture on tab switch as a safety net (e.g. if commandStack event missed).
+    if (activeTab.value === 'designer') {
+        const current = designerRef.value?.getSchema();
+        if (current) schemaSnapshot.value = current;
     }
     activeTab.value = tab;
 }
 
-function applyJsonToEditor() {
+async function onJsonApply(schema: any) {
+    // Switch to designer first so the container is visible (non-zero dimensions)
+    // before calling importSchema — form-js needs a rendered container to import into.
+    activeTab.value = 'designer';
+    await nextTick();
     try {
-        const schema = JSON.parse(jsonText.value);
-        editor.value?.importSchema(schema);
-        activeTab.value = 'designer';
-        jsonError.value = '';
+        await designerRef.value?.importSchema(schema);
+        schemaSnapshot.value = schema;
         toast.add({ severity: 'success', summary: 'Applied', detail: 'JSON applied to designer.', life: 2000 });
     } catch (err: any) {
-        jsonError.value = err?.message ?? 'Invalid JSON';
+        toast.add({ severity: 'error', summary: 'Apply failed', detail: err?.message ?? 'Could not apply schema.', life: 4000 });
     }
 }
-
-// ── Preview ───────────────────────────────────────────────────────────────────
-type ViewMode = 'desktop' | 'tablet' | 'mobile';
-const viewMode = ref<ViewMode>('desktop');
-const viewOptions = [
-    { value: 'desktop', icon: 'pi pi-desktop',  label: 'Desktop' },
-    { value: 'tablet',  icon: 'pi pi-tablet',   label: 'Tablet'  },
-    { value: 'mobile',  icon: 'pi pi-mobile',   label: 'Mobile'  },
-];
-const canvasMaxWidth: Record<ViewMode, string> = {
-    desktop: '100%', tablet: '768px', mobile: '390px',
-};
-
-const previewRef     = ref<HTMLDivElement>();
-const previewSchema  = ref<any>(null);
-const taskVarsJson   = ref('{\n  \n}');
-const formOutputJson = ref('{}');
-const varsJsonError  = ref('');
-const allFormVars    = ref<FormVariable[]>([]);
-const referencedKeys = ref<string[]>([]);
-
-const resolvedFormVars = computed<Record<string, any>>(() => {
-    const map: Record<string, any> = {};
-    for (const fv of allFormVars.value) {
-        if (referencedKeys.value.includes(fv.key)) map[fv.key] = fv.items;
-    }
-    return map;
-});
-
-let previewInstance: any = null;
-
-function destroyPreview() {
-    previewInstance?.destroy();
-    previewInstance = null;
-    formOutputJson.value = '{}';
-}
-
-function extractExpressionKeys(schema: any): string[] {
-    const keys = new Set<string>();
-    const scan = (components: any[]) => {
-        for (const c of components ?? []) {
-            if (c.valuesExpression) {
-                const m = String(c.valuesExpression).match(/^=\s*(\w+)/);
-                if (m) keys.add(m[1]);
-            }
-            if (c.documentsExpression) {
-                const m = String(c.documentsExpression).match(/^=?\s*(\w+)/);
-                if (m) keys.add(m[1]);
-            }
-            if (c.components) scan(c.components);
-        }
-    };
-    scan(schema?.components ?? []);
-    return [...keys];
-}
-
-async function loadFormVars(schema: any) {
-    try {
-        allFormVars.value    = await $api.formVariables.getAll();
-        referencedKeys.value = extractExpressionKeys(schema);
-    } catch { /* non-fatal */ }
-}
-
-async function mountPreview(schema: any, taskData: object = {}) {
-    if (!previewRef.value || !schema) return;
-    destroyPreview();
-    const merged = { ...resolvedFormVars.value, ...taskData };
-    previewInstance = new Form({ container: previewRef.value, additionalModules: [DocumentListModule] });
-    await previewInstance.importSchema(schema, merged);
-    previewInstance.on('changed', (event: { data: Record<string, any> }) => {
-        formOutputJson.value = JSON.stringify(event.data, null, 2);
-    });
-}
-
-async function applyVars() {
-    try {
-        const data = JSON.parse(taskVarsJson.value);
-        varsJsonError.value = '';
-        await mountPreview(previewSchema.value, data);
-    } catch (err: any) {
-        varsJsonError.value = err?.message ?? 'Invalid JSON';
-    }
-}
-
-// wait for previewRef to be in DOM when switching to preview
-watch(activeTab, async (tab) => {
-    if (tab === 'preview' && previewSchema.value && !previewInstance) {
-        await loadFormVars(previewSchema.value);
-        setTimeout(() => mountPreview(previewSchema.value), 50);
-    }
-});
 
 // ── Save dialog ───────────────────────────────────────────────────────────────
 const metaVisible = ref(false);
@@ -174,7 +80,7 @@ async function save() {
     if (!metaName.value.trim()) { openMeta(); return; }
     saving.value = true;
     try {
-        const schema = getSchema() as IForm;
+        const schema = (designerRef.value?.getSchema() ?? schemaSnapshot.value) as IForm;
         schema.name        = metaName.value.trim();
         schema.description = metaDesc.value.trim() || undefined;
         const saved = await $api.forms.save(schema) as IForm;
@@ -198,7 +104,7 @@ async function load() {
     if (isNew.value) return;
     loading.value = true;
     try {
-        form.value = await $api.forms.findById(id.value!);
+        form.value     = await $api.forms.findById(id.value!);
         metaName.value = form.value.name ?? '';
         metaDesc.value = form.value.description ?? '';
     } catch {
@@ -209,22 +115,10 @@ async function load() {
     }
 }
 
-// ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(async () => {
     await load();
-
-    if (!editorRef.value) return;
-    const formEditor = new FormEditor({
-        container: editorRef.value,
-        additionalModules: [DocumentListModule, DocumentListEditorModule],
-    });
-    await formEditor.importSchema(form.value ?? EMPTY_SCHEMA);
-    editor.value = formEditor;
-});
-
-onUnmounted(() => {
-    editor.value?.destroy();
-    destroyPreview();
+    await nextTick();
+    schemaSnapshot.value = initialSchema.value;
 });
 </script>
 
@@ -276,120 +170,33 @@ onUnmounted(() => {
             <Button label="Save" icon="pi pi-save" size="small" :loading="saving" @click="handleSave" />
         </div>
 
-        <!-- ── Content ───────────────────────────────────────────────────── -->
+        <!-- ── Loading state ─────────────────────────────────────────────── -->
         <div v-if="loading" class="flex-1 flex items-center justify-center text-surface-400">
             <i class="pi pi-spin pi-spinner text-2xl" />
         </div>
 
+        <!-- ── Tab content ───────────────────────────────────────────────── -->
         <template v-else>
 
-            <!-- Designer tab: v-show keeps editor mounted -->
-            <div v-show="activeTab === 'designer'" class="flex-1 min-h-0">
-                <div
-                    ref="editorRef"
-                    :class="isDark ? 'formjs-dark' : 'formjs-light'"
-                    style="height: 100%;"
-                />
-            </div>
+            <!-- Designer: v-show keeps FormEditor DOM alive across tab switches -->
+            <FormDesignerTab
+                v-show="activeTab === 'designer'"
+                ref="designerRef"
+                :schema="initialSchema"
+                class="flex-1 min-h-0"
+                @schema-change="onDesignerSchemaChange"
+            />
 
-            <!-- JSON tab -->
-            <div v-if="activeTab === 'json'" class="flex-1 min-h-0 flex flex-col">
-                <div class="flex items-center justify-between px-4 py-2 border-b border-surface-200 dark:border-surface-700 shrink-0">
-                    <p class="text-xs text-surface-400">
-                        Raw form-js schema JSON. Edit and click "Apply" to update the designer.
-                    </p>
-                    <div class="flex items-center gap-2">
-                        <span v-if="jsonError" class="text-xs text-red-500">{{ jsonError }}</span>
-                        <Button
-                            label="Apply to designer"
-                            icon="pi pi-arrow-left"
-                            size="small"
-                            @click="applyJsonToEditor"
-                        />
-                    </div>
-                </div>
-                <div class="flex-1 min-h-0 json-editor-fill">
-                    <JsonEditor
-                        v-model:text="jsonText"
-                        mode="text"
-                        :mainMenuBar="false"
-                        :navigationBar="false"
-                        :darkTheme="isDark"
-                        @change="jsonError = ''"
-                    />
-                </div>
-            </div>
+            <FormJsonTab
+                v-if="activeTab === 'json'"
+                :schema="schemaSnapshot"
+                @apply="onJsonApply"
+            />
 
-            <!-- Preview tab -->
-            <div v-if="activeTab === 'preview'" class="flex-1 min-h-0 flex overflow-hidden">
-
-                <!-- Left: inputs -->
-                <div class="flex flex-col border-r border-surface-200 dark:border-surface-700 shrink-0 overflow-y-auto" style="width: 300px;">
-
-                    <!-- Viewport selector -->
-                    <div class="flex items-center justify-between px-4 py-2 border-b border-surface-200 dark:border-surface-700 shrink-0">
-                        <span class="text-xs font-semibold uppercase tracking-wide opacity-60">Viewport</span>
-                        <SelectButton
-                            v-model="viewMode"
-                            :options="viewOptions"
-                            option-value="value"
-                            :pt="{ pcButton: { root: { style: 'padding: 0.25rem 0.5rem; font-size:0.75rem;' } } }"
-                        >
-                            <template #option="{ option }">
-                                <i :class="option.icon" />
-                            </template>
-                        </SelectButton>
-                    </div>
-
-                    <!-- Form variables -->
-                    <div class="px-4 py-3 border-b border-surface-200 dark:border-surface-700 shrink-0">
-                        <p class="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">Form variables</p>
-                        <div v-if="referencedKeys.length === 0" class="text-xs opacity-50 italic">No expression references.</div>
-                        <div v-else class="flex flex-wrap gap-1">
-                            <Tag
-                                v-for="key in referencedKeys" :key="key"
-                                :value="key"
-                                :severity="resolvedFormVars[key] ? 'success' : 'warn'"
-                                style="font-size: 0.7rem;"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Task variables -->
-                    <div class="flex flex-col gap-2 px-4 py-3 flex-1">
-                        <div class="flex items-center justify-between">
-                            <p class="text-xs font-semibold uppercase tracking-wide opacity-60">Task variables</p>
-                            <div class="flex gap-1">
-                                <Button label="Apply" size="small" @click="applyVars" />
-                                <Button label="Reset" size="small" severity="secondary" @click="taskVarsJson = '{\n  \n}'; mountPreview(previewSchema)" />
-                            </div>
-                        </div>
-                        <p v-if="varsJsonError" class="text-xs text-red-500">{{ varsJsonError }}</p>
-                        <Textarea
-                            v-model="taskVarsJson"
-                            :rows="8"
-                            class="w-full font-mono text-xs resize-none"
-                            placeholder='{ "myVar": "value" }'
-                        />
-
-                        <!-- Output -->
-                        <p class="text-xs font-semibold uppercase tracking-wide opacity-60 mt-2">Form output</p>
-                        <pre class="text-xs p-2 rounded bg-surface-100 dark:bg-zinc-800 overflow-auto flex-1">{{ formOutputJson }}</pre>
-                    </div>
-                </div>
-
-                <!-- Right: form canvas -->
-                <div
-                    :class="isDark ? 'formjs-dark' : 'formjs-light'"
-                    class="flex-1 min-w-0 overflow-y-auto p-6 flex flex-col items-center bg-surface-50 dark:bg-zinc-900"
-                >
-                    <div
-                        :style="{ width: '100%', maxWidth: canvasMaxWidth[viewMode], transition: 'max-width 0.25s ease' }"
-                    >
-                        <div ref="previewRef" />
-                    </div>
-                </div>
-            </div>
+            <FormPreviewTab
+                v-if="activeTab === 'preview'"
+                :schema="schemaSnapshot"
+            />
 
         </template>
 
@@ -417,9 +224,3 @@ onUnmounted(() => {
 
     </div>
 </template>
-
-<style scoped>
-.json-editor-fill :deep(.vue-ts-json-editor) {
-    height: 100% !important;
-}
-</style>

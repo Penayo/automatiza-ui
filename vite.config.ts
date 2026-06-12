@@ -10,6 +10,7 @@ export default defineConfig({
     global: {},
   },
   resolve: {
+    dedupe: ['@bpmn-io/form-js-viewer', 'preact', 'preact/hooks'],
     alias: {
       '@':           fileURLToPath(new URL('./src', import.meta.url)),
       '@pages':      fileURLToPath(new URL('./src/pages', import.meta.url)),

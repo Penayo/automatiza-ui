@@ -10,6 +10,7 @@ import { $api } from '@services/api';
 import type { ProcessDefinition, ProcessVariables } from '@services/ProcessesService';
 import { Form } from "@bpmn-io/form-js";
 import { DocumentListModule } from '@/form-fields/DocumentListField';
+import { LinkModule } from '@/form-fields/LinkField';
 import type { IForm } from '@services/FormsService';
 
 const toast = useToast();
@@ -48,7 +49,7 @@ const handleSubmit = async (variables: Record<string, any>) => {
 };
 
 const buildForm = () => {
-    const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule] });
+    const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule, LinkModule] });
     formViewer.value = form;
     form.importSchema(formSchema.value, {}).then(() => { console.log(form); });
 

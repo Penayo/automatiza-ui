@@ -3,6 +3,7 @@ import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 import { Form } from '@bpmn-io/form-js';
 import { DocumentListModule } from '@/form-fields/DocumentListField';
+import { LinkModule } from '@/form-fields/LinkField';
 import { $api } from '@services/api';
 import type { FormVariable } from '@services/FormVariablesService';
 
@@ -94,7 +95,7 @@ async function mountForm(taskData: object = {}) {
     destroyForm();
     formInstance = new Form({
         container:         formRef.value,
-        additionalModules: [DocumentListModule],
+        additionalModules: [DocumentListModule, LinkModule],
     });
     await formInstance.importSchema(props.schema, mergedData(taskData));
     formInstance.on('changed', (event: { data: Record<string, any> }) => {

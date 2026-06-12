@@ -79,9 +79,11 @@ const routes = [
 
       // Design
       { path: 'modeler',     name: 'CamundaModeler', component: () => import('./pages/admin/modeler/Index.vue') },
-      { path: 'forms',          name: 'FormsList', component: () => import('./pages/admin/forms/FormsIndex.vue') },
-      { path: 'forms/new',      name: 'FormsNew',  component: () => import('./pages/admin/forms/Index.vue') },
-      { path: 'forms/:id/edit', name: 'FormsEdit', component: () => import('./pages/admin/forms/Index.vue') },
+      { path: 'forms',                    name: 'FormsList',        component: () => import('./pages/admin/forms/FormsIndex.vue') },
+      { path: 'forms/new',                name: 'FormsNew',         component: () => import('./pages/admin/forms/Index.vue') },
+      { path: 'forms/:id/edit',           name: 'FormsEdit',        component: () => import('./pages/admin/forms/Index.vue') },
+      { path: 'forms/jsonschema/new',     name: 'JsonSchemaNew',    component: () => import('./pages/admin/forms/JsonSchemaFormEditor.vue') },
+      { path: 'forms/jsonschema/:id/edit',name: 'JsonSchemaEdit',   component: () => import('./pages/admin/forms/JsonSchemaFormEditor.vue') },
       { path: 'formbuilder', redirect: { name: 'FormsList' } },
 
       // Decisions (DMN)

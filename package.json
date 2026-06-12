@@ -14,7 +14,9 @@
   "dependencies": {
     "@bpmn-io/form-js": "^1.15.1",
     "@bpmn-io/form-js-editor": "^1.15.1",
+    "@bpmn-io/form-js-viewer": "^1.21.3",
     "@lab2view/vue-email-editor": "^0.2.13",
+    "@lljj/vue3-form-element": "^1.19.0",
     "@pdfme/common": "^6.1.2",
     "@pdfme/schemas": "^6.1.2",
     "@pdfme/ui": "^6.1.2",
@@ -36,6 +38,7 @@
     "dayjs": "^1.11.19",
     "dmn-js": "^17.8.1",
     "dmn-js-properties-panel": "^3.11.1",
+    "element-plus": "^2.14.1",
     "lucide-vue-next": "^0.511.0",
     "mjml-browser": "^4.18.0",
     "pinia": "^3.0.4",

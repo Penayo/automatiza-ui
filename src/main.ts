@@ -16,7 +16,19 @@ import Tooltip from 'primevue/tooltip';
 // Vue Form
 import Vueform from '@vueform/vueform'
 import vueformConfig from './../vueform.config'
-import { DynamicDialog } from 'primevue';
+
+// Element Plus — must be registered globally so @lljj/vue3-form-element can
+// resolve its components (ElInput, ElSelect, etc.) via resolveComponent()
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import en from 'element-plus/es/locale/lang/en'
+
+// Reset lljj's default Chinese AJV validation messages
+import { i18n as lljjI18n } from '@lljj/vue3-form-element'
+lljjI18n.useLocal(() => {});
+
+// Custom widgets (registered after app.use(ElementPlus) below)
+import DocReviewWidget from '@components/widgets/DocReviewWidget.vue'
 
 const MyPreset = definePreset(Aura, {
     semantic: {
@@ -60,6 +72,8 @@ const MyPreset = definePreset(Aura, {
 });
 
 const app = createApp(App)
+app.use(ElementPlus, { locale: en })
+app.component('DocReviewWidget', DocReviewWidget)
 app.use(PrimeVue, {
 	theme: {
 		preset: MyPreset,

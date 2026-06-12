@@ -51,4 +51,13 @@ export class FilesService extends BaseService {
         const result = await this.get<{ signedUrl: string }>(`url?key=${encodeURIComponent(key)}`);
         return (result as { signedUrl: string }).signedUrl;
     }
+
+    /**
+     * Batch-refresh presigned URLs.
+     * keys: { [docKey]: R2ObjectKey }  →  returns { [docKey]: newSignedUrl }
+     */
+    async refreshSignedUrls(keys: Record<string, string>): Promise<Record<string, string>> {
+        const result = await this.post<Record<string, string>>('refresh-urls', { keys });
+        return result as Record<string, string>;
+    }
 }

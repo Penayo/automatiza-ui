@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { Form } from "@bpmn-io/form-js";
 import { DocumentListModule } from '@/form-fields/DocumentListField';
+import { LinkModule } from '@/form-fields/LinkField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, computed, onMounted, onErrorCaptured } from 'vue';
+
+onErrorCaptured((err) => {
+    if (err instanceof TypeError && err.message.includes('emitsOptions')) return false;
+    return true;
+});
 import { useTheme } from '@/composables/useTheme';
 
 const { isDark } = useTheme();
@@ -17,6 +23,12 @@ import { onApprove } from "@/utils/common";
 import { parseApiError } from "@/utils/error";
 import type { IAccess } from "@services/AuthService.ts";
 import { resolveFormFiles } from '@/form-fields/form-js-submit';
+
+// JSON Schema form renderer
+import VueForm from '@lljj/vue3-form-element';
+import 'element-plus/dist/index.css';
+import { ElConfigProvider } from 'element-plus';
+import en from 'element-plus/es/locale/lang/en';
 
 const toast    = useToast();
 const confirm  = useConfirm();
@@ -35,6 +47,11 @@ const userInfo        = ref<IAccess | null>(null);
 const completed       = ref<boolean>(false);
 const currentFormData = ref<Record<string, any>>({});
 
+// JSON Schema form live data (two-way bound to VueForm)
+const jsonFormData = ref<Record<string, any>>({});
+
+const isJsonSchema = computed(() => formSchema.value?.type === 'jsonschema');
+
 // ── Task completion ──────────────────────────────────────────────────────────
 
 async function completeTask(variables: any) {
@@ -42,7 +59,7 @@ async function completeTask(variables: any) {
         loading.value = true;
         await $api.tasks.completeTask(props.task?.id as string, { variables });
         formSchema.value = null;
-        completed.value  = true;           // show confirmation panel
+        completed.value  = true;
         emit('refresh');
     } catch (error) {
         const errorInfo = parseApiError(error);
@@ -57,10 +74,18 @@ async function saveTask() {
     saving.value = true;
     saved.value  = false;
     try {
-        const vars = { ...formData.value, ...currentFormData.value };
-        const prefix = props.task.processInstanceId;
-        const resolvedVars = await resolveFormFiles(vars, $api.files, formViewer.value, prefix);
-        await $api.tasks.updateVariables(props.task.id, resolvedVars);
+        const vars = isJsonSchema.value
+            ? { ...formData.value, ...jsonFormData.value }
+            : { ...formData.value, ...currentFormData.value };
+
+        if (!isJsonSchema.value) {
+            const prefix = props.task.processInstanceId;
+            const resolvedVars = await resolveFormFiles(vars, $api.files, formViewer.value, prefix);
+            await $api.tasks.updateVariables(props.task.id, resolvedVars);
+        } else {
+            await $api.tasks.updateVariables(props.task.id, vars);
+        }
+
         saved.value = true;
         setTimeout(() => { saved.value = false; }, 3000);
     } catch (err: any) {
@@ -79,7 +104,13 @@ function submitForm() {
     onApprove(
         confirm,
         'Are you sure you want to submit this form?\nThis will advance the task to the next stage.',
-        async () => { if (formViewer.value) formViewer.value.submit(); },
+        async () => {
+            if (isJsonSchema.value) {
+                completeTask({ ...formData.value, ...jsonFormData.value });
+            } else if (formViewer.value) {
+                formViewer.value.submit();
+            }
+        },
     );
 }
 
@@ -91,6 +122,9 @@ async function getTaskForm() {
         const { formSchema: schema, formData: data } = await $api.tasks.getTaskForm(props.task?.id as string);
         formSchema.value = schema;
         formData.value   = data ?? {};
+        if (schema?.type === 'jsonschema') {
+            jsonFormData.value = { ...(data ?? {}) };
+        }
     } catch (error) {
         const errorInfo = parseApiError(error);
         toast.add({ ...errorInfo, life: 3000 });
@@ -102,7 +136,7 @@ async function getTaskForm() {
 const isTaskAssignedToUser = () => props.task?.assignee === userInfo.value?.user.username;
 
 watch(() => props.task, () => {
-    completed.value  = false;             // reset on task change
+    completed.value  = false;
     getTaskForm();
     userInfo.value = $api.authService.getAccessInfo();
 
@@ -114,6 +148,9 @@ watch(() => props.task, () => {
 }, { immediate: true });
 
 watch(formSchema, () => {
+    // JSON Schema forms don't use the form-js viewer
+    if (formSchema.value?.type === 'jsonschema') return;
+
     if (formViewer.value) {
         formViewer.value.destroy();
         formViewer.value = undefined;
@@ -121,7 +158,7 @@ watch(formSchema, () => {
 
     if (!formSchema.value || !props.task) return;
 
-    const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule] });
+    const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule, LinkModule] });
     formViewer.value = form;
 
     form.importSchema(formSchema.value, formData.value).then(() => {
@@ -135,7 +172,6 @@ watch(formSchema, () => {
     });
 
     form.on('submit', async (event: { data: ProcessVariables; errors: Error[] }) => {
-        console.log('[TaskForm] form submitted, raw event.data:', event.data);
         try {
             const prefix = props.task?.processInstanceId;
             const resolvedData = await resolveFormFiles(
@@ -146,11 +182,10 @@ watch(formSchema, () => {
             );
             completeTask(resolvedData);
         } catch (err: any) {
-            console.error('[TaskForm] file upload failed, aborting submit:', err);
             toast.add({
                 severity: 'error',
                 summary:  'File upload failed',
-                detail:   err?.response?.data?.message ?? err?.message ?? 'Could not upload file. Check the console for details.',
+                detail:   err?.response?.data?.message ?? err?.message ?? 'Could not upload file.',
                 life:     8000,
             });
         }
@@ -183,9 +218,29 @@ onMounted(() => {});
 
     <!-- ── Form panel ─────────────────────────────────────────────────────── -->
     <div v-else>
-        <div ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
+
+        <!-- form-js renderer -->
+        <div
+            v-if="!isJsonSchema"
+            ref="formRef"
+            :class="isDark ? 'formjs-dark' : 'formjs-light'"
+        />
+
+        <!-- JSON Schema renderer — footer hidden, PrimeVue actions below control submission -->
+        <div v-else class="p-4 jsf-preview-root">
+            <ElConfigProvider :locale="en">
+                <VueForm
+                    v-model="jsonFormData"
+                    :schema="formSchema!.jsonSchema ?? {}"
+                    :ui-schema="formSchema!.uiSchema ?? {}"
+                    :form-footer="{ show: false }"
+                    :disabled="!isTaskAssignedToUser()"
+                />
+            </ElConfigProvider>
+        </div>
+
+        <!-- Action bar — shared between form-js and JSON Schema -->
         <div class="flex flex-row items-center justify-between p-3">
-            <!-- Saved confirmation -->
             <span v-if="saved" class="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
                 <i class="pi pi-check-circle" /> Progress saved
             </span>
@@ -212,3 +267,20 @@ onMounted(() => {});
         </div>
     </div>
 </template>
+
+<style>
+.jsf-preview-root {
+    font-family: inherit;
+}
+
+.jsf-preview-root .el-form-item__label {
+    font-size: 0.875rem;
+}
+
+.jsf-preview-root .el-button--primary {
+    --el-button-bg-color: #0f62fe;
+    --el-button-border-color: #0f62fe;
+    --el-button-hover-bg-color: #0353e9;
+    --el-button-hover-border-color: #0353e9;
+}
+</style>

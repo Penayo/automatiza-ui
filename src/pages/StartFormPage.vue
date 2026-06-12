@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form } from '@bpmn-io/form-js';
 import { DocumentListModule } from '@/form-fields/DocumentListField';
+import { LinkModule } from '@/form-fields/LinkField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
@@ -67,7 +68,7 @@ watch(state, (s) => {
     if (s !== 'form' || !formSchema.value) return;
     setTimeout(() => {
         if (!formRef.value) return;
-        const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule] });
+        const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule, LinkModule] });
         formViewer.value = form;
         form.importSchema(formSchema.value, {});
         form.on('submit', (event: { data: Record<string, any>; errors: any[] }) => {
