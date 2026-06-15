@@ -69,12 +69,11 @@ function submitForm() {
     onApprove(confirm, `Está seguro de procesar el formulario?\nEsto enviará la tarea a la siguiente etapa!`, onConfirm)
 }
 
-const isTaskAssignedToUser = () => props.task?.assignee === userInfo.value?.user.username;
+const isTaskAssignedToUser = () => props.task?.assignment?.assignee === userInfo.value?.user.username;
 
 watch(() => props.task, () => {
     getTaskForm()
     userInfo.value = $api.authService.getAccessInfo();
-    console.log('USER INFO', userInfo.value, props.task?.assignee);
 
     if(isTaskAssignedToUser()) {
         formViewer.value?.setProperty('readOnly', false);
@@ -102,7 +101,7 @@ watch(formSchema, () => {
 
     form.importSchema(formSchema.value, formSchema.value.metadata)
         .then(() => {
-            if (props.task?.assignee !== userInfo.value?.user.username) {
+            if (props.task?.assignment?.assignee !== userInfo.value?.user.username) {
                 formViewer.value?.setProperty('readOnly', true);
             }
         });

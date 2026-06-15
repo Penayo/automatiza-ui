@@ -133,7 +133,7 @@ async function getTaskForm() {
     }
 }
 
-const isTaskAssignedToUser = () => props.task?.assignee === userInfo.value?.user.username;
+const isTaskAssignedToUser = () => props.task?.assignment?.assignee === userInfo.value?.user.username;
 
 watch(() => props.task, () => {
     completed.value  = false;

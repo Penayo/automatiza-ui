@@ -29,15 +29,17 @@ export interface Task extends APIData {
     inputVariables: TaskVariable[];
     createdAt: Date;
     completedAt?: Date;
-    candidateGroups: string[];
-    candidateUsers: string[];
-    dueDate?: Date;
-    followUpDate?: Date;
-    priority?: number;
-    assignee?: string;
-    assignedAt?: Date;
-    claimedBy?: string;
-    claimedAt?: Date;
+    assignment?: {
+        candidateGroups?: string[];
+        candidateUsers?: string[];
+        dueDate?: Date;
+        followUpDate?: Date;
+        priority?: number;
+        assignee?: string;
+        assignedAt?: Date;
+        claimedBy?: string;
+        claimedAt?: Date;
+    };
     documentation?: string;
     shareLink?: {
         token:      string;

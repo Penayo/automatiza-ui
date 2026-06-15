@@ -20,8 +20,8 @@ const loading = ref(false);
 type Urgency = 'overdue' | 'today' | 'soon' | null;
 
 function urgency(task: Task): Urgency {
-    if (!task.dueDate) return null;
-    const due  = dayjs(task.dueDate).startOf('day');
+    if (!task.assignment?.dueDate) return null;
+    const due  = dayjs(task.assignment.dueDate).startOf('day');
     const today = dayjs().startOf('day');
     const diff  = due.diff(today, 'day');
     if (diff < 0)  return 'overdue';
@@ -54,14 +54,14 @@ const counts = computed(() => ({
     all:        tasks.value.length,
     overdue:    tasks.value.filter(t => urgency(t) === 'overdue').length,
     today:      tasks.value.filter(t => urgency(t) === 'today').length,
-    unassigned: tasks.value.filter(t => !t.assignee).length,
+    unassigned: tasks.value.filter(t => !t.assignment?.assignee).length,
 }));
 
 const filteredTasks = computed(() => {
     switch (activeFilter.value) {
         case 'overdue':    return tasks.value.filter(t => urgency(t) === 'overdue');
         case 'today':      return tasks.value.filter(t => urgency(t) === 'today');
-        case 'unassigned': return tasks.value.filter(t => !t.assignee);
+        case 'unassigned': return tasks.value.filter(t => !t.assignment?.assignee);
         default:           return tasks.value;
     }
 });
@@ -177,11 +177,11 @@ defineExpose({ getTasks });
                     <!-- Created ago + due date -->
                     <div class="flex justify-between text-xs font-light italic mt-0.5">
                         <span>Created {{ dayjs(slotProps.data.createdAt).fromNow() }}</span>
-                        <span v-if="slotProps.data.dueDate" :class="{
+                        <span v-if="slotProps.data.assignment?.dueDate" :class="{
                             'text-red-500 font-bold not-italic': urgency(slotProps.data) === 'overdue',
                             'text-orange-500 font-semibold not-italic': urgency(slotProps.data) === 'today',
                         }">
-                            Due {{ dayjs(slotProps.data.dueDate).fromNow() }}
+                            Due {{ dayjs(slotProps.data.assignment.dueDate).fromNow() }}
                         </span>
                     </div>
                 </div>

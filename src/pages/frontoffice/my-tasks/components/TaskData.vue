@@ -46,7 +46,7 @@ async function copyShareLink() {
             <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">
                 {{ props.task?.status === 'COMPLETED' ? 'Completed by' : 'Claimed by' }}
             </span>
-            <span>{{ props.task?.claimedBy ?? '—' }}</span>
+            <span>{{ props.task?.assignment?.claimedBy ?? '—' }}</span>
         </div>
 
         <div class="flex items-start gap-2">
@@ -61,24 +61,24 @@ async function copyShareLink() {
 
         <TaskSchedule
             label="Due date"
-            :value="props.task?.dueDate"
+            :value="props.task?.assignment?.dueDate"
             @date-set="d => updateTask('dueDate', d?.toISOString())"
             :enabled="props.task?.status !== 'COMPLETED'" />
 
         <TaskSchedule
             label="Follow-up date"
-            :value="props.task?.followUpDate"
+            :value="props.task?.assignment?.followUpDate"
             @date-set="d => updateTask('followUpDate', d?.toISOString())"
             :enabled="props.task?.status !== 'COMPLETED'" />
 
         <div class="flex items-start gap-2">
             <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">Candidate groups</span>
-            <span>{{ props.task?.candidateGroups?.join(', ') || '—' }}</span>
+            <span>{{ props.task?.assignment?.candidateGroups?.join(', ') || '—' }}</span>
         </div>
 
         <div class="flex items-start gap-2">
             <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">Candidate users</span>
-            <span>{{ props.task?.candidateUsers?.join(', ') || '—' }}</span>
+            <span>{{ props.task?.assignment?.candidateUsers?.join(', ') || '—' }}</span>
         </div>
 
         <div v-if="props.task?.documentation">

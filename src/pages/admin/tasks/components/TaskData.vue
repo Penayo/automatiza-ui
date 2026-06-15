@@ -30,13 +30,13 @@ async function updateTask(key: string, value: string) {
 <template>
     <div class="p-4">
         <div class="font-bold m-0 mb-3">Estado: <Tag :severity="props.task?.status === 'COMPLETED' ? 'success' : 'warning'">{{ props.task?.status }}</Tag></div>
-        <div class="font-bold m-0 mb-3">{{ props.task?.status === 'COMPLETED' ? 'Completado Por:' : 'Tomado Por:' }} <div class="text-normal">{{ props.task?.claimedBy }}</div></div>
+        <div class="font-bold m-0 mb-3">{{ props.task?.status === 'COMPLETED' ? 'Completado Por:' : 'Tomado Por:' }} <div class="text-normal">{{ props.task?.assignment?.claimedBy }}</div></div>
         <div class="font-bold m-0 mb-3">Fecha de Creación: <div class="text-normal">{{ props.task?.createdAt }}</div></div>
         <div class="font-bold m-0 mb-3">Completado en fecha: <div class="text-normal">{{ props.task?.completedAt }}</div></div>
-        <TaskSchedule label="Fecha de Vencimiento" :value="props.task?.dueDate" @date-set="d => updateTask('dueDate', d?.toISOString())" :enabled="props.task?.status !== 'COMPLETED'" />
-        <TaskSchedule label="Fecha de Seguimiento" :value="props.task?.followUpDate" @date-set="d => updateTask('followUpDate', d?.toISOString())" :enabled="props.task?.status !== 'COMPLETED'" />
-        <div class="font-bold m-0 mb-3">Grupos Candidatos: <div class="text-normal">{{ props.task?.candidateGroups }}</div></div>
-        <div class="font-bold m-0 mb-3">Usuarios Candidatos: <div class="text-normal">{{ props.task?.candidateUsers }}</div></div>
+        <TaskSchedule label="Fecha de Vencimiento" :value="props.task?.assignment?.dueDate" @date-set="d => updateTask('dueDate', d?.toISOString())" :enabled="props.task?.status !== 'COMPLETED'" />
+        <TaskSchedule label="Fecha de Seguimiento" :value="props.task?.assignment?.followUpDate" @date-set="d => updateTask('followUpDate', d?.toISOString())" :enabled="props.task?.status !== 'COMPLETED'" />
+        <div class="font-bold m-0 mb-3">Grupos Candidatos: <div class="text-normal">{{ props.task?.assignment?.candidateGroups }}</div></div>
+        <div class="font-bold m-0 mb-3">Usuarios Candidatos: <div class="text-normal">{{ props.task?.assignment?.candidateUsers }}</div></div>
         <h3 class="font-bold m-0 mb-3">Documentation</h3>
         <div>{{ props.task?.documentation }}</div>
     </div>

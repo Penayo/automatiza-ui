@@ -92,13 +92,13 @@ async function updateTask(key: string, value: string) {
                 <div class="flex flex-row gap-6 flex-wrap">
                     <TaskSchedule
                         label="Due date"
-                        :value="props.currentTask?.dueDate"
+                        :value="props.currentTask?.assignment?.dueDate"
                         @date-set="(d: Date) => updateTask('dueDate', d?.toISOString())"
                         :enabled="props.currentTask?.status !== 'COMPLETED'" />
 
                     <TaskSchedule
                         label="Follow-up"
-                        :value="props.currentTask?.followUpDate"
+                        :value="props.currentTask?.assignment?.followUpDate"
                         @date-set="(d: Date) => updateTask('followUpDate', d?.toISOString())"
                         :enabled="props.currentTask?.status !== 'COMPLETED'" />
                 </div>
@@ -121,7 +121,7 @@ async function updateTask(key: string, value: string) {
                         <i class="pi pi-check text-[10px]" /> Submitted
                     </span>
 
-                    <Button v-if="!props.currentTask?.assignee" size="small" @click="claimTask">Claim</Button>
+                    <Button v-if="!props.currentTask?.assignment?.assignee" size="small" @click="claimTask">Claim</Button>
                     <Button v-else size="small" severity="secondary" @click="unclaimTask">Release</Button>
                 </div>
             </div>
