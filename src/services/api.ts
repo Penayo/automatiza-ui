@@ -27,6 +27,7 @@ import { FormVariablesService } from "@services/FormVariablesService";
 import { ReportsService } from "@services/ReportsService";
 import { EmailTemplatesService } from "@services/EmailTemplatesService";
 import { FilesService } from "@services/FilesService";
+import { RecoveryService } from "@services/RecoveryService";
 
 export type PageRequest = {
 	page?: number;
@@ -57,4 +58,5 @@ export const $api = {
 	reports: new ReportsService(),
 	emailTemplates: new EmailTemplatesService(),
 	files: new FilesService(),
+	recovery: new RecoveryService(),
 }

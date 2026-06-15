@@ -128,6 +128,7 @@
 			items: [
 				{ label: 'Audit Logs',  icon: 'pi pi-eye',          command: () => nav('/admin/audit') },
 				{ label: 'Messages',    icon: 'pi pi-envelope',     command: () => nav('/admin/messages') },
+				{ label: 'Recovery',    icon: 'pi pi-wrench',       command: () => nav('/admin/recovery') },
 				{ label: 'Users',       icon: 'pi pi-users',   command: () => nav('/admin/users') },
 				{ label: 'Roles',       icon: 'pi pi-users',   command: () => nav('/admin/roles') },
 				{ label: 'Permissions', icon: 'pi pi-shield',  command: () => nav('/admin/permissions') },

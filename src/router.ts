@@ -107,6 +107,7 @@ const routes = [
       // System
       { path: 'audit',    name: 'AuditLogs', component: () => import('./pages/admin/audit/Index.vue') },
       { path: 'messages', name: 'AdminMessages', component: () => import('./pages/admin/messages/Index.vue') },
+      { path: 'recovery', name: 'ProcessRecovery', component: () => import('./pages/admin/recovery/Index.vue') },
 
       // Users
       { path: 'users', name: 'UsersIndex', component: () => import('./pages/admin/users/Index.vue'), meta: { requiresPermission: 'manage_users' } },
