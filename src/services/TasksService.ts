@@ -198,6 +198,23 @@ export class TasksService extends ModelApiService {
         }
     }
 
+    async testRestRequest(config: Record<string, any>): Promise<{
+        status: number;
+        statusText: string;
+        durationMs: number;
+        headers: Record<string, string>;
+        body: any;
+        error?: string;
+    }> {
+        try {
+            const response = await this.post<any>('test-rest-request', { config });
+            return response as any;
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
+    }
+
     async retryTask(taskId: string, variables?: Record<string, any>): Promise<{ status: string; message: string }> {
         try {
             const response = await this.post<{ status: string; message: string }>(
