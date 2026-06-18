@@ -1,3 +1,59 @@
+<!--
+  DocReviewWidget — JSON-Schema UI field for reviewing uploaded documents.
+
+  Register as:  "ui:field": "DocReviewWidget"
+
+  ui:options
+  ──────────
+  docsKey    (string, default "docs")
+             Dot-path into formData that holds the documents object.
+             Example: "uploadedDocuments" or "nested.uploadedDocuments"
+
+  urlField   (string, default "url")
+             Property name on each doc entry that holds the signed download URL.
+
+  nameField  (string, default "name")
+             Property name on each doc entry that holds the display filename.
+
+  keyField   (string, default "key")
+             Property name on each doc entry that holds the R2 object key
+             (used to refresh expired signed URLs).
+
+  checkLabel (string, default "Correct?")
+             Label shown next to each checkbox.
+
+  Expected formData shape
+  ───────────────────────
+  The value at docsKey must be an object whose keys are document identifiers
+  and whose values each contain at minimum the fields named by urlField,
+  nameField, and keyField:
+
+    uploadedDocuments: {
+      nacional_id: {
+        signedUrl: "https://…?X-Amz-Date=…&X-Amz-Expires=…",
+        filename:  "national_id.pdf",
+        key:       "tenant/instance-id/nacional_id.pdf"
+      },
+      business_fundation: {
+        signedUrl: "https://…?X-Amz-Date=…&X-Amz-Expires=…",
+        filename:  "business_foundation.pdf",
+        key:       "tenant/instance-id/business_fundation.pdf"
+      }
+    }
+
+  Field output value
+  ──────────────────
+  The widget writes a per-key boolean map back to rootFormData at curNodePath:
+
+    { "nacional_id": true, "business_fundation": false }
+
+  Expired URLs
+  ────────────
+  If any signed URL is expired (X-Amz-Date + X-Amz-Expires in the past), a
+  banner appears with a "Refresh links" button that calls
+  $api.files.refreshSignedUrls({ docKey → r2ObjectKey }) and patches the URLs
+  in place. Expired documents cannot be checked until their link is refreshed.
+-->
 <script setup lang="ts">
 import { computed, inject, ref, onMounted, watch, type Ref } from 'vue';
 import { ElCheckbox } from 'element-plus';
@@ -25,7 +81,8 @@ onMounted(() => {
   console.log('[DocReviewWidget] docs at mount:', docs.value);
 });
 
-const jsfFormData = inject<Ref<Record<string, any>>>('jsfFormData', ref({}));
+const jsfFormData   = inject<Ref<Record<string, any>>>('jsfFormData', ref({}));
+const formDisabled  = inject<Ref<boolean>>('formDisabled', ref(false));
 
 console.log('[DocReviewWidget] jsfFormData injected (is default ref?):', !inject('jsfFormData'));
 
@@ -182,7 +239,7 @@ function toggle(docKey: string, checked: boolean | string | number) {
           <span class="text-xs text-surface-500 dark:text-zinc-400">{{ checkLabel }}</span>
           <ElCheckbox
             :model-value="confirmed[key] ?? false"
-            :disabled="disabled || readonly || isUrlExpired(doc[urlField] ?? '')"
+            :disabled="formDisabled || disabled || readonly || isUrlExpired(doc[urlField] ?? '')"
             @change="toggle(key, $event)"
           />
         </div>

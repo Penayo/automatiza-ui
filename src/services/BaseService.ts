@@ -1,5 +1,22 @@
-import axios, { Axios, type AxiosInstance, type AxiosRequestConfig } from 'axios';
+import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { navigateTo } from '@services/routerRef';
+
+// Axios 1.x serializes arrays as keys[]=v (bracket notation). NestJS ValidationPipe
+// with forbidNonWhitelisted:true rejects the literal "keys[]" property name.
+// Serialize arrays as repeated plain keys instead: keys=v&keys=v.
+function serializeParams(params: Record<string, any>): string {
+  const parts: string[] = [];
+  for (const key of Object.keys(params)) {
+    const val = params[key];
+    if (val === undefined || val === null) continue;
+    if (Array.isArray(val)) {
+      val.forEach(v => parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`));
+    } else {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`);
+    }
+  }
+  return parts.join('&');
+}
 
 export type ILog = {
   date: Date;
@@ -34,6 +51,7 @@ export class BaseService {
     try {
       config = config ?? {}
       config.headers = { ...this.getAuthorizationHeader() }
+      config.paramsSerializer = serializeParams;
 
       const { data } = await axios.get(this.getUrl(url), config);
       return data as T;

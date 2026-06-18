@@ -5,7 +5,7 @@ import { LinkModule } from '@/form-fields/LinkField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { ref, watch, computed, onMounted, onErrorCaptured } from 'vue';
+import { ref, watch, computed, onMounted, onErrorCaptured, provide, watchEffect } from 'vue';
 
 onErrorCaptured((err) => {
     if (err instanceof TypeError && err.message.includes('emitsOptions')) return false;
@@ -27,6 +27,7 @@ import { resolveFormFiles } from '@/form-fields/form-js-submit';
 // JSON Schema form renderer
 import VueForm from '@lljj/vue3-form-element';
 import 'element-plus/dist/index.css';
+import 'element-plus/theme-chalk/dark/css-vars.css';
 import { ElConfigProvider } from 'element-plus';
 import en from 'element-plus/es/locale/lang/en';
 
@@ -49,6 +50,15 @@ const currentFormData = ref<Record<string, any>>({});
 
 // JSON Schema form live data (two-way bound to VueForm)
 const jsonFormData = ref<Record<string, any>>({});
+
+// Provide full task formData (process variables) to child widgets such as
+// DocReviewWidget that need to read sibling keys (e.g. uploadedDocuments).
+provide('jsfFormData', formData);
+
+// Provide disabled state explicitly — @lljj/vue3-form-element does not reliably
+// propagate :disabled to custom ui:field components.
+const formDisabled = computed(() => !isTaskAssignedToUser());
+provide('formDisabled', formDisabled);
 
 const isJsonSchema = computed(() => formSchema.value?.type === 'jsonschema');
 
@@ -79,8 +89,11 @@ async function saveTask() {
             : { ...formData.value, ...currentFormData.value };
 
         if (!isJsonSchema.value) {
-            const prefix = props.task.processInstanceId;
-            const resolvedVars = await resolveFormFiles(vars, $api.files, formViewer.value, prefix);
+                const resolvedVars = await resolveFormFiles(
+                vars, $api.files, formViewer.value,
+                props.task.processInstanceId,
+                props.task.id,
+            );
             await $api.tasks.updateVariables(props.task.id, resolvedVars);
         } else {
             await $api.tasks.updateVariables(props.task.id, vars);
@@ -136,16 +149,14 @@ async function getTaskForm() {
 const isTaskAssignedToUser = () => props.task?.assignment?.assignee === userInfo.value?.user.username;
 
 watch(() => props.task, () => {
-    completed.value  = false;
+    completed.value = false;
     getTaskForm();
-    userInfo.value = $api.authService.getAccessInfo();
-
-    if (isTaskAssignedToUser()) {
-        formViewer.value?.setProperty('readOnly', false);
-    } else {
-        formViewer.value?.setProperty('readOnly', true);
-    }
+    userInfo.value  = $api.authService.getAccessInfo();
 }, { immediate: true });
+
+watchEffect(() => {
+    formViewer.value?.setProperty('readOnly', !canEditForm.value);
+});
 
 watch(formSchema, () => {
     // JSON Schema forms don't use the form-js viewer
@@ -173,12 +184,12 @@ watch(formSchema, () => {
 
     form.on('submit', async (event: { data: ProcessVariables; errors: Error[] }) => {
         try {
-            const prefix = props.task?.processInstanceId;
             const resolvedData = await resolveFormFiles(
                 event.data as Record<string, any>,
                 $api.files,
                 form,
-                prefix,
+                props.task?.processInstanceId,
+                props.task?.id,
             );
             completeTask(resolvedData);
         } catch (err: any) {

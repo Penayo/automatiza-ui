@@ -1,13 +1,35 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { DataTable, Column, Tag } from 'primevue';
 import { extractDocuments } from '@/utils/form-files';
+import { $api } from '@services/api';
 
 const props = defineProps<{
     variables?: { key: string; value: any }[];
 }>();
 
 const documents = computed(() => extractDocuments(props.variables ?? []));
+
+// r2Key → fresh signedUrl, hydrated on mount
+const signedUrls = ref<Record<string, string>>({});
+
+onMounted(async () => {
+    const docs = documents.value;
+    if (!docs.length) return;
+
+    const keys: Record<string, string> = {};
+    for (const { docKey, file } of docs) {
+        if (file.r2Key) keys[docKey] = file.r2Key;
+    }
+
+    if (Object.keys(keys).length) {
+        signedUrls.value = await $api.files.refreshSignedUrls(keys);
+    }
+});
+
+function urlFor(docKey: string): string {
+    return signedUrls.value[docKey] ?? '';
+}
 
 function formatSize(bytes: number): string {
     if (!bytes)              return '';
@@ -41,7 +63,8 @@ function formatSize(bytes: number): string {
             <Column header="Filename">
                 <template #body="{ data }">
                     <a
-                        :href="data.file.signedUrl"
+                        v-if="urlFor(data.docKey)"
+                        :href="urlFor(data.docKey)"
                         target="_blank"
                         rel="noopener noreferrer"
                         class="text-sm flex items-center gap-1.5 hover:underline"
@@ -50,6 +73,10 @@ function formatSize(bytes: number): string {
                         <i class="pi pi-file text-xs" />
                         {{ data.file.filename }}
                     </a>
+                    <span v-else class="text-sm text-surface-400 flex items-center gap-1.5">
+                        <i class="pi pi-spin pi-spinner text-xs" />
+                        {{ data.file.filename }}
+                    </span>
                 </template>
             </Column>
 
@@ -68,7 +95,8 @@ function formatSize(bytes: number): string {
             <Column header="" style="width: 48px">
                 <template #body="{ data }">
                     <a
-                        :href="data.file.signedUrl"
+                        v-if="urlFor(data.docKey)"
+                        :href="urlFor(data.docKey)"
                         target="_blank"
                         rel="noopener noreferrer"
                         v-tooltip.top="'Open'"

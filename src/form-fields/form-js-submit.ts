@@ -10,7 +10,7 @@
  */
 
 import type { FilesService } from '@services/FilesService';
-import { uploadFile, isStoredFile } from '@/utils/form-files';
+import { uploadFile, isDocumentReference } from '@/utils/form-files';
 
 // ── form-js pending-file reference ────────────────────────────────────────────
 // DocumentListField stores { _ref: 'files::id', name, size } in form data so
@@ -34,9 +34,9 @@ function isDocumentListValue(
         value !== null &&
         !Array.isArray(value) &&
         !(value instanceof File) &&
-        !isStoredFile(value) &&
+        !isDocumentReference(value) &&
         Object.values(value as object).some(
-            v => v instanceof File || isStoredFile(v) || isPendingFileRef(v) || v === null,
+            v => v instanceof File || isDocumentReference(v) || isPendingFileRef(v) || v === null,
         )
     );
 }
@@ -46,7 +46,7 @@ function isDocumentListValue(
 /**
  * Take the raw data object from a form-js submit/save event and return a clean
  * copy where every file reference has been uploaded to R2 and replaced with a
- * StoredFile object.
+ * DocumentReference object { documentId, r2Key, filename, size, mimeType }.
  *
  * Three kinds of file values are resolved:
  *  1. "files::<id>" strings  → looked up in form-js fileRegistry, then uploaded
@@ -54,10 +54,11 @@ function isDocumentListValue(
  *  3. DocumentList pending refs { _ref, name, size } → looked up in fileRegistry, uploaded
  */
 export async function resolveFormFiles(
-    data:         Record<string, any>,
-    filesService: FilesService,
-    formInstance?: any,
-    prefix?:       string,
+    data:               Record<string, any>,
+    filesService:       FilesService,
+    formInstance?:      any,
+    processInstanceId?: string,
+    taskId?:            string,
 ): Promise<Record<string, any>> {
     const fileRegistry = formInstance?.get?.('fileRegistry');
 
@@ -79,14 +80,14 @@ export async function resolveFormFiles(
     await Promise.all(
         Object.entries(preResolved).map(async ([key, value]) => {
             if (value instanceof File) {
-                resolved[key] = await uploadFile(value, filesService, prefix);
+                resolved[key] = await uploadFile(value, filesService, processInstanceId, taskId);
             } else if (Array.isArray(value) && value.length > 0 && value[0] instanceof File) {
                 resolved[key] = await Promise.all(
-                    value.map((f: File) => uploadFile(f, filesService, prefix)),
+                    value.map((f: File) => uploadFile(f, filesService, processInstanceId, taskId)),
                 );
             } else if (value instanceof FileList) {
                 resolved[key] = await Promise.all(
-                    Array.from(value).map(f => uploadFile(f, filesService, prefix)),
+                    Array.from(value).map(f => uploadFile(f, filesService, processInstanceId, taskId)),
                 );
             } else {
                 resolved[key] = value;
@@ -102,11 +103,11 @@ export async function resolveFormFiles(
         await Promise.all(
             Object.entries(value).map(async ([docKey, docValue]) => {
                 if (docValue instanceof File) {
-                    uploadedMap[docKey] = await uploadFile(docValue, filesService, prefix);
+                    uploadedMap[docKey] = await uploadFile(docValue, filesService, processInstanceId, taskId);
                 } else if (isPendingFileRef(docValue)) {
                     const files: File[] = fileRegistry?.getFiles?.(docValue._ref) ?? [];
                     uploadedMap[docKey] = files[0]
-                        ? await uploadFile(files[0], filesService, prefix)
+                        ? await uploadFile(files[0], filesService, processInstanceId, taskId)
                         : null;
                 } else {
                     uploadedMap[docKey] = docValue;

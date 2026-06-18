@@ -135,6 +135,11 @@ defineExpose({ reload: loadTasks });
                     <i :class="[taskIcon(task.type), 'text-surface-400 shrink-0']" />
                     <span class="font-bold">{{ task.name ?? task.taskDefinitionId }}</span>
                     <div class="ml-auto flex items-center gap-2 shrink-0">
+                        <span
+                            v-if="task.createdAt"
+                            class="text-xs text-surface-400 font-mono hidden sm:inline"
+                            v-tooltip.top="new Date(task.createdAt).toLocaleString()"
+                        >{{ dayjs(task.createdAt).fromNow() }}</span>
                         <Badge
                             :value="task.status"
                             :severity="statusSeverity[task.status] ?? 'secondary'"

@@ -8,6 +8,11 @@ const emit  = defineEmits<{ 'update:visible': [v: boolean] }>();
 const close = () => emit('update:visible', false);
 
 // ── Catalog data ──────────────────────────────────────────────────────────────
+interface ExampleSection {
+    label: string;
+    code:  Record<string, any>;
+}
+
 interface CatalogEntry {
     id:          string;
     label:       string;
@@ -16,6 +21,7 @@ interface CatalogEntry {
     description: string;
     schema:      Record<string, any>;
     uiSchema?:   Record<string, any>;
+    examples?:   ExampleSection[];
 }
 
 const CATALOG: CatalogEntry[] = [
@@ -198,7 +204,7 @@ const CATALOG: CatalogEntry[] = [
     // ── Custom widgets ───────────────────────────────────────────────────────
     {
         id: 'doc-review', label: 'DocReviewWidget', category: 'Custom Widgets', icon: 'pi-file-check',
-        description: 'Lists uploaded documents as clickable links with a confirmation checkbox per document. Reads from a sibling key in the form data. Detects expired signed URLs and shows a refresh button.',
+        description: 'Lists uploaded documents as clickable links with a confirmation checkbox per document. Reads from a sibling key in the form data (docsKey). Detects expired signed URLs and shows a refresh button. The field value written back is a per-document-key boolean map.',
         schema: { type: 'object', title: 'Document Review' },
         uiSchema: {
             'ui:field': 'DocReviewWidget',
@@ -210,6 +216,32 @@ const CATALOG: CatalogEntry[] = [
                 checkLabel: 'Correct?',
             },
         },
+        examples: [
+            {
+                label: 'formData[docsKey] — input read by the widget (one entry per uploaded file)',
+                code: {
+                    uploadedDocuments: {
+                        nacional_id: {
+                            signedUrl: 'https://cdn.example.com/nacional_id.pdf?X-Amz-Date=20250101T000000Z&X-Amz-Expires=3600',
+                            filename:  'national_id.pdf',
+                            key:       'tenant-id/instance-id/nacional_id.pdf',
+                        },
+                        business_fundation: {
+                            signedUrl: 'https://cdn.example.com/business_fundation.pdf?X-Amz-Date=20250101T000000Z&X-Amz-Expires=3600',
+                            filename:  'business_foundation.pdf',
+                            key:       'tenant-id/instance-id/business_fundation.pdf',
+                        },
+                    },
+                },
+            },
+            {
+                label: 'Field value written back — per-document boolean (checked = reviewed & correct)',
+                code: {
+                    nacional_id:        true,
+                    business_fundation: false,
+                },
+            },
+        ],
     },
 ];
 
@@ -389,6 +421,17 @@ async function copySnippet(type: 'schema' | 'uiSchema') {
                                     Paste the Schema snippet into <code class="bg-surface-100 dark:bg-zinc-800 px-1 rounded">properties</code> and the UI Schema snippet into the UI Schema editor under the same key.
                                 </p>
                             </div>
+
+                            <!-- Data examples -->
+                            <template v-if="selected.examples?.length">
+                                <div class="mt-4 border-t border-surface-100 dark:border-zinc-800 pt-4 flex flex-col gap-3">
+                                    <span class="text-xs font-semibold text-surface-600 dark:text-zinc-300">Examples</span>
+                                    <div v-for="(ex, i) in selected.examples" :key="i">
+                                        <p class="text-xs text-surface-400 dark:text-zinc-500 mb-1 leading-relaxed">{{ ex.label }}</p>
+                                        <pre class="text-xs bg-surface-50 dark:bg-zinc-800 border border-surface-200 dark:border-zinc-700 rounded p-3 overflow-x-auto leading-relaxed text-surface-800 dark:text-zinc-200 font-mono">{{ JSON.stringify(ex.code, null, 2) }}</pre>
+                                    </div>
+                                </div>
+                            </template>
                         </template>
                     </div>
                 </div>

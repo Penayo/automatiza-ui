@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { useState, useEffect, useContext } from 'preact/hooks';
-import { isStoredFile } from '@/utils/form-files';
+import { isDocumentReference } from '@/utils/form-files';
 import { useExpressionEvaluation, FormContext } from '@bpmn-io/form-js-viewer';
 
 // form-js's clone() uses JSON.parse(JSON.stringify()), which destroys File objects.
@@ -20,9 +20,25 @@ function formatSize(bytes) {
 
 // ─── Single document row ──────────────────────────────────────────────────────
 
+const API_HOST = import.meta.env.VITE_API_HOST ?? '';
+
+async function openDocumentUrl(r2Key) {
+    try {
+        const res = await fetch(`${API_HOST}/bpmn/files/refresh-urls`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ keys: { doc: r2Key } }),
+        });
+        const data = await res.json();
+        if (data.doc) window.open(data.doc, '_blank', 'noopener,noreferrer');
+    } catch {
+        // silently ignore — the file is still on R2, just the URL fetch failed
+    }
+}
+
 function DocumentRow({ doc, uploaded, readonly, onPick, onRemove }) {
-    // Already a StoredFile (previously uploaded + saved as process variable)
-    const isStored  = isStoredFile(uploaded);
+    // Already a DocumentReference (previously uploaded + saved as process variable)
+    const isStored  = isDocumentReference(uploaded);
     // Picked this session — stored in fileRegistry, form data holds a { _ref, name, size } reference
     const isPending = isPendingRef(uploaded);
     const hasFile   = isStored || isPending;
@@ -44,11 +60,11 @@ function DocumentRow({ doc, uploaded, readonly, onPick, onRemove }) {
             ? h('div', { class: 'fjs-doc-uploaded' },
                 h('span', { class: 'fjs-doc-filename' }, filename),
                 filesize != null && h('span', { class: 'fjs-doc-size' }, formatSize(filesize)),
-                isStored && h('a', {
+                isStored && uploaded.r2Key && h('button', {
+                    type: 'button',
                     class: 'fjs-doc-view',
-                    href: uploaded.signedUrl,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
+                    title: 'Open file',
+                    onClick: () => openDocumentUrl(uploaded.r2Key),
                 }, h('i', { class: 'pi pi-external-link' })),
                 !readonly && h('button', {
                     type: 'button',

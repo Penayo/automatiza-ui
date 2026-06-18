@@ -161,8 +161,11 @@
 }
 
 /* Override form-js's own CSS variable theming system so all its internal
-   rules (which use --cds-* / --color-* vars) automatically go dark. */
-.formjs-dark .fjs-container {
+   rules (which use --cds-* / --color-* vars) automatically go dark.
+   Must be on .formjs-dark itself (not just .fjs-container) because in the
+   FormEditor the palette and properties panel are siblings of .fjs-container
+   and won't inherit variables set only on that element. */
+.formjs-dark {
   /* Carbon Design System tokens that form-js reads */
   --cds-field:                    var(--fj-input-bg);
   --cds-field-01:                 var(--fj-input-bg);
@@ -184,8 +187,6 @@
   --color-text-light:             var(--fj-muted);
   --color-text-lighter:           var(--fj-muted);
   --color-text-lightest:          var(--fj-placeholder);
-
-  background-color: var(--fj-bg) !important;
 }
 
 /* Root background + text color for viewer/editor containers */

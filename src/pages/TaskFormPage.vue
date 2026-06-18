@@ -81,7 +81,11 @@ watch(state, (s) => {
         form.on('submit', async (event: { data: Record<string, any>; errors: any[] }) => {
             console.log('[TaskFormPage] form submitted, raw event.data:', event.data);
             try {
-                const resolvedData = await resolveFormFiles(event.data, filesService, form);
+                const resolvedData = await resolveFormFiles(
+                    event.data, filesService, form,
+                    data.value?.processInstanceId,
+                    data.value?.taskId,
+                );
                 submit(resolvedData);
             } catch (err: any) {
                 console.error('[TaskFormPage] file upload failed, aborting submit:', err);
@@ -97,7 +101,11 @@ async function saveProgress(variables: Record<string, any>) {
     saving.value = true;
     saved.value  = false;
     try {
-        const resolvedData = await resolveFormFiles(variables, filesService, formViewer.value);
+        const resolvedData = await resolveFormFiles(
+            variables, filesService, formViewer.value,
+            data.value?.processInstanceId,
+            data.value?.taskId,
+        );
         await $taskPublic.save(token, resolvedData);
         saved.value = true;
         setTimeout(() => { saved.value = false; }, 3000);
