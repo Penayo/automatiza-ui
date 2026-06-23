@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Accordion, AccordionContent, AccordionHeader, AccordionPanel, Badge, Button, useToast, useConfirm } from 'primevue';
+import { Accordion, AccordionContent, AccordionHeader, AccordionPanel, Badge, Button, Tag, useToast, useConfirm } from 'primevue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
@@ -104,6 +104,17 @@ const statusSeverity: Record<string, 'success' | 'danger' | 'warn' | 'info' | 's
     RUNNING:   'info',
 };
 
+function serviceTypeLabel(type?: string): string {
+    if (!type) return 'Unknown';
+    if (['io.camunda:http-json:1', 'io.camunda.connectors.HttpJson.v2', 'io.camunda.connectors.HttpJson.v2-hybrid'].includes(type)) return 'REST HTTP';
+    if (type === 'io.penayotech:smtp:1' || type === 'io.camunda:email:1') return 'Email (SMTP)';
+    if (type === 'io.processlinker:report:v1') return 'Report';
+    if (type === 'io.camunda.connectors.OpenAI.v1') return 'OpenAI';
+    if (type === 'io.processlinker:esign:dropbox:v1') return 'eSign (Dropbox)';
+    if (type === 'io.processlinker:esign:docusign:v1') return 'eSign (DocuSign)';
+    return type;
+}
+
 function taskIcon(type: string) {
     if (type === 'bpmn:UserTask')         return 'pi pi-user';
     if (type === 'bpmn:ServiceTask')      return 'pi pi-cog';
@@ -133,18 +144,15 @@ defineExpose({ reload: loadTasks });
             <AccordionHeader>
                 <div class="flex items-center gap-2 w-full pr-2">
                     <i :class="[taskIcon(task.type), 'text-surface-400 shrink-0']" />
-                    <span class="font-bold">{{ task.name ?? task.taskDefinitionId }}</span>
+                    <Badge
+                        :value="task.status"
+                        :severity="statusSeverity[task.status] ?? 'secondary'"
+                        class="font-mono text-xs shrink-0"
+                    />
+                    <span v-if="task.createdAt" class="text-xs text-surface-400 font-mono shrink-0">{{ dayjs(task.createdAt).format('YYYY/MM/DD HH:mm') }}</span>
+                    <span class="font-bold truncate">{{ task.name ?? task.taskDefinitionId }}</span>
+                    <Tag v-if="task.testMode" icon="pi pi-flask" value="TEST" severity="warn" class="text-xs py-0 shrink-0" />
                     <div class="ml-auto flex items-center gap-2 shrink-0">
-                        <span
-                            v-if="task.createdAt"
-                            class="text-xs text-surface-400 font-mono hidden sm:inline"
-                            v-tooltip.top="new Date(task.createdAt).toLocaleString()"
-                        >{{ dayjs(task.createdAt).fromNow() }}</span>
-                        <Badge
-                            :value="task.status"
-                            :severity="statusSeverity[task.status] ?? 'secondary'"
-                            class="font-mono text-xs"
-                        />
                         <!-- Quick retry — FAILED automated tasks only -->
                         <Button
                             v-if="task.status === 'FAILED' && task.type !== 'bpmn:UserTask'"
@@ -179,14 +187,15 @@ defineExpose({ reload: loadTasks });
                             v-tooltip.top="'Replay from this task (rewinds process)'"
                             @click="openReplayDialog(task, 'replay', $event)"
                         />
-                        <!-- Edit service config -->
+                        <!-- Edit service config — automated tasks with a config form -->
                         <Button
+                            v-if="task.type === 'bpmn:ServiceTask' && !['external', 'delegate'].includes(task.service?.type ?? '')"
                             icon="pi pi-cog"
                             size="small"
                             severity="secondary"
                             text
                             rounded
-                            v-tooltip.top="'Edit service config'"
+                            v-tooltip.top="`Edit service config (${serviceTypeLabel(task.service?.type)})`"
                             @click="openServiceConfig(task, $event)"
                         />
                         <!-- Edit variables -->

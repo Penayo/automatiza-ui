@@ -53,6 +53,8 @@ const actionOptions = [
     { label: 'Task assigned', value: 'TASK_ASSIGNED' },
     { label: 'Task unassigned', value: 'TASK_UNASSIGNED' },
     { label: 'Task claimed', value: 'TASK_CLAIMED' },
+    { label: 'User login', value: 'USER_LOGIN' },
+    { label: 'User login failed', value: 'USER_LOGIN_FAILED' },
 ];
 
 const levelSeverity = (level: string) => {

@@ -46,6 +46,7 @@
 	import { onMounted, onUnmounted, ref } from 'vue';
 	import { useRouter } from 'vue-router';
 	import { DashboardService } from '@services/DashboardService';
+	import { useTestEmailUnread } from '@/composables/useTestEmailUnread';
 
 	defineProps({ sidebarOpen: Boolean });
 	const emit = defineEmits(['toggle-sidebar']);
@@ -53,8 +54,9 @@
 	const router      = useRouter();
 	const currentMenu = ref('dashboard');
 	const failedCount = ref(0);
+	const { unreadCount, refresh: refreshUnread  } = useTestEmailUnread();
 
-	// Poll every 60 seconds so the badge stays fresh without a full page reload
+	// Poll every 60 seconds so badges stay fresh without a full page reload
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 	async function refreshFailedCount() {
@@ -67,7 +69,8 @@
 
 	onMounted(() => {
 		refreshFailedCount();
-		pollTimer = setInterval(refreshFailedCount, 60_000);
+		refreshUnread();
+		pollTimer = setInterval(() => { refreshFailedCount(); refreshUnread(); }, 60_000);
 	});
 
 	onUnmounted(() => {
@@ -113,20 +116,12 @@
 			]
 		},
 		{
-			label: 'Documentation',
-			icon: 'pi pi-book',
-			items: [
-				{ label: 'FEEL Expressions',   icon: 'pi pi-code',     command: () => nav('/admin/docs/feel-expressions') },
-				{ label: 'Timer Events',        icon: 'pi pi-clock',    command: () => nav('/admin/docs/timer-events') },
-				{ label: 'Process Variables',   icon: 'pi pi-database', command: () => nav('/admin/docs/process-variables') },
-				{ label: 'Service Tasks',       icon: 'pi pi-cog',      command: () => nav('/admin/docs/service-tasks') },
-			]
-		},
-		{
 			label: 'System',
 			icon: 'pi pi-cog',
 			items: [
-				{ label: 'Audit Logs',  icon: 'pi pi-eye',          command: () => nav('/admin/audit') },
+				{ label: 'Audit Logs',    icon: 'pi pi-eye',       command: () => nav('/admin/audit') },
+					{ label: 'User Activity', icon: 'pi pi-users',     command: () => nav('/admin/audit/reports/user-activity') },
+					{ label: 'Task Timing',   icon: 'pi pi-stopwatch', command: () => nav('/admin/audit/reports/task-timing') },
 				{ label: 'Messages',    icon: 'pi pi-envelope',     command: () => nav('/admin/messages') },
 				{ label: 'Recovery',    icon: 'pi pi-wrench',       command: () => nav('/admin/recovery') },
 				{ label: 'Users',       icon: 'pi pi-users',   command: () => nav('/admin/users') },
@@ -135,7 +130,19 @@
 				{ label: 'Variables',   icon: 'pi pi-wrench',  command: () => nav('/admin/variables') },
 				{ label: 'Secrets',     icon: 'pi pi-wrench',  command: () => nav('/admin/secrets') },
 				{ label: 'API Keys',    icon: 'pi pi-key',     command: () => nav('/admin/api-keys') },
+				{ label: 'API Mocks',   icon: 'pi pi-server',  command: () => nav('/admin/api-mocks') },
+				{ label: 'Test Inbox',  icon: 'pi pi-inbox',   command: () => nav('/admin/test-inbox'), get badge() { return unreadCount.value || undefined; } },
 			]
 		},
+		{
+			label: 'Documentation',
+			icon: 'pi pi-book',
+			items: [
+				{ label: 'FEEL Expressions',   icon: 'pi pi-code',     command: () => nav('/admin/docs/feel-expressions') },
+				{ label: 'Timer Events',        icon: 'pi pi-clock',    command: () => nav('/admin/docs/timer-events') },
+				{ label: 'Process Variables',   icon: 'pi pi-database', command: () => nav('/admin/docs/process-variables') },
+				{ label: 'Service Tasks',       icon: 'pi pi-cog',      command: () => nav('/admin/docs/service-tasks') },
+			]
+		},		
 	]);
 </script>

@@ -27,7 +27,7 @@ function renderMarkdown(text: string): string {
     return marked.parse(text) as string;
 }
 
-export type AiContextType = 'form-designer' | 'bpmn-designer' | 'report' | 'email';
+export type AiContextType = 'form-designer' | 'bpmn-designer' | 'dmn-designer' | 'report' | 'email';
 
 const props = defineProps<{
     contextType: AiContextType;
@@ -42,6 +42,7 @@ interface Message {
 const PANEL_LABELS: Record<AiContextType, string> = {
     'form-designer':  'Form Assistant',
     'bpmn-designer':  'Process Assistant',
+    'dmn-designer':   'Decision Assistant',
     'report':         'Report Assistant',
     'email':          'Email Assistant',
 };
@@ -49,6 +50,7 @@ const PANEL_LABELS: Record<AiContextType, string> = {
 const PANEL_HINTS: Record<AiContextType, string> = {
     'form-designer':  'Ask me anything about this schema — field types, validation, UI options, custom widgets…',
     'bpmn-designer':  'Ask about BPMN elements, gateway conditions, service task config…',
+    'dmn-designer':   'Ask about decision table inputs, outputs, FEEL expressions, hit policies, rule design…',
     'report':         'Ask about report layout, filters, aggregations…',
     'email':          'Ask about template variables, email copy, formatting…',
 };
@@ -191,18 +193,18 @@ function handleBubbleClick(e: MouseEvent) {
         <Transition name="drawer">
             <div
                 v-if="open"
-                class="fixed z-40 top-0 right-0 bottom-0 flex flex-col
-                       border-l border-surface-200 dark:border-zinc-700
-                       bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden"
-                style="width: 460px; position: fixed;"
+                class="fixed top-0 right-0 bottom-0 flex flex-col
+                        border-l border-surface-200 dark:border-zinc-700
+                        bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden"
+                style="width: 460px; position: fixed;z-index: 1000;"
             >
                 <!-- Copied indicator -->
                 <Transition name="copied-toast">
                     <div
                         v-if="copiedId"
                         class="absolute top-14 left-1/2 -translate-x-1/2 z-10
-                               flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-lg
-                               bg-emerald-500 text-white text-xs font-medium pointer-events-none"
+                                flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-lg
+                                 bg-emerald-500 text-white text-xs font-medium pointer-events-none"
                     >
                         <i class="pi pi-check" style="font-size: 0.65rem" />
                         Copied to clipboard
@@ -256,7 +258,7 @@ function handleBubbleClick(e: MouseEvent) {
                         </div>
                         <!-- Assistant -->
                         <div v-else class="flex justify-start">
-                            <div class="ai-bubble max-w-[88%] px-4 py-2.5 rounded-2xl rounded-tl-sm
+                            <div class="ai-bubble w-full px-4 py-2.5 rounded-2xl rounded-tl-sm
                                         text-sm leading-relaxed
                                         text-surface-800 dark:text-zinc-200
                                         bg-surface-100 dark:bg-zinc-800"
@@ -327,13 +329,13 @@ function handleBubbleClick(e: MouseEvent) {
         <!-- Floating action button -->
         <button
             @click="toggleOpen"
-            class="fixed z-50 bottom-6 right-6 rounded-full shadow-xl
+            class="fixed bottom-6 right-6 rounded-full shadow-xl
                    flex items-center justify-center
                    transition-all duration-200 active:scale-95"
             :class="open
                 ? 'bg-zinc-700 dark:bg-zinc-600 hover:bg-zinc-800 dark:hover:bg-zinc-500'
                 : 'bg-emerald-600 hover:bg-emerald-700'"
-            style="width: 52px; height: 52px;"
+            style="width: 52px; height: 52px; z-index: 1000;"
             :title="open ? 'Close assistant' : 'Open AI assistant'"
         >
             <Transition name="icon-swap" mode="out-in">

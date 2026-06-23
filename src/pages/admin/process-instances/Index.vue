@@ -185,7 +185,10 @@ onMounted(async () => {
 
             <Column field="status" header="Status" style="width: 8rem">
                 <template #body="{ data }">
-                    <Tag :value="data.status" :severity="statusSeverity(data.status)" />
+                    <div class="flex items-center gap-1">
+                        <Tag :value="data.status" :severity="statusSeverity(data.status)" />
+                        <Tag v-if="data.testMode" value="TEST" severity="warn" class="text-xs" v-tooltip.top="data.testType ?? 'auto-stub'" />
+                    </div>
                 </template>
             </Column>
 

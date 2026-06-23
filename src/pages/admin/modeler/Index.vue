@@ -18,7 +18,7 @@ async function onSaveModel(xml: string) {
 </script>
 
 <template>
-  <div>
+  <div style="height: calc(100vh - 50px); display: flex; flex-direction: column; overflow: hidden;">
     <CamundaModeler @save="onSaveModel" />
   </div>
 </template>

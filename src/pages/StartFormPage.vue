@@ -17,7 +17,8 @@ const companyName = import.meta.env.VITE_COMPANY_NAME ?? 'Process Linker';
 
 const route  = useRoute();
 const router = useRouter();
-const processId = route.params.processId as string;
+const processId    = route.params.processId as string;
+const webhookToken = route.query.token as string | undefined;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 type PageState = 'loading' | 'form' | 'login-required' | 'forbidden' | 'done' | 'error';
@@ -81,8 +82,9 @@ watch(state, (s) => {
 async function submit(variables: Record<string, any>) {
     submitting.value = true;
     try {
+        const tokenParam = webhookToken ? `?token=${encodeURIComponent(webhookToken)}` : '';
         await axios.post(
-            `${BASE}/bpmn/processes/${processId}/public-start`,
+            `${BASE}/bpmn/processes/${processId}/public-start${tokenParam}`,
             { variables },
             { headers: authHeaders() },
         );
@@ -108,7 +110,8 @@ function submitForm() {
 }
 
 function goLogin() {
-    const redirect = encodeURIComponent(`/start/${processId}`);
+    const tokenSuffix = webhookToken ? `?token=${encodeURIComponent(webhookToken)}` : '';
+    const redirect = encodeURIComponent(`/start/${processId}${tokenSuffix}`);
     router.push(`/login?redirect=${redirect}`);
 }
 

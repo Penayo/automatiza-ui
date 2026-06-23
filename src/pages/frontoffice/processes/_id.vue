@@ -175,6 +175,7 @@ onMounted(load);
                     v-else-if="activeTab === 'instances'"
                     :process-id="process.processId"
                     :process-definition-id="process.id!"
+                    :process-name="process.name"
                 />
 
                 <ProcessStats

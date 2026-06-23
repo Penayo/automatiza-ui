@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { Dialog, Tab, TabList, TabPanel, TabPanels, Tabs, Toolbar, useToast } from 'primevue';
+import { onApprove } from '@/utils/common';
+import { Button, Dialog, Tab, TabList, TabPanel, TabPanels, Tabs, Tag, useToast, useConfirm } from 'primevue';
 import { useRoute } from 'vue-router';
 import { $api } from '@services/api';
 import type { ProcessInstance } from '@services/ProcessesService';
@@ -10,11 +11,13 @@ import TaskList from '@pages/admin/process-instances/components/TaskList.vue';
 import PauseProcessInstance from '@pages/admin/process-instances/components/PauseProcessInstance.vue';
 import ResumeProcessInstance from '@pages/admin/process-instances/components/ResumeProcessInstance.vue';
 import ProcessInstanceLog from '@pages/admin/process-instances/components/ProcessInstanceLog.vue';
+import ProcessInstanceTimeline from '@pages/admin/process-instances/components/ProcessInstanceTimeline.vue';
 import DocumentsTab from '@components/data/DocumentsTab.vue';
 import DiagramTab from '@pages/admin/process-instances/components/DiagramTab.vue';
 
-const toast = useToast();
-const route = useRoute();
+const toast   = useToast();
+const confirm = useConfirm();
+const route   = useRoute();
 const visible = ref(true);
 const instance = ref<ProcessInstance>();
 const loading = ref(false);
@@ -37,6 +40,23 @@ const fetchInstance = async () => {
 };
 
 onMounted(fetchInstance);
+
+function confirmTerminate() {
+  onApprove(
+    confirm,
+    'This will cancel all active tasks and stop the process immediately.',
+    async () => {
+      try {
+        await $api.processes.terminateInstance(instance.value!.id!);
+        toast.add({ severity: 'success', summary: 'Terminated', detail: 'Process instance terminated.', life: 3000 });
+        await fetchInstance();
+      } catch {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not terminate instance.', life: 3000 });
+      }
+    },
+    { acceptPropsLabel: 'Terminate', acceptPropsSeverity: 'danger' },
+  );
+}
 </script>
 
 <template>
@@ -45,12 +65,30 @@ onMounted(fetchInstance);
     v-model:visible="visible"
     maximizable
     modal
-    :header="instance ? instance.processDefinition.name : 'Instance Details'"
     :style="{ width: '60rem', 'min-height': '40rem' }"
     :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
     @show="dialogRef?.maximize()"
     @after-hide="$router.go(-1)"
   >
+    <template #header>
+      <div class="flex items-center justify-between w-full gap-6 pr-2">
+        <span class="font-semibold text-lg truncate">
+          {{ instance ? `${instance.processDefinition.name}${instance.testMode ? ' 🧪' : ''}` : 'Instance Details' }}
+        </span>
+        <div v-if="instance" class="flex items-center gap-2 shrink-0">
+          <PauseProcessInstance v-if="instance.status === 'RUNNING'" :instance-id="instance.id" @paused="fetchInstance" />
+          <ResumeProcessInstance v-if="instance.status === 'PAUSED'" :instance-id="instance.id" @resumed="fetchInstance" />
+          <Button
+            v-if="instance.status !== 'COMPLETED' && instance.status !== 'TERMINATED'"
+            size="small"
+            label="Terminate"
+            severity="danger"
+            icon="pi pi-times-circle"
+            @click="confirmTerminate"
+          />
+        </div>
+      </div>
+    </template>
     <div v-if="loading" class="flex justify-center">
       <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
     </div>
@@ -64,24 +102,16 @@ onMounted(fetchInstance);
             <Tab value="3">Log</Tab>
             <Tab value="4">Exceptions</Tab>
             <Tab value="5">Documents</Tab>
+            <Tab value="6">Timeline</Tab>
         </TabList>
         <TabPanels class="overflow-y-auto" style="height: calc(100vh - 140px)">
             <TabPanel value="0">
-              <Toolbar v-if="instance?.status !== 'COMPLETED'">
-                  <template #start>
-                  </template>
-
-                  <template #center>
-                  </template>
-
-                  <template #end>
-                    <PauseProcessInstance v-if="instance?.status == 'RUNNING'" :instance-id="instance?.id" @paused="fetchInstance" />
-                    <ResumeProcessInstance v-if="instance?.status == 'PAUSED'" :instance-id="instance?.id" @resumed="fetchInstance" />
-                  </template>
-              </Toolbar>              
-              <div  class="flex flex-col mt-4 gap-4">
+              <div class="flex flex-col mt-4 gap-4">
                 <div class="flex flex-col gap-3 text-zinc-600 dark:text-zinc-200">
 
+                  <Tag v-if="instance?.testMode" severity="warn" class="self-start mb-1">
+                      🧪 TEST MODE — {{ instance.testType ?? 'auto-stub' }}
+                  </Tag>
                   <DataItem icon="pi pi-key" label="Instance Id:" :value="instance?.id" />
                   <DataItem icon="pi pi-ellipsis-h" label="Version:" :value="instance?.processDefinition.version" />
 
@@ -132,6 +162,10 @@ onMounted(fetchInstance);
             </TabPanel>
             <TabPanel value="5">
               <DocumentsTab :variables="instance?.variables" />
+            </TabPanel>
+
+            <TabPanel value="6">
+              <ProcessInstanceTimeline :processInstanceId="instance?.id" />
             </TabPanel>
           </TabPanels>
       </Tabs>

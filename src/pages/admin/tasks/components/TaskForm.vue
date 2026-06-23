@@ -119,6 +119,14 @@ onMounted(() => {
 
 <template>
     <div>
+        <!-- Test mode banner -->
+        <div
+            v-if="props.task?.testMode"
+            class="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-sm"
+        >
+            <i class="pi pi-flask text-base shrink-0" />
+            <span><strong>Test run</strong> — this task is part of a test process instance.</span>
+        </div>
         <div ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
         <div class="flex flex-row gap-2 justify-end p-3">
             <Button size="small" severity="secondary" :disabled="!isTaskAssignedToUser()">Guardar</Button>

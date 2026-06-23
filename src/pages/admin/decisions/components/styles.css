@@ -58,19 +58,23 @@
 }
 
 /* ── DRD: element fills / strokes ──────────────────────────────────────── */
-.dark .dmn-modeler-container .djs-element .djs-visual rect {
+.dark .dmn-modeler-container .djs-shape .djs-visual rect {
   fill:   #3f3f46 !important;   /* zinc-700 */
   stroke: #52525b !important;   /* zinc-600 */
 }
-.dark .dmn-modeler-container .djs-element .djs-visual circle {
+.dark .dmn-modeler-container .djs-shape .djs-visual circle {
   fill:   #27272a !important;
   stroke: #3f3f46 !important;
 }
-.dark .dmn-modeler-container .djs-element .djs-visual polygon {
+.dark .dmn-modeler-container .djs-shape .djs-visual polygon {
   fill:   none    !important;
   stroke: #a1a1aa !important;
 }
-.dark .dmn-modeler-container .djs-element .djs-visual path {
+.dark .dmn-modeler-container .djs-shape .djs-visual path {
+  fill:   #27272a !important;
+  stroke: #3f3f46 !important;
+}
+.dark .dmn-modeler-container .djs-connection .djs-visual path {
   stroke: #d1d5db !important;
 }
 
@@ -97,6 +101,11 @@
 }
 .dark .dmn-modeler-container .djs-context-pad .entry:hover {
   background-color: #3f3f46;
+}
+/* ── Context pad ────────────────────────────────────────────────────── */
+.djs-context-pad .entry {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 
 /* ── Decision table: top-level bg ───────────────────────────────────────── */

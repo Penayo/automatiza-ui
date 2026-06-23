@@ -46,7 +46,12 @@ export interface Task extends APIData {
         usedAt?:    string;
         expiresAt?: string;
     };
+    testMode?: boolean;
     serviceConfig?: Record<string, any>;
+    service?: {
+        type?: string;
+        topic?: string;
+    };
 }
 
 export interface CompleteTaskDto {

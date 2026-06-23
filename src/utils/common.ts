@@ -52,8 +52,6 @@ export function onDelete<T>(
 	});
 }
 
-
-
 export async function deleteItem(
 	service: ModelApiService,
 	item: APIData,

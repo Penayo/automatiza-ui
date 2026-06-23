@@ -20,6 +20,8 @@ export interface ProcessDefinition extends APIData {
     starterGroups?: string[];
     starterUsers?: string[];
     responsibleContacts?: string[];
+    webhookToken?: string;
+    hasStartForm?: boolean;
 }
 
 export interface UpdateProcessMetaDto {
@@ -51,6 +53,8 @@ export interface ProcessInstance extends APIData {
     }>;
     indexKeys: string[];
     subscribedTo?: string[];
+    testMode?: boolean;
+    testType?: 'auto-stub' | 'pause-and-fill';
     log?: Array<{
         date: Date;
         message: string;
@@ -66,6 +70,8 @@ export interface DeployProcessDto {
 
 export interface StartProcessDto {
     variables?: Record<string, any>;
+    testMode?: boolean;
+    testType?: 'auto-stub' | 'pause-and-fill';
 }
 
 export type ProcessInstanceQuery = PageRequest & {
@@ -181,5 +187,9 @@ export class ProcessesService extends ModelApiService {
         const response = await this.post(url);
 
         return response as ProcessInstance ;
-    }   
+    }
+
+    async terminateInstance(instanceId: string): Promise<void> {
+        await this.delete(`instances/${instanceId}`);
+    }
 }

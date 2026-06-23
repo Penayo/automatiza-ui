@@ -6,7 +6,8 @@ import { useTheme } from '@/composables/useTheme';
 import { $api } from '@services/api';
 import type { DecisionDefinition } from '@services/DecisionsService';
 import DmnModeler from './components/DmnModeler.vue';
-import JsonEditor from 'vue3-ts-jsoneditor';
+import CodeEditor from '@components/CodeEditor.vue';
+import AiChatPanel from '@components/chat/AiChatPanel.vue';
 
 const { isDark } = useTheme();
 const route  = useRoute();
@@ -26,10 +27,13 @@ type Tab = 'designer' | 'xml' | 'preview';
 const activeTab  = ref<Tab>('designer');
 const xmlText    = ref('');
 const xmlError   = ref('');
+const currentXml = ref('');
 
 async function switchTab(tab: Tab) {
+    const xml = await modelerRef.value?.getXml() ?? decision.value?.dmnXml ?? '';
+    currentXml.value = xml;
     if (tab === 'xml') {
-        xmlText.value  = await modelerRef.value?.getXml() ?? decision.value?.dmnXml ?? '';
+        xmlText.value  = xml;
         xmlError.value = '';
     }
     if (tab === 'preview') {
@@ -38,7 +42,20 @@ async function switchTab(tab: Tab) {
     activeTab.value = tab;
 }
 
+// ── AI context ────────────────────────────────────────────────────────────────
+const aiContext = computed(() => ({
+    decisionId:  decision.value?.decisionId,
+    name:        decision.value?.name,
+    version:     decision.value?.version,
+    deployedAt:  decision.value?.deployedAt,
+    activeTab:   activeTab.value,
+    dmnXml:      activeTab.value === 'xml' ? xmlText.value : currentXml.value,
+}));
+
 async function applyXmlToDesigner() {
+    const domErr = xmlWellFormedError(xmlText.value);
+    if (domErr) { xmlError.value = domErr; return; }
+
     try {
         await modelerRef.value?.importXml(xmlText.value);
         activeTab.value = 'designer';
@@ -47,6 +64,15 @@ async function applyXmlToDesigner() {
     } catch (err: any) {
         xmlError.value = err?.message ?? 'Invalid DMN XML';
     }
+}
+
+function xmlWellFormedError(text: string): string | null {
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    const err = doc.querySelector('parsererror');
+    if (!err) return null;
+    const line = err.textContent?.match(/line (\d+)/i)?.[1];
+    const col  = err.textContent?.match(/column (\d+)/i)?.[1];
+    return `Malformed XML${line ? ` at line ${line}${col ? `, col ${col}` : ''}` : ''} — check all tags are properly closed and namespaces are declared.`;
 }
 
 // ── Preview ───────────────────────────────────────────────────────────────────
@@ -89,6 +115,7 @@ async function load() {
         router.push({ name: 'DecisionsList' });
     } finally {
         loading.value = false;
+        if (decision.value?.dmnXml) currentXml.value = decision.value.dmnXml;
     }
 }
 
@@ -256,14 +283,12 @@ onMounted(load);
                         />
                     </div>
                 </div>
-                <div class="flex-1 min-h-0 json-editor-fill">
-                    <JsonEditor
-                        v-model:text="xmlText"
-                        mode="text"
-                        :mainMenuBar="false"
-                        :navigationBar="false"
-                        :darkTheme="isDark"
-                        @change="xmlError = ''"
+                <div class="flex-1 min-h-0">
+                    <CodeEditor
+                        v-model="xmlText"
+                        lang="xml"
+                        :dark="isDark"
+                        @update:modelValue="xmlError = ''"
                     />
                 </div>
             </div>
@@ -355,10 +380,7 @@ onMounted(load);
 
         </template>
     </div>
+
+    <AiChatPanel context-type="dmn-designer" :context="aiContext" />
 </template>
 
-<style scoped>
-.json-editor-fill :deep(.vue-ts-json-editor) {
-    height: 100% !important;
-}
-</style>

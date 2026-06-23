@@ -158,6 +158,13 @@ defineExpose({ getTasks });
                             :severity="urgencySeverity[urgency(slotProps.data)!]"
                             class="text-xs py-0"
                         />
+                        <Tag
+                            v-if="slotProps.data.testMode"
+                            icon="pi pi-flask"
+                            value="TEST"
+                            severity="warn"
+                            class="text-xs py-0"
+                        />
                     </div>
 
                     <!-- Correlation key value (if set) -->

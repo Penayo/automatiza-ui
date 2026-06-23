@@ -4,21 +4,31 @@ import { Button, useToast } from 'primevue';
 import { $api } from '@services/api';
 import { useRouter } from 'vue-router';
 import type { ProcessDefinition } from '@services/ProcessesService';
+import { trackProcessOpen, sortProcesses, type ProcessSort } from '@/composables/useRecentProcesses';
 
 const $router = useRouter();
 const toast   = useToast();
 const all     = ref<ProcessDefinition[]>([]);
 const search  = ref('');
 const loading = ref(false);
+const sort    = ref<ProcessSort>('recent');
+
+const sortOptions: { label: string; value: ProcessSort }[] = [
+    { label: 'Recent',  value: 'recent' },
+    { label: 'A–Z',     value: 'az'     },
+    { label: 'Newest',  value: 'newest' },
+];
 
 const filtered = computed(() => {
     const q = search.value.trim().toLowerCase();
-    if (!q) return all.value;
-    return all.value.filter(p =>
-        p.name?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q) ||
-        p.processId?.toLowerCase().includes(q),
-    );
+    const list = q
+        ? all.value.filter(p =>
+            p.name?.toLowerCase().includes(q) ||
+            p.description?.toLowerCase().includes(q) ||
+            p.processId?.toLowerCase().includes(q),
+          )
+        : all.value;
+    return sortProcesses(list, sort.value);
 });
 
 const fetchData = async () => {
@@ -43,13 +53,17 @@ const deployProcess = async (item: ProcessDefinition, e: MouseEvent) => {
     }
 };
 
-const openEdit  = (id: string) => $router.push({ name: 'ProcessEdit', params: { id } });
+const openEdit  = (proc: ProcessDefinition) => {
+    trackProcessOpen(proc.processId);
+    $router.push({ name: 'ProcessEdit', params: { id: proc.id! } });
+};
 const openStart = (id: string, e: MouseEvent) => { e.stopPropagation(); $router.push({ name: 'ProcessStart', params: { id } }); };
 const openNew   = () => $router.push({ name: 'ProcessNew' });
 
-const copyLink = async (id: string, e: MouseEvent) => {
+const copyLink = async (proc: ProcessDefinition, e: MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/start/${id}`;
+    const token = proc.webhookToken ? `?token=${proc.webhookToken}` : '';
+    const url = `${window.location.origin}/start/${proc.id}${token}`;
     if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
     } else {
@@ -88,6 +102,18 @@ onMounted(fetchData);
                         style="--tw-ring-color: var(--layout-accent-color)"
                     />
                 </div>
+                <!-- Sort pills -->
+                <div class="flex items-center rounded-lg border border-surface-200 dark:border-surface-700 overflow-hidden text-xs">
+                    <button
+                        v-for="opt in sortOptions"
+                        :key="opt.value"
+                        class="px-3 py-1.5 transition-colors"
+                        :class="sort === opt.value
+                            ? 'bg-surface-900 dark:bg-surface-100 text-white dark:text-surface-900 font-medium'
+                            : 'text-surface-500 hover:text-surface-800 dark:hover:text-surface-200'"
+                        @click="sort = opt.value"
+                    >{{ opt.label }}</button>
+                </div>
                 <Button variant="text" rounded icon="pi pi-refresh" @click="fetchData" :loading="loading" />
                 <Button icon="pi pi-plus" label="New" @click="openNew" />
             </div>
@@ -117,7 +143,7 @@ onMounted(fetchData);
                     style="--hover-border: var(--layout-accent-color)"
                     @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = 'var(--layout-accent-color)'"
                     @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = ''"
-                    @click="openEdit(proc.id!)"
+                    @click="openEdit(proc)"
                 >
                     <!-- Top accent line (appears on hover) -->
                     <div class="h-0.5 w-full opacity-0 group-hover:opacity-100 transition-opacity" style="background: var(--layout-accent-color)" />
@@ -127,7 +153,7 @@ onMounted(fetchData);
                         <div class="flex items-start justify-between mb-3">
                             <span class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-400 transition-colors"
                                 :style="{ color: 'inherit' }"
-                                :class="'group-hover:[color:var(--layout-accent-color)]'"
+                                :class="'group-hover:text-(--layout-accent-color)'"
                             >
                                 <i class="pi pi-sitemap text-lg" />
                             </span>
@@ -156,7 +182,7 @@ onMounted(fetchData);
                     <div class="absolute inset-x-0 bottom-0 flex items-center border-t border-surface-100 dark:border-surface-800 bg-surface-0 dark:bg-surface-900 translate-y-full group-hover:translate-y-0 transition-transform duration-150">
                         <button
                             class="flex-1 flex items-center justify-center gap-1.5 text-xs text-surface-500 py-2.5 hover:text-surface-900 dark:hover:text-surface-50 transition-colors"
-                            @click.stop="openEdit(proc.id!)"
+                            @click.stop="openEdit(proc)"
                         >
                             <i class="pi pi-file-edit" /> Edit
                         </button>
@@ -174,14 +200,16 @@ onMounted(fetchData);
                         >
                             <i class="pi pi-upload" /> Deploy
                         </button>
+                        <template v-if="proc.hasStartForm">
                         <div class="w-px h-4 bg-surface-200 dark:bg-surface-700" />
                         <button
                             class="flex-1 flex items-center justify-center gap-1.5 text-xs text-surface-500 py-2.5 hover:text-emerald-500 transition-colors"
                             v-tooltip.top="'Copy shareable start form link'"
-                            @click="copyLink(proc.id!, $event)"
+                            @click="copyLink(proc, $event)"
                         >
                             <i class="pi pi-link" /> Link
                         </button>
+                        </template>
                     </div>
                 </div>
             </div>

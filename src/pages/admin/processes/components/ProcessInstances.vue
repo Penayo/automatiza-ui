@@ -1,23 +1,16 @@
 <script setup lang="ts">
-import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
-import '@/forms.scss';
-import { ref, watch, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { useToast, Button, Select, DataTable, Column, Tag, Dialog } from 'primevue';
-import { Form } from '@bpmn-io/form-js';
-import { DocumentListModule } from '@/form-fields/DocumentListField';
-import { LinkModule } from '@/form-fields/LinkField';
-import JsonEditor from 'vue3-ts-jsoneditor';
+import { useToast, Button, Select, DataTable, Column, Tag } from 'primevue';
 import { $api } from '@services/api';
 import type { ProcessInstance, ProcessInstanceQuery } from '@services/ProcessesService';
-import type { IForm } from '@services/FormsService';
 import type { PageResponse } from '@services/api';
+import StartProcessDialog from './StartProcessDialog.vue';
 
 const props = defineProps<{
-    /** BPMN processId field — used as the filter for the instances query */
     processId: string;
-    /** Database id of the ProcessDefinition — used to start a new instance */
     processDefinitionId?: string;
+    processName?: string;
 }>();
 
 const router = useRouter();
@@ -31,19 +24,16 @@ const currentPage = ref(1);
 const status      = ref<string | null>(null);
 
 const statusOptions = [
-    { label: 'All statuses', value: null        },
-    { label: 'Running',      value: 'RUNNING'   },
-    { label: 'Completed',    value: 'COMPLETED' },
-    { label: 'Failed',       value: 'FAILED'    },
-    { label: 'Paused',       value: 'PAUSED'    },
-    { label: 'Terminated',   value: 'TERMINATED'},
+    { label: 'All statuses', value: null         },
+    { label: 'Running',      value: 'RUNNING'    },
+    { label: 'Completed',    value: 'COMPLETED'  },
+    { label: 'Failed',       value: 'FAILED'     },
+    { label: 'Paused',       value: 'PAUSED'     },
+    { label: 'Terminated',   value: 'TERMINATED' },
 ];
 
 const severityMap: Record<string, string> = {
-    COMPLETED: 'success',
-    FAILED:    'danger',
-    RUNNING:   'info',
-    PAUSED:    'warn',
+    COMPLETED: 'success', FAILED: 'danger', RUNNING: 'info', PAUSED: 'warn',
 };
 const statusSeverity = (s: string) => severityMap[s] ?? 'secondary';
 
@@ -78,86 +68,17 @@ function onStatusChange() {
 }
 
 function openDetail(id: string) {
-    // Navigate to child route — Detail dialog renders inside EditProcess via <RouterView />
-    const processId = route.params.id as string;
-    if (processId) {
-        router.push({ name: 'ProcessEditInstanceDetail', params: { id: processId, instanceId: id } });
+    const pid = route.params.id as string;
+    if (pid) {
+        router.push({ name: 'ProcessEditInstanceDetail', params: { id: pid, instanceId: id } });
     } else {
         router.push({ name: 'ProcessInstanceDetail', params: { id } });
     }
 }
 
-// ── Start Process ─────────────────────────────────────────────────────────────
+// ── Start dialog ──────────────────────────────────────────────────────────────
 
 const startDialogVisible = ref(false);
-const startLoading       = ref(false);
-const starting           = ref(false);
-const startFormRef       = ref<HTMLElement | null>(null);
-const startFormSchema    = ref<IForm | null>(null);
-const startFormViewer    = ref<InstanceType<typeof Form> | null>(null);
-const startVars          = ref('{}');
-
-async function openStartDialog() {
-    if (!props.processDefinitionId) return;
-    startDialogVisible.value = true;
-    startLoading.value       = true;
-    startFormSchema.value    = null;
-    startVars.value          = '{}';
-    try {
-        startFormSchema.value = await $api.processes.getStartForm(props.processDefinitionId);
-    } catch {
-        // no start form — fall back to JSON editor
-    } finally {
-        startLoading.value = false;
-    }
-}
-
-function onStartDialogShow() {
-    // Schema may not be loaded yet — the watch below handles that case.
-    if (startFormSchema.value && startFormRef.value) mountStartForm();
-}
-
-function mountStartForm() {
-    if (!startFormRef.value) return;
-    const form = new Form({ container: startFormRef.value, additionalModules: [DocumentListModule, LinkModule] });
-    startFormViewer.value = form;
-    form.importSchema(startFormSchema.value, {});
-    form.on('submit', (event: { data: Record<string, any>; errors: unknown[] }) => {
-        submitStart(event.data);
-    });
-}
-
-watch(startFormSchema, (schema) => {
-    if (!schema) return;
-    // Wait for the v-if="startFormSchema" div to render before mounting.
-    setTimeout(() => mountStartForm(), 0);
-});
-
-async function submitStart(variables: Record<string, any>) {
-    starting.value = true;
-    try {
-        await $api.processes.startProcess(props.processDefinitionId!, { variables });
-        toast.add({ severity: 'success', summary: 'Started', detail: 'Process instance created.', life: 3000 });
-        startDialogVisible.value = false;
-        await fetch();
-    } catch (err: any) {
-        toast.add({ severity: 'error', summary: 'Error', detail: err?.message ?? 'Failed to start process.', life: 4000 });
-    } finally {
-        starting.value = false;
-    }
-}
-
-function handleStartSubmit() {
-    if (startFormViewer.value && startFormSchema.value) {
-        startFormViewer.value.submit();
-    } else {
-        try {
-            submitStart(JSON.parse(startVars.value));
-        } catch {
-            toast.add({ severity: 'error', summary: 'Invalid JSON', detail: 'Fix the variables JSON before starting.', life: 3000 });
-        }
-    }
-}
 
 onMounted(fetch);
 </script>
@@ -191,12 +112,12 @@ onMounted(fetch);
                     label="Start Process"
                     icon="pi pi-play"
                     severity="success"
-                    @click="openStartDialog"
+                    @click="startDialogVisible = true"
                 />
             </div>
         </div>
 
-        <!-- Table -->
+        <!-- Instances table -->
         <DataTable
             :value="instances?.rows"
             :totalRecords="instances?.totalRecords"
@@ -218,69 +139,32 @@ onMounted(fetch);
                     >{{ data.id }}</button>
                 </template>
             </Column>
-
             <Column field="status" header="Status" style="width: 9rem">
                 <template #body="{ data }">
                     <Tag :value="data.status" :severity="statusSeverity(data.status)" />
                 </template>
             </Column>
-
             <Column field="createdAt" header="Started" style="width: 11rem">
                 <template #body="{ data }">
                     <span class="text-xs text-surface-400">{{ new Date(data.createdAt).toLocaleString() }}</span>
                 </template>
             </Column>
-
             <Column field="completedAt" header="Completed" style="width: 11rem">
                 <template #body="{ data }">
                     <span class="text-xs text-surface-400">{{ data.completedAt ? new Date(data.completedAt).toLocaleString() : '—' }}</span>
                 </template>
             </Column>
-
             <template #empty>
                 <div class="text-center py-10 text-surface-400">No instances found.</div>
             </template>
         </DataTable>
     </div>
 
-    <!-- Start Process dialog -->
-    <Dialog
+    <StartProcessDialog
+        v-if="processDefinitionId"
         v-model:visible="startDialogVisible"
-        modal
-        header="Start Process"
-        :style="{ width: '42rem' }"
-        :dismissableMask="true"
-        @show="onStartDialogShow"
-    >
-        <div v-if="startLoading" class="flex justify-center py-8">
-            <i class="pi pi-spin pi-spinner text-3xl text-surface-400" />
-        </div>
-
-        <div v-else>
-            <div v-if="startFormSchema" ref="startFormRef" class="formjs-dark" />
-            <div v-else class="space-y-3">
-                <p class="text-sm text-surface-500">No start form configured. Provide initial variables as JSON (optional).</p>
-                <JsonEditor
-                    mode="text"
-                    v-model:text="startVars"
-                    :mainMenuBar="false"
-                    :navigationBar="false"
-                    :darkTheme="true"
-                    height="200"
-                />
-            </div>
-        </div>
-
-        <template #footer>
-            <Button label="Cancel" severity="secondary" text @click="startDialogVisible = false" />
-            <Button
-                v-if="!startLoading"
-                label="Start"
-                icon="pi pi-play"
-                severity="success"
-                :loading="starting"
-                @click="handleStartSubmit"
-            />
-        </template>
-    </Dialog>
+        :processDefinitionId="processDefinitionId"
+        :processName="processName"
+        @started="fetch"
+    />
 </template>

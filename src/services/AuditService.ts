@@ -40,6 +40,43 @@ export interface AuditLogResponse {
     pages: number;
 }
 
+export interface UserActivityRow {
+    actorUsername: string;
+    total: number;
+    TASK_COMPLETED: number;
+    TASK_CLAIMED: number;
+    TASK_ASSIGNED: number;
+    PROCESS_STARTED: number;
+    PROCESS_COMPLETED: number;
+    PROCESS_FAILED: number;
+    TASK_FAILED: number;
+}
+
+export interface TaskTimingRow {
+    taskName: string;
+    taskType: string;
+    processName: string;
+    count: number;
+    avgDurationMs: number;
+    minDurationMs: number;
+    maxDurationMs: number;
+}
+
+export interface ProcessTimelineEntry {
+    timestamp: string;
+    action: string;
+    actorUsername: string;
+    message: string;
+    taskId?: string;
+    taskName?: string;
+}
+
+export interface AuditReportQuery {
+    from?: string;
+    to?: string;
+    processName?: string;
+}
+
 export class AuditService extends BaseService {
     constructor() {
         super('audit');
@@ -58,7 +95,26 @@ export class AuditService extends BaseService {
         if (query.page)              params.page              = query.page;
         if (query.limit)             params.limit             = query.limit;
 
-        return this.get<AuditLogResponse>('logs', { params });
+        return this.get<AuditLogResponse>('logs', { params }) as Promise<AuditLogResponse>;
+    }
+
+    async getProcessTimeline(instanceId: string): Promise<ProcessTimelineEntry[]> {
+        return this.get<ProcessTimelineEntry[]>(`reports/process-timeline/${instanceId}`) as Promise<ProcessTimelineEntry[]>;
+    }
+
+    async getUserActivityReport(query: AuditReportQuery = {}): Promise<UserActivityRow[]> {
+        const params: Record<string, any> = {};
+        if (query.from) params.from = query.from;
+        if (query.to)   params.to   = query.to;
+        return this.get<UserActivityRow[]>('reports/user-activity', { params }) as Promise<UserActivityRow[]>;
+    }
+
+    async getTaskTimingReport(query: AuditReportQuery = {}): Promise<TaskTimingRow[]> {
+        const params: Record<string, any> = {};
+        if (query.from)        params.from        = query.from;
+        if (query.to)          params.to          = query.to;
+        if (query.processName) params.processName = query.processName;
+        return this.get<TaskTimingRow[]>('reports/task-timing', { params }) as Promise<TaskTimingRow[]>;
     }
 
     exportUrl(query: AuditLogQuery = {}): string {

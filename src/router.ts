@@ -106,6 +106,8 @@ const routes = [
 
       // System
       { path: 'audit',    name: 'AuditLogs', component: () => import('./pages/admin/audit/Index.vue') },
+      { path: 'audit/reports/user-activity', name: 'AuditUserActivity', component: () => import('./pages/admin/audit/reports/UserActivity.vue') },
+      { path: 'audit/reports/task-timing',   name: 'AuditTaskTiming',   component: () => import('./pages/admin/audit/reports/TaskTiming.vue') },
       { path: 'messages', name: 'AdminMessages', component: () => import('./pages/admin/messages/Index.vue') },
       { path: 'recovery', name: 'ProcessRecovery', component: () => import('./pages/admin/recovery/Index.vue') },
 
@@ -138,6 +140,12 @@ const routes = [
       { path: 'secrets', name: 'SecretsIndex', component: () => import('./pages/admin/secrets/Index.vue'), meta: { requiresPermission: 'manage_secrets' } },
       { path: 'secrets/new', name: 'SecretsNew', component: () => import('./pages/admin/secrets/New.vue'), meta: { requiresPermission: 'manage_secrets' } },
       { path: 'secrets/:key/edit', name: 'SecretsEdit', component: () => import('./pages/admin/secrets/Edit.vue'), meta: { requiresPermission: 'manage_secrets' } },
+
+      // API Mocks
+      { path: 'api-mocks', name: 'ApiMocksIndex', component: () => import('./pages/admin/api-mocks/Index.vue') },
+
+      // Test Inbox
+      { path: 'test-inbox', name: 'TestInbox', component: () => import('./pages/admin/test-inbox/Index.vue') },
 
       // API Keys
       { path: 'api-keys', name: 'ApiKeysIndex', component: () => import('./pages/admin/api-keys/Index.vue') },

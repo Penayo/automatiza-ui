@@ -5,21 +5,31 @@ import { useToast } from 'primevue';
 import { $api } from '@services/api';
 import type { ProcessDefinition } from '@services/ProcessesService';
 import { parseApiError } from '@/utils/error';
+import { trackProcessOpen, sortProcesses, type ProcessSort } from '@/composables/useRecentProcesses';
 
 const router  = useRouter();
 const toast   = useToast();
 const loading = ref(false);
 const search  = ref('');
+const sort    = ref<ProcessSort>('recent');
 const all     = ref<ProcessDefinition[]>([]);
+
+const sortOptions: { label: string; value: ProcessSort }[] = [
+    { label: 'Recent',  value: 'recent' },
+    { label: 'A–Z',     value: 'az'     },
+    { label: 'Newest',  value: 'newest' },
+];
 
 const filtered = computed(() => {
     const q = search.value.trim().toLowerCase();
-    if (!q) return all.value;
-    return all.value.filter(p =>
-        p.name?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q) ||
-        p.processId?.toLowerCase().includes(q),
-    );
+    const list = q
+        ? all.value.filter(p =>
+            p.name?.toLowerCase().includes(q) ||
+            p.description?.toLowerCase().includes(q) ||
+            p.processId?.toLowerCase().includes(q),
+          )
+        : all.value;
+    return sortProcesses(list, sort.value);
 });
 
 async function fetchProcesses() {
@@ -33,8 +43,9 @@ async function fetchProcesses() {
     }
 }
 
-function open(id: string) {
-    router.push({ name: 'FrontofficeProcessDetail', params: { id } });
+function open(proc: ProcessDefinition) {
+    trackProcessOpen(proc.processId);
+    router.push({ name: 'FrontofficeProcessDetail', params: { id: proc.id! } });
 }
 
 onMounted(fetchProcesses);
@@ -48,15 +59,30 @@ onMounted(fetchProcesses);
                 <h1 class="text-xl font-semibold" style="color: var(--layout-title-color)">Processes</h1>
                 <p class="text-sm text-surface-500 mt-0.5">Start a new process request</p>
             </div>
-            <div class="sm:ml-auto w-full sm:w-72 relative">
-                <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm pointer-events-none" />
-                <input
-                    v-model="search"
-                    type="text"
-                    placeholder="Search processes…"
-                    class="w-full bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg px-4 py-2 pl-9 text-sm text-surface-900 dark:text-surface-50 placeholder-surface-400 focus:outline-none focus:ring-1"
-                    style="--tw-ring-color: var(--layout-accent-color)"
-                />
+            <div class="sm:ml-auto flex flex-wrap items-center gap-2">
+                <!-- Sort pills -->
+                <div class="flex items-center rounded-lg border border-surface-200 dark:border-surface-700 overflow-hidden text-xs">
+                    <button
+                        v-for="opt in sortOptions"
+                        :key="opt.value"
+                        class="px-3 py-1.5 transition-colors"
+                        :class="sort === opt.value
+                            ? 'bg-surface-900 dark:bg-surface-100 text-white dark:text-surface-900 font-medium'
+                            : 'text-surface-500 hover:text-surface-800 dark:hover:text-surface-200'"
+                        @click="sort = opt.value"
+                    >{{ opt.label }}</button>
+                </div>
+                <!-- Search -->
+                <div class="relative w-full sm:w-64">
+                    <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm pointer-events-none" />
+                    <input
+                        v-model="search"
+                        type="text"
+                        placeholder="Search processes…"
+                        class="w-full bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg px-4 py-2 pl-9 text-sm text-surface-900 dark:text-surface-50 placeholder-surface-400 focus:outline-none focus:ring-1"
+                        style="--tw-ring-color: var(--layout-accent-color)"
+                    />
+                </div>
             </div>
         </div>
 
@@ -79,7 +105,7 @@ onMounted(fetchProcesses);
                 class="group text-left rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 p-5 transition-all duration-150 cursor-pointer focus:outline-none hover:shadow-md"
                 @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = 'var(--layout-accent-color)'"
                 @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = ''"
-                @click="open(proc.id!)"
+                @click="open(proc)"
             >
                 <!-- Icon + version pill -->
                 <div class="flex items-start justify-between mb-3">

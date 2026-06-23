@@ -230,6 +230,15 @@ onMounted(() => {});
     <!-- ── Form panel ─────────────────────────────────────────────────────── -->
     <div v-else>
 
+        <!-- Test mode banner -->
+        <div
+            v-if="props.task?.testMode"
+            class="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-sm"
+        >
+            <i class="pi pi-flask text-base shrink-0" />
+            <span><strong>Test run</strong> — this task is part of a test process instance. Submissions will be recorded but no real actions will occur.</span>
+        </div>
+
         <!-- form-js renderer -->
         <div
             v-if="!isJsonSchema"
