@@ -57,8 +57,10 @@ async function load() {
     } catch (err: any) {
         const status = err?.response?.status;
         if (status === 404)      state.value = 'notfound';
-        else if (status === 410) state.value = 'used';
-        else {
+        else if (status === 410) {
+            errorMsg.value = err?.response?.data?.message ?? 'This form has already been submitted.';
+            state.value = 'used';
+        } else {
             errorMsg.value = err?.response?.data?.message ?? 'Something went wrong.';
             state.value    = 'error';
         }
@@ -135,7 +137,7 @@ async function submit(variables: Record<string, any>) {
         state.value = 'done';
     } catch (err: any) {
         const status = err?.response?.status;
-        if (status === 410) { state.value = 'used'; return; }
+        if (status === 410) { errorMsg.value = err?.response?.data?.message ?? 'This form has already been submitted.'; state.value = 'used'; return; }
         errorMsg.value = err?.response?.data?.message ?? 'Submission failed. Please try again.';
         state.value    = 'error';
     } finally {
@@ -199,15 +201,13 @@ onMounted(load);
                     </p>
                 </div>
 
-                <!-- Already used -->
+                <!-- Already used / expired -->
                 <div v-else-if="state === 'used'" class="flex flex-col items-center gap-4 py-16 text-center">
                     <div class="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
                         <i class="pi pi-lock text-amber-500 text-2xl" />
                     </div>
-                    <h2 class="text-lg font-semibold text-surface-700 dark:text-surface-200">Already submitted</h2>
-                    <p class="text-sm text-surface-400 max-w-xs">
-                        This form has already been filled in and submitted. Each link can only be used once.
-                    </p>
+                    <h2 class="text-lg font-semibold text-surface-700 dark:text-surface-200">Link unavailable</h2>
+                    <p class="text-sm text-surface-400 max-w-xs">{{ errorMsg }}</p>
                 </div>
 
                 <!-- Generic error -->

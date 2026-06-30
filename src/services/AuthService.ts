@@ -32,6 +32,7 @@ export class AuthService extends ModelApiService {
 
     async login(loginUser: ILogin): Promise<IAccess> {
         const { data } = await this.api.post(this.getUrl('login'), loginUser);
+        localStorage.removeItem('errors');
         localStorage.setItem('token', data.access_token);
         return data as IAccess;
     }

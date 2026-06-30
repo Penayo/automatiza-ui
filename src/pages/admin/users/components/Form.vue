@@ -1,11 +1,13 @@
 <script setup lang="ts">
-	import { onMounted, ref, watch } from 'vue';
-	import { InputText, Password, Panel, Checkbox } from 'primevue';
+	import { onMounted, ref, watch, computed } from 'vue';
+	import { InputText, Password, Panel, Checkbox, Select } from 'primevue';
 	import z from 'zod';
 	import { parseZodError, type FormErrorMap } from '@/utils/error';
 	import FormField from '@components/form/FormField.vue';
 	import type { IUser, IRole, PageResponse } from '@services/api';
 	import { $api } from '@services/api';
+	import { AuthService } from '@services/AuthService';
+	import type { ITenant } from '@services/TenantsService';
 
 	const props = defineProps(['defaultValues'])
 	const $emit = defineEmits(['submit'])
@@ -25,7 +27,13 @@
 
 	const validationError = ref<FormErrorMap | null>(null);
 
-	const allRoles = ref<IRole[]>([]);
+	const isSuperAdmin = computed(() => {
+		const access = new AuthService().getAccessInfo();
+		return access?.user?.roles?.includes('SUPER_ADMIN') ?? false;
+	});
+
+	const allRoles    = ref<IRole[]>([]);
+	const allTenants  = ref<ITenant[]>([]);
 
 	const user = ref<IUser>({
 		username: '',
@@ -43,14 +51,15 @@
 	})
 
 	async function handleFormSubmit () {
-		console.log('handling submit')
-
 		try {
 			formSchema.parse(user.value);
+			if (isSuperAdmin.value && !user.value.tenantId) {
+				validationError.value = { tenantId: 'Please select a tenant' } as any;
+				return;
+			}
 			$emit('submit', user.value);
 		} catch(error: unknown) {
 			validationError.value = parseZodError(error as z.ZodError);
-			console.log(validationError.value);
 		}
 	}
 
@@ -85,9 +94,15 @@
 		console.log(allRoles.value);
 	}
 
+	async function fetchTenants() {
+		if (!isSuperAdmin.value) return;
+		allTenants.value = await $api.tenants.findAll();
+	}
+
 	onMounted(() => {
 		assignDefaultValues();
 		fetchRoles();
+		fetchTenants();
 	})
 </script>
 
@@ -134,6 +149,20 @@
 					</FormField>
 				</div>
 			</div>
+		</Panel>
+
+		<Panel v-if="isSuperAdmin" header="Tenant" class="mt-4">
+			<FormField label="Assign to Tenant" label-for="tenantId">
+				<Select
+					id="tenantId"
+					v-model="user.tenantId"
+					:options="allTenants"
+					optionLabel="name"
+					optionValue="id"
+					placeholder="Select a tenant"
+					class="w-full"
+				/>
+			</FormField>
 		</Panel>
 
 		<Panel header="Roles" class="mt-4">

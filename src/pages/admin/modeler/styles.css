@@ -209,3 +209,54 @@
   background-color: transparent !important;
   box-shadow: none !important;
 }
+
+/* ── Replace / morph popup ──────────────────────────────────────────── */
+.dark .djs-popup {
+  background-color: #27272a !important;   /* zinc-800 */
+  border: 1px solid #3f3f46 !important;   /* zinc-700 */
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  color: #a1a1aa !important;              /* zinc-400 */
+}
+
+.dark .djs-popup .djs-popup-header {
+  background-color: #1c1c1f !important;
+  border-bottom: 1px solid #3f3f46 !important;
+  color: #d4d4d8 !important;              /* zinc-300 */
+}
+
+.dark .djs-popup .djs-popup-body {
+  background-color: #27272a !important;
+}
+
+.dark .djs-popup .entry {
+  color: #a1a1aa !important;
+}
+
+.dark .djs-popup .entry:hover {
+  background-color: #3f3f46 !important;   /* zinc-700 */
+  color: #f4f4f5 !important;              /* zinc-100 */
+}
+
+.dark .djs-popup .entry.active,
+.dark .djs-popup .entry.selected {
+  background-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+/* ── bpmn-replace list items ────────────────────────────────────────── */
+.dark .bpmn-replace .replace-menu {
+  background-color: #27272a !important;
+  border: 1px solid #3f3f46 !important;
+  color: #a1a1aa !important;
+}
+
+.dark .bpmn-replace .replace-menu li:hover,
+.dark .bpmn-replace .replace-menu li.active {
+  background-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+.dark .bpmn-replace .replace-menu li span {
+  color: inherit !important;
+}

@@ -5,7 +5,8 @@ import { LinkModule } from '@/form-fields/LinkField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { ref, watch, computed, onMounted, onErrorCaptured, provide, watchEffect } from 'vue';
+import { ref, watch, computed, onMounted, onErrorCaptured, provide, watchEffect, markRaw, type Component } from 'vue';
+import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
 
 onErrorCaptured((err) => {
     if (err instanceof TypeError && err.message.includes('emitsOptions')) return false;
@@ -61,6 +62,10 @@ const formDisabled = computed(() => !isTaskAssignedToUser());
 provide('formDisabled', formDisabled);
 
 const isJsonSchema = computed(() => formSchema.value?.type === 'jsonschema');
+const isCustom     = computed(() => formSchema.value?.type === 'custom');
+
+const customView    = ref<Component | null>(null);
+const customViewRef = ref<{ getVariables: () => Record<string, any> } | null>(null);
 
 // ── Task completion ──────────────────────────────────────────────────────────
 
@@ -79,17 +84,21 @@ async function completeTask(variables: any) {
     }
 }
 
+function getCurrentVars(): Record<string, any> {
+    if (isCustom.value)     return customViewRef.value?.getVariables() ?? { ...formData.value };
+    if (isJsonSchema.value) return { ...formData.value, ...jsonFormData.value };
+    return { ...formData.value, ...currentFormData.value };
+}
+
 async function saveTask() {
     if (!props.task?.id) return;
     saving.value = true;
     saved.value  = false;
     try {
-        const vars = isJsonSchema.value
-            ? { ...formData.value, ...jsonFormData.value }
-            : { ...formData.value, ...currentFormData.value };
+        const vars = getCurrentVars();
 
-        if (!isJsonSchema.value) {
-                const resolvedVars = await resolveFormFiles(
+        if (!isJsonSchema.value && !isCustom.value) {
+            const resolvedVars = await resolveFormFiles(
                 vars, $api.files, formViewer.value,
                 props.task.processInstanceId,
                 props.task.id,
@@ -118,8 +127,8 @@ function submitForm() {
         confirm,
         'Are you sure you want to submit this form?\nThis will advance the task to the next stage.',
         async () => {
-            if (isJsonSchema.value) {
-                completeTask({ ...formData.value, ...jsonFormData.value });
+            if (isCustom.value || isJsonSchema.value) {
+                completeTask(getCurrentVars());
             } else if (formViewer.value) {
                 formViewer.value.submit();
             }
@@ -131,12 +140,24 @@ function submitForm() {
 
 async function getTaskForm() {
     try {
-        loading.value = true;
+        loading.value  = true;
+        customView.value = null;
         const { formSchema: schema, formData: data } = await $api.tasks.getTaskForm(props.task?.id as string);
         formSchema.value = schema;
         formData.value   = data ?? {};
+
         if (schema?.type === 'jsonschema') {
             jsonFormData.value = { ...(data ?? {}) };
+        }
+
+        if (schema?.type === 'custom' && schema.key) {
+            const loader = CUSTOM_TASK_VIEWS[schema.key];
+            if (loader) {
+                const mod = await loader();
+                customView.value = markRaw(mod.default);
+            } else {
+                toast.add({ severity: 'warn', summary: 'Unknown view', detail: `No custom task view registered for key "${schema.key}"`, life: 5000 });
+            }
         }
     } catch (error) {
         const errorInfo = parseApiError(error);
@@ -147,6 +168,7 @@ async function getTaskForm() {
 }
 
 const isTaskAssignedToUser = () => props.task?.assignment?.assignee === userInfo.value?.user.username;
+const canEditForm = computed(() => isTaskAssignedToUser());
 
 watch(() => props.task, () => {
     completed.value = false;
@@ -239,9 +261,27 @@ onMounted(() => {});
             <span><strong>Test run</strong> — this task is part of a test process instance. Submissions will be recorded but no real actions will occur.</span>
         </div>
 
+        <!-- Custom Vue component renderer -->
+        <component
+            v-if="isCustom && customView"
+            :is="customView"
+            ref="customViewRef"
+            :task="task"
+            :variables="formData"
+            :read-only="!isTaskAssignedToUser()"
+        />
+
+        <div
+            v-else-if="isCustom && !customView && !loading"
+            class="flex flex-col items-center gap-2 py-12 text-surface-400"
+        >
+            <i class="pi pi-exclamation-triangle text-2xl" />
+            <span class="text-sm">Custom view not found for key "{{ formSchema?.key }}"</span>
+        </div>
+
         <!-- form-js renderer -->
         <div
-            v-if="!isJsonSchema"
+            v-else-if="!isJsonSchema"
             ref="formRef"
             :class="isDark ? 'formjs-dark' : 'formjs-light'"
         />
@@ -259,7 +299,7 @@ onMounted(() => {});
             </ElConfigProvider>
         </div>
 
-        <!-- Action bar — shared between form-js and JSON Schema -->
+        <!-- Action bar — shared across all form types -->
         <div class="flex flex-row items-center justify-between p-3">
             <span v-if="saved" class="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
                 <i class="pi pi-check-circle" /> Progress saved

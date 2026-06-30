@@ -43,10 +43,11 @@
 
 <script setup lang="ts">
 	import { Badge, PanelMenu } from 'primevue';
-	import { onMounted, onUnmounted, ref } from 'vue';
+	import { onMounted, onUnmounted, ref, computed } from 'vue';
 	import { useRouter } from 'vue-router';
 	import { DashboardService } from '@services/DashboardService';
 	import { useTestEmailUnread } from '@/composables/useTestEmailUnread';
+	import { AuthService } from '@services/AuthService';
 
 	defineProps({ sidebarOpen: Boolean });
 	const emit = defineEmits(['toggle-sidebar']);
@@ -55,6 +56,11 @@
 	const currentMenu = ref('dashboard');
 	const failedCount = ref(0);
 	const { unreadCount, refresh: refreshUnread  } = useTestEmailUnread();
+
+	const isSuperAdmin = computed(() => {
+		const access = new AuthService().getAccessInfo();
+		return access?.user?.roles?.includes('SUPER_ADMIN') ?? false;
+	});
 
 	// Poll every 60 seconds so badges stay fresh without a full page reload
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -79,7 +85,7 @@
 
 	const nav = (path: string) => { currentMenu.value = path; router.push(path); };
 
-	const menuItems = ref([
+	const menuItems = computed(() => [
 		{
 			label: 'Dashboards',
 			icon: 'pi pi-chart-pie',
@@ -101,6 +107,13 @@
 			icon: 'pi pi-list',
 			items: [
 				{ label: 'All Tasks', icon: 'pi pi-list-check', command: () => nav('/admin/tasks') },
+			]
+		},
+		{
+			label: 'Documents',
+			icon: 'pi pi-folder-open',
+			items: [
+				{ label: 'All Documents', icon: 'pi pi-file', command: () => nav('/admin/documents') },
 			]
 		},
 		{
@@ -143,6 +156,13 @@
 				{ label: 'Process Variables',   icon: 'pi pi-database', command: () => nav('/admin/docs/process-variables') },
 				{ label: 'Service Tasks',       icon: 'pi pi-cog',      command: () => nav('/admin/docs/service-tasks') },
 			]
-		},		
+		},
+		...(isSuperAdmin.value ? [{
+			label: 'Platform',
+			icon: 'pi pi-building',
+			items: [
+				{ label: 'Tenants', icon: 'pi pi-building-columns', command: () => nav('/admin/tenants') },
+			]
+		}] : []),
 	]);
 </script>

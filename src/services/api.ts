@@ -30,6 +30,7 @@ import { FilesService } from "@services/FilesService";
 import { RecoveryService } from "@services/RecoveryService";
 import { ApiMocksService } from "@services/ApiMocksService";
 import { TestEmailLogsService } from "@services/TestEmailLogsService";
+import { TenantsService } from "@services/TenantsService";
 
 export type PageRequest = {
 	page?: number;
@@ -63,4 +64,5 @@ export const $api = {
 	recovery: new RecoveryService(),
 	apiMocks: new ApiMocksService(),
 	testEmailLogs: new TestEmailLogsService(),
+	tenants: new TenantsService(),
 }

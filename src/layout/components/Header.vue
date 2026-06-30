@@ -3,10 +3,42 @@ import { computed } from 'vue';
 import { useTheme } from '@/composables/useTheme';
 import { AuthService } from '@services/AuthService';
 
-defineProps({ sidebarOpen: Boolean })
-defineEmits(['toggle-sidebar'])
+const COMPANY_NAME_CLASSES: Record<string, string> = {
+    display:    'text-lg font-bold tracking-tight',
+    heading:    'text-base font-bold',
+    subheading: 'text-sm font-semibold',
+    caption:    'text-xs font-medium opacity-70',
+};
+
+const props = defineProps({
+    sidebarOpen:       Boolean,
+    companyName:       { type: String,  default: undefined },
+    logoUrl:           { type: String,  default: undefined },
+    logoDarkUrl:       { type: String,  default: undefined },
+    logoSize:          { type: Number,  default: undefined },
+    logoPadding:       { type: Number,  default: undefined },
+    logoBgColor:       { type: String,  default: undefined },
+    showCompanyName:   { type: Boolean, default: true },
+    companyNameStyle:  { type: String,  default: 'subheading' },
+});
+defineEmits(['toggle-sidebar']);
+
+const companyNameClass = computed(() =>
+    COMPANY_NAME_CLASSES[props.companyNameStyle] ?? COMPANY_NAME_CLASSES.subheading
+);
 
 const { isDark, toggle } = useTheme();
+
+const activeLogo = computed(() => {
+    if (isDark.value) return props.logoDarkUrl ?? props.logoUrl ?? '/logo.png';
+    return props.logoUrl ?? '/logo.png';
+});
+
+const logoContainerStyle = computed(() => ({
+    padding:         props.logoPadding != null ? `${props.logoPadding}px` : undefined,
+    backgroundColor: props.logoBgColor || undefined,
+    borderRadius:    props.logoPadding ? '4px' : undefined,
+}));
 
 const authService = new AuthService();
 const accessInfo  = authService.getAccessInfo();
@@ -37,9 +69,22 @@ const roleBadge   = computed(() => isAdmin.value ? 'ADMIN' : 'USER');
 			</svg>
 		</button>
 
-		<!-- Logo -->
-		<div class="flex-1 flex md:justify-start justify-center items-center">
-			<img src="/logo.png" alt="Logo" class="h-10" />
+		<!-- Logo / company name -->
+		<div class="flex-1 flex md:justify-start justify-center items-center gap-2">
+			<div :style="logoContainerStyle">
+				<img
+					:src="activeLogo"
+					:alt="companyName ?? 'Logo'"
+					class="object-contain block"
+					:style="{ height: logoSize ? `${logoSize}px` : '32px' }"
+				/>
+			</div>
+			<span
+				v-if="showCompanyName && companyName"
+				class="hidden sm:block truncate"
+				:class="companyNameClass"
+				style="color: var(--layout-header-text);"
+			>{{ companyName }}</span>
 		</div>
 
 		<!-- Right side -->

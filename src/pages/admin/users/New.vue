@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { Button } from 'primevue';
+import { useToast } from 'primevue/usetoast';
+import { useRouter } from 'vue-router';
 import { $api } from '@services/api';
 import Form from '@pages/admin/users/components/Form.vue';
-import type { IVariable } from '@services/api';
+import type { IUser } from '@services/api';
 import Page from '@components/Page.vue';
 
-const $emit = defineEmits(['created'])
+const $emit  = defineEmits(['created']);
+const router = useRouter();
+const toast  = useToast();
 const formRef = ref<typeof Form>();
-const visible = ref(true);
 
-async function handleFormSubmit (formValues: IVariable) {
+async function handleFormSubmit(formValues: IUser) {
 	try {
-		const result = await $api.variables.post(formValues);
+		const result = await $api.users.createUser(formValues);
+		toast.add({ severity: 'success', summary: 'User created', detail: `${formValues.username} was added successfully`, life: 3000 });
 		$emit('created', result);
-		setTimeout(() => visible.value = false, 500)
-	} catch(error) {
-		console.log(error) // we should handle api error globally
+		setTimeout(() => router.push('/admin/users'), 500);
+	} catch (error: any) {
+		const detail = error?.response?.data?.message ?? 'Could not create user';
+		toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 });
 	}
 }
 </script>

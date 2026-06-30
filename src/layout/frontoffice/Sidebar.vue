@@ -54,9 +54,10 @@
 	const pendingCount = ref(0);
 
 	const menuItems = [
-		{ label: 'Dashboard', icon: 'pi pi-chart-line', path: '/dashboard' },
-		{ label: 'My Tasks',  icon: 'pi pi-list-check', path: '/my-tasks'  },
-		{ label: 'Processes', icon: 'pi pi-sitemap',    path: '/processes' },
+		{ label: 'Dashboard', icon: 'pi pi-chart-line',  path: '/dashboard'  },
+		{ label: 'My Tasks',  icon: 'pi pi-list-check',  path: '/my-tasks'   },
+		{ label: 'Processes', icon: 'pi pi-sitemap',     path: '/processes'  },
+		{ label: 'Documents', icon: 'pi pi-folder-open', path: '/documents'  },
 	];
 
 	// Highlight the item whose path matches or is a prefix of the current route

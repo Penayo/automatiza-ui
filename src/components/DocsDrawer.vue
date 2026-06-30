@@ -3,16 +3,18 @@ import { ref, computed } from 'vue';
 import { Drawer } from 'primevue';
 import { marked } from 'marked';
 
-import feelMd         from '@docs/feel-expressions.md?raw';
-import timersMd       from '@docs/timer-events.md?raw';
-import variablesMd    from '@docs/process-variables.md?raw';
-import serviceTasksMd from '@docs/service-tasks.md?raw';
+import feelMd          from '@docs/feel-expressions.md?raw';
+import timersMd        from '@docs/timer-events.md?raw';
+import variablesMd     from '@docs/process-variables.md?raw';
+import serviceTasksMd  from '@docs/service-tasks.md?raw';
+import taskListenersMd from '@docs/task-listeners.md?raw';
 
 const pages = [
     { slug: 'feel-expressions',  label: 'FEEL Expressions',  icon: 'pi pi-code',     content: feelMd },
     { slug: 'timer-events',      label: 'Timer Events',       icon: 'pi pi-clock',    content: timersMd },
     { slug: 'process-variables', label: 'Process Variables',  icon: 'pi pi-database', content: variablesMd },
     { slug: 'service-tasks',     label: 'Service Tasks',      icon: 'pi pi-cog',      content: serviceTasksMd },
+    { slug: 'task-listeners',    label: 'Task Listeners',     icon: 'pi pi-bolt',     content: taskListenersMd },
 ];
 
 const visible = defineModel<boolean>('visible', { default: false });

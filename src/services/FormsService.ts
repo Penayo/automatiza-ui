@@ -5,7 +5,9 @@ export interface IForm extends APIData {
     id: string;
     name: string;
     description?: string;
-    type: 'default' | 'form' | 'Form' | 'jsonschema';
+    type: 'default' | 'form' | 'Form' | 'jsonschema' | 'custom';
+    /** Only set when type === 'custom'. Maps to a registered key in task-views/index.ts */
+    key?: string;
     version: number;
     schemaVersion: number;
     components?: Array<{

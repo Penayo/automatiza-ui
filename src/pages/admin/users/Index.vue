@@ -102,7 +102,7 @@ onMounted(async () => {
 		>
 			<Column field="person" header="Owner">
 				<template #body="slotProps">
-					{{ slotProps.data.person.firstName }} {{ slotProps.data.person.lastName }}
+					{{ slotProps.data.person?.firstName }} {{ slotProps.data.person?.lastName }}
 				</template>
 			</Column>
 			<Column field="username" header="Username"></Column>

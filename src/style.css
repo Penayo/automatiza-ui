@@ -13,6 +13,12 @@ html {
     font-size: 14px;
 }
 
+button:not(:disabled),
+[role="button"]:not(:disabled),
+a[href] {
+    cursor: pointer;
+}
+
 /* You might use a customized CSS selector */
 .dark, .dark *, .dark :before, .dark :after {
     --vf-bg-input: var(--vf-dark-800);

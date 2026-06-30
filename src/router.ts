@@ -18,7 +18,7 @@ const routes = [
     path: '/',
     component: FrontofficeLayout,
     children: [
-      { path: '', name: 'Home', component: () => import('./pages/Home.vue') },
+      { path: '', redirect: '/dashboard' },
       { path: 'dashboard', name: 'FrontofficeDashboard', component: () => import('./pages/frontoffice/dashboard/Index.vue') },
       { path: 'my-tasks', name: 'FrontofficeMyTasks', component: () => import('./pages/frontoffice/my-tasks/Index.vue') },
       {
@@ -28,6 +28,7 @@ const routes = [
       },
       { path: 'processes', name: 'FrontofficeProcesses', component: () => import('./pages/frontoffice/processes/Index.vue') },
       { path: 'processes/:id', name: 'FrontofficeProcessDetail', component: () => import('./pages/frontoffice/processes/_id.vue') },
+      { path: 'documents', name: 'FrontofficeDocuments', component: () => import('./pages/frontoffice/documents/Index.vue') },
     ],
   },
 
@@ -99,6 +100,9 @@ const routes = [
       { path: 'reports/new',      name: 'ReportNew',   component: () => import('./pages/admin/reports/Designer.vue') },
       { path: 'reports/:id',      name: 'ReportEdit',  component: () => import('./pages/admin/reports/Designer.vue') },
 
+      // Documents
+      { path: 'documents', name: 'DocumentsList', component: () => import('./pages/admin/documents/Index.vue') },
+
       // Email Templates
       { path: 'email-templates',       name: 'EmailTemplatesList', component: () => import('./pages/admin/email-templates/Index.vue') },
       { path: 'email-templates/new',   name: 'EmailTemplateNew',   component: () => import('./pages/admin/email-templates/Designer.vue') },
@@ -152,6 +156,10 @@ const routes = [
       { path: 'api-keys/new', name: 'ApiKeysNew', component: () => import('./pages/admin/api-keys/New.vue') },
       { path: 'api-keys/:id/edit', name: 'ApiKeysEdit', component: () => import('./pages/admin/api-keys/Edit.vue') },
 
+      // Tenants (SUPER_ADMIN only)
+      { path: 'tenants',     name: 'TenantsList', component: () => import('./pages/admin/tenants/Index.vue') },
+      { path: 'tenants/:id', name: 'TenantEdit',  component: () => import('./pages/admin/tenants/_id.vue') },
+
       // Documentation
       { path: 'docs/:page?', name: 'DocsPage', component: () => import('./pages/admin/docs/Index.vue') },
     ],
@@ -169,22 +177,23 @@ router.beforeEach(async (to, _from, next) => {
   const accessInfo = authService.getAccessInfo();
 
   // ── Layer 1: Admin route guard ──────────────────────────────────────────────
-  // Any route under /admin requires the ADMIN role.
-  // Non-admin authenticated users are redirected to their task list.
+  // Any route under /admin requires ADMIN or SUPER_ADMIN role.
   if (to.path.startsWith('/admin')) {
     const user = accessInfo?.user;
     if (!user) {
       next('/login');
       return;
     }
-    const isAdmin = Array.isArray(user.roles) && user.roles.includes('ADMIN');
-    if (!isAdmin) {
+    const canAccessAdmin = Array.isArray(user.roles) &&
+      (user.roles.includes('ADMIN') || user.roles.includes('SUPER_ADMIN'));
+    if (!canAccessAdmin) {
       next('/my-tasks');
       return;
     }
   }
 
   // ── Layer 2: Fine-grained permission guard ──────────────────────────────────
+  // SUPER_ADMIN bypasses all permission checks.
   const requiresPermission = to.meta.requiresPermission;
   if (requiresPermission) {
     const user = accessInfo?.user;
@@ -193,17 +202,19 @@ router.beforeEach(async (to, _from, next) => {
       return;
     }
 
-    const userRoles = user.roles;
-    const roles = await $api.roles.fetchRoles({ keys: userRoles }) as PageResponse<IRole>;
-    const permissions: IPermission[] = [];
-    roles.rows.forEach(role => {
-      permissions.push(...role.permissions as IPermission[]);
-    });
+    if (!user.roles?.includes('SUPER_ADMIN')) {
+      const userRoles = user.roles;
+      const roles = await $api.roles.fetchRoles({ keys: userRoles }) as PageResponse<IRole>;
+      const permissions: IPermission[] = [];
+      roles.rows.forEach(role => {
+        permissions.push(...role.permissions as IPermission[]);
+      });
 
-    const hasPermission = permissions.some(permission => permission.name == to.name);
-    if (!hasPermission) {
-      next('/unauthorized');
-      return;
+      const hasPermission = permissions.some(permission => permission.name == to.name);
+      if (!hasPermission) {
+        next('/unauthorized');
+        return;
+      }
     }
   }
 

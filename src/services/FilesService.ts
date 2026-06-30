@@ -16,14 +16,34 @@ export interface FileUploadResult {
 export interface ProcessDocumentRecord {
     id:                string;
     processInstanceId: string;
+    processName?:      string;
     taskId?:           string;
+    taskName?:         string;
     r2Key:             string;
     filename:          string;
     size:              number;
     mimeType:          string;
     source:            'user_upload' | 'report_task' | 'esign_output';
     uploadedBy?:       string;
+    tenantId?:         string;
     createdAt:         string;
+}
+
+export interface DocumentListParams {
+    page?:     number;
+    limit?:    number;
+    search?:   string;
+    source?:   'user_upload' | 'report_task' | 'esign_output';
+    mimeType?: string;
+    from?:     string;
+    to?:       string;
+}
+
+export interface DocumentListResponse {
+    data:  ProcessDocumentRecord[];
+    total: number;
+    page:  number;
+    limit: number;
 }
 
 export class FilesService extends BaseService {
@@ -89,5 +109,24 @@ export class FilesService extends BaseService {
             `documents?processInstanceId=${encodeURIComponent(processInstanceId)}`,
         );
         return result as ProcessDocumentRecord[];
+    }
+
+    /**
+     * Paginated cross-instance document list for the documents management page.
+     */
+    async listAllDocuments(params: DocumentListParams = {}): Promise<DocumentListResponse> {
+        const qs = new URLSearchParams();
+        if (params.page)     qs.set('page',     String(params.page));
+        if (params.limit)    qs.set('limit',    String(params.limit));
+        if (params.search)   qs.set('search',   params.search);
+        if (params.source)   qs.set('source',   params.source);
+        if (params.mimeType) qs.set('mimeType', params.mimeType);
+        if (params.from)     qs.set('from',     params.from);
+        if (params.to)       qs.set('to',       params.to);
+
+        const result = await this.get<DocumentListResponse>(
+            `documents/all${qs.toString() ? `?${qs.toString()}` : ''}`,
+        );
+        return result as DocumentListResponse;
     }
 }

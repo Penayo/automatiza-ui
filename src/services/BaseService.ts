@@ -115,15 +115,23 @@ export class BaseService {
   }
 
   handleErrors(err: any) {
-    const errors = JSON.parse(localStorage.getItem('errors') || '[]');
-    errors.push(err);
     console.log('API Error:', err);
 
-    localStorage.setItem('errors', JSON.stringify(errors));
+    // Axios errors contain circular references — store only serializable fields.
+    // Cap at 50 entries so this never fills localStorage.
+    try {
+      const errors = JSON.parse(localStorage.getItem('errors') || '[]');
+      errors.push({
+        message: err?.message,
+        status: err?.response?.status ?? err?.status,
+        url: err?.config?.url,
+        ts: Date.now(),
+      });
+      localStorage.setItem('errors', JSON.stringify(errors.slice(-50)));
+    } catch { /* ignore storage errors */ }
 
     // Handle 401 Unauthorized error
     if (err?.response?.status === 401 || err?.status === 401) {
-      // Optionally clear tokens, redirect, or show login
       localStorage.removeItem('token');
       navigateTo('/login');
       window.dispatchEvent(new CustomEvent('api-unauthorized'));
