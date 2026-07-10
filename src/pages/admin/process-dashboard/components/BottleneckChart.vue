@@ -44,7 +44,7 @@ function draw() {
     .call(d3.axisLeft(y).tickSize(0))
     .call((g) => g.select('.domain').remove())
     .selectAll('text').attr('font-size', '11px').attr('fill', '#374151')
-    .text((d) => d.length > 20 ? d.slice(0, 18) + '…' : d);
+    .text((d) => (d as string).length > 20 ? (d as string).slice(0, 18) + '…' : d as string);
 
   svg.selectAll('.val-label')
     .data(props.data).enter().append('text')

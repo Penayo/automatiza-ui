@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useToast } from 'primevue';
+import { useToast, useConfirm } from 'primevue';
 import { $api } from '@services/api';
 import axios from 'axios';
+import { onApprove } from '@/utils/common';
 import type { ProcessDefinition, UpdateProcessMetaDto } from '@services/ProcessesService';
 import CamundaModeler from '@pages/admin/modeler/components/CamundaModeler.vue';
 import ProcessInfo      from './components/ProcessInfo.vue';
 import ProcessInstances from './components/ProcessInstances.vue';
 import ProcessStats     from './components/ProcessStats.vue';
 
-const route  = useRoute();
-const router = useRouter();
-const toast  = useToast();
+const route   = useRoute();
+const router  = useRouter();
+const toast   = useToast();
+const confirm = useConfirm();
 
 const process   = ref<ProcessDefinition | null>(null);
 const loading   = ref(false);
@@ -132,6 +134,25 @@ async function regenerateToken() {
     }
 }
 
+function onExportBpmn() {
+    if (!process.value?.bpmnXml) return;
+    onApprove(confirm, 'Are you sure you want to export the process XML?', exportBpmn);
+}
+
+function exportBpmn() {
+    if (!process.value?.bpmnXml) return;
+    const blob = new Blob([process.value.bpmnXml], { type: 'application/xml' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    console.log(process.value)
+    a.download = `${process.value.processId}-v${process.value.version ?? 1}.bpmn`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 onMounted(fetchProcess);
 </script>
 
@@ -154,6 +175,16 @@ onMounted(fetchProcess);
                 </h1>
                 <p class="text-xs text-surface-400 mt-0.5">v{{ process?.version ?? 1 }} · {{ process?.processId }}</p>
             </div>
+
+            <button
+                v-if="process"
+                class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+                v-tooltip.top="'Export BPMN XML'"
+                @click="onExportBpmn"
+            >
+                <i class="pi pi-download text-xs" />
+                Export
+            </button>
         </div>
 
         <!-- ── Tab strip ─────────────────────────────────────────────────── -->

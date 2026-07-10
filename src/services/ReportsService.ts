@@ -33,13 +33,12 @@ export class ReportsService extends ModelApiService {
         return this.post<ReportDefinition>('', dto) as Promise<ReportDefinition>;
     }
 
-    async update(id: string, dto: SaveReportDto): Promise<ReportDefinition> {
-        const response = await this.put(id, dto);
-        return (response as any)?.data ?? response as ReportDefinition;
+    update(id: string, dto: SaveReportDto): Promise<ReportDefinition> {
+        return this.put<ReportDefinition>(id, dto);
     }
 
-    remove(id: string): Promise<void> {
-        return this.delete(id) as Promise<void>;
+    remove(id: string): Promise<boolean> {
+        return this.delete(id);
     }
 
     /**

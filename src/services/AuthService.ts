@@ -31,16 +31,16 @@ export class AuthService extends ModelApiService {
     }
 
     async login(loginUser: ILogin): Promise<IAccess> {
-        const { data } = await this.api.post(this.getUrl('login'), loginUser);
+        const data = await this.post<IAccess>('login', loginUser);
         localStorage.removeItem('errors');
         localStorage.setItem('token', data.access_token);
-        return data as IAccess;
+        return data;
     }
 
     async signup(payload: ISignup): Promise<IAccess> {
-        const { data } = await this.api.post(this.getUrl('signup'), payload);
+        const data = await this.post<IAccess>('signup', payload);
         localStorage.setItem('token', data.access_token);
-        return data as IAccess;
+        return data;
     }
 
     saveAccessInfo(access: IAccess) {

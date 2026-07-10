@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { Dialog, DataTable, Column, Button, Toolbar, useToast } from 'primevue';
-import { onMounted, ref, watch } from 'vue' ;
+import { Dialog, DataTable, Column, Button, useToast } from 'primevue';
+import { onMounted, ref } from 'vue' ;
 import { useConfirm } from "primevue/useconfirm";
-import { $api, type IPermission, type IRole, type PageResponse } from '@services/api' ;
-import { onDelete, onApprove } from '@/utils/common';
+import { $api, type IPermission, type PageResponse } from '@services/api' ;
+import { onApprove } from '@/utils/common';
 import { useRoute, useRouter } from 'vue-router';
-import type { PermissionQuery } from '@services/PermissionService';
 
 const $emit = defineEmits(['addPermissions']);
 
@@ -20,7 +19,6 @@ const permissions = ref<PageResponse<IPermission>>();
 const selectedItems = ref<IPermission[] | null>(null);
 const loading = ref(false);
 const visible = ref(false);
-const search = ref('');
 const rowsPerPage = ref(15);
 
 const fetchData = async () => {

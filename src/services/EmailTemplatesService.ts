@@ -34,12 +34,11 @@ export class EmailTemplatesService extends ModelApiService {
         return this.post<EmailTemplateDefinition>('', dto) as Promise<EmailTemplateDefinition>;
     }
 
-    async update(id: string, dto: SaveEmailTemplateDto): Promise<EmailTemplateDefinition> {
-        const response = await this.put(id, dto);
-        return (response as any)?.data ?? response as EmailTemplateDefinition;
+    update(id: string, dto: SaveEmailTemplateDto): Promise<EmailTemplateDefinition> {
+        return this.put<EmailTemplateDefinition>(id, dto);
     }
 
-    remove(id: string): Promise<void> {
-        return this.delete(id) as Promise<void>;
+    remove(id: string): Promise<boolean> {
+        return this.delete(id);
     }
 }

@@ -1,4 +1,4 @@
-import type { APIData, BaseService } from "@services/BaseService";
+import type { APIData } from "@services/BaseService";
 import type { ModelApiService } from "@services/ModelAPI";
 
 export function onApprove(

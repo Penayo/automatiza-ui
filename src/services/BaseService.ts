@@ -47,10 +47,10 @@ export class BaseService {
     });
   }
 
-  async get<T>(url: string = "", config?: AxiosRequestConfig): Promise<T | void> {
+  async get<T>(url: string = "", config?: AxiosRequestConfig): Promise<T> {
     try {
       config = config ?? {}
-      config.headers = { ...this.getAuthorizationHeader() }
+      config.headers = this.getRequestHeaders()
       config.paramsSerializer = serializeParams;
 
       const { data } = await axios.get(this.getUrl(url), config);
@@ -61,7 +61,7 @@ export class BaseService {
     }
   }
 
-  async post<T>(url?: string | Object, postData = {}, config?: AxiosRequestConfig): Promise<T | void> {
+  async post<T>(url?: string | Object, postData = {}, config?: AxiosRequestConfig): Promise<T> {
     if (typeof url === "object") {
       config = postData
       postData = url
@@ -70,7 +70,7 @@ export class BaseService {
 
     try {
       config = config ?? {}
-      config.headers = { ...this.getAuthorizationHeader() }
+      config.headers = this.getRequestHeaders()
 
       const { data } = await axios.post(this.getUrl(url as string), postData, config);
       console.log({ data })
@@ -81,25 +81,25 @@ export class BaseService {
     }
   }
 
-  async put(id: string, data = {}, config?: AxiosRequestConfig) {
+  async put<T>(id: string, putData = {}, config?: AxiosRequestConfig): Promise<T> {
     if (!id) throw Error("Id was not provided");
 
     try {
       config = config ?? {}
-      config.headers = { ...this.getAuthorizationHeader() }
-      const response = await axios.put(this.getUrl(id), data, config);
-      return response;
+      config.headers = this.getRequestHeaders()
+      const { data } = await axios.put(this.getUrl(id), putData, config);
+      return data as T;
     } catch (err) {
       this.handleErrors(err);
       throw err;
     }
   }
 
-  async delete(id: string) {
+  async delete(id: string): Promise<boolean> {
     if (!id) throw Error("Id was not provided");
 
     try {
-      await axios.delete(this.getUrl(id), { headers: { ...this.getAuthorizationHeader() } });
+      await axios.delete(this.getUrl(id), { headers: this.getRequestHeaders() });
       return true;
     } catch (err) {
       this.handleErrors(err);
@@ -150,5 +150,17 @@ export class BaseService {
     }
 
     return {}
+  }
+
+  // SUPER_ADMIN tenant switcher: the selected tenant is sent on every request as
+  // X-Tenant-Id. The backend honors it only for SUPER_ADMIN (see tenant.interceptor.ts);
+  // for any other user it is ignored and the JWT tenant is used.
+  getTenantHeader () {
+    const tenantId = localStorage.getItem('selectedTenantId')
+    return tenantId ? { 'X-Tenant-Id': tenantId } : {}
+  }
+
+  getRequestHeaders () {
+    return { ...this.getAuthorizationHeader(), ...this.getTenantHeader() }
   }
 }

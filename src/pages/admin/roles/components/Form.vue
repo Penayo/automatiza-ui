@@ -1,6 +1,6 @@
 <script setup lang="ts">
-	import { onMounted, ref, watch, computed } from 'vue';
-	import { InputText, Panel, DataTable, Column, Button, Dialog } from 'primevue';
+	import { onMounted, ref, watch } from 'vue';
+	import { InputText, Panel } from 'primevue';
 	import z from 'zod';
 	import { parseZodError, type FormErrorMap } from '@/utils/error';
 	import FormField from '@components/form/FormField.vue';
@@ -26,9 +26,6 @@
 	})
 
 	const allPermissions = ref<IPermission[]>([]);
-	const selectedPermissionToAdd = ref<IPermission | null>(null);
-	const selectedPermissionToRemove = ref<IPermission | null>(null);
-	const showAddDialog = ref(false);
 
 	async function handleFormSubmit () {
 		console.log('handling submit')
@@ -45,10 +42,6 @@
 	defineExpose({
 		save: handleFormSubmit
 	})
-
-	const assignedPermissions = computed(() =>
-		allPermissions.value.filter(p => role.value.permissions.includes(p._id!))
-	);
 
 	const fetchAllPermissions = async () => {
 		try {

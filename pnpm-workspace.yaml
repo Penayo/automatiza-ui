@@ -1,4 +1,12 @@
 onlyBuiltDependencies:
-  - bpmn-js-properties-panel
+  - "@carbon/grid"
+  - "@carbon/icons"
+  - "@carbon/layout"
+  - "@parcel/watcher"
+  - core-js
   - esbuild
+  - inferno
   - canvas
+
+allowBuilds:
+  bpmn-js-properties-panel: true

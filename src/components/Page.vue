@@ -1,5 +1,5 @@
 <script setup lang="ts">
-	const props = defineProps(['title', 'subtitle'])
+	defineProps(['title', 'subtitle'])
 </script>
 
 <template>

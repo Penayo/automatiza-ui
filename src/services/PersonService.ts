@@ -25,7 +25,6 @@ export class PersonService extends ModelApiService {
     }
 
     getPerson(id: string): Promise<IPerson> {
-        return this.api.get(this.getUrl(id))
-            .then((d) => d.data) as Promise<IPerson>;
+        return this.get<IPerson>(id);
     }
 }

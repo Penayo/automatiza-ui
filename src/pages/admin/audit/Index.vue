@@ -32,6 +32,8 @@ const categoryOptions = [
     { label: 'System', value: 'system' },
     { label: 'Task', value: 'task' },
     { label: 'Queue', value: 'queue' },
+    { label: 'Design', value: 'design' },
+    { label: 'Admin', value: 'admin' },
 ];
 
 const levelOptions = [
@@ -47,6 +49,45 @@ const actionOptions = [
     { label: 'Process started', value: 'PROCESS_STARTED' },
     { label: 'Process completed', value: 'PROCESS_COMPLETED' },
     { label: 'Process failed', value: 'PROCESS_FAILED' },
+    { label: 'Process paused', value: 'PROCESS_PAUSED' },
+    { label: 'Process resumed', value: 'PROCESS_RESUMED' },
+    { label: 'Process terminated', value: 'PROCESS_TERMINATED' },
+    { label: 'Process definition created', value: 'PROCESS_DEFINITION_CREATED' },
+    { label: 'Process definition updated', value: 'PROCESS_DEFINITION_UPDATED' },
+    { label: 'Process definition deployed', value: 'PROCESS_DEFINITION_DEPLOYED' },
+    { label: 'Webhook token regenerated', value: 'PROCESS_WEBHOOK_TOKEN_REGENERATED' },
+    { label: 'Form created', value: 'FORM_CREATED' },
+    { label: 'Form updated', value: 'FORM_UPDATED' },
+    { label: 'Form deleted', value: 'FORM_DELETED' },
+    { label: 'Report created', value: 'REPORT_CREATED' },
+    { label: 'Report updated', value: 'REPORT_UPDATED' },
+    { label: 'Report deleted', value: 'REPORT_DELETED' },
+    { label: 'Decision created', value: 'DECISION_CREATED' },
+    { label: 'Decision deployed', value: 'DECISION_DEPLOYED' },
+    { label: 'Decision deleted', value: 'DECISION_DELETED' },
+    { label: 'Email template created', value: 'EMAIL_TEMPLATE_CREATED' },
+    { label: 'Email template updated', value: 'EMAIL_TEMPLATE_UPDATED' },
+    { label: 'Email template deleted', value: 'EMAIL_TEMPLATE_DELETED' },
+    { label: 'Form variable created', value: 'FORM_VARIABLE_CREATED' },
+    { label: 'Form variable updated', value: 'FORM_VARIABLE_UPDATED' },
+    { label: 'Form variable deleted', value: 'FORM_VARIABLE_DELETED' },
+    { label: 'User created', value: 'USER_CREATED' },
+    { label: 'User updated', value: 'USER_UPDATED' },
+    { label: 'User deleted', value: 'USER_DELETED' },
+    { label: 'Role created', value: 'ROLE_CREATED' },
+    { label: 'Role updated', value: 'ROLE_UPDATED' },
+    { label: 'Role deleted', value: 'ROLE_DELETED' },
+    { label: 'Permission created', value: 'PERMISSION_CREATED' },
+    { label: 'Permission updated', value: 'PERMISSION_UPDATED' },
+    { label: 'Permission deleted', value: 'PERMISSION_DELETED' },
+    { label: 'Secret created', value: 'SECRET_CREATED' },
+    { label: 'Secret updated', value: 'SECRET_UPDATED' },
+    { label: 'Secret deleted', value: 'SECRET_DELETED' },
+    { label: 'Mock created', value: 'MOCK_CREATED' },
+    { label: 'Mock updated', value: 'MOCK_UPDATED' },
+    { label: 'Mock deleted', value: 'MOCK_DELETED' },
+    { label: 'Mock toggled', value: 'MOCK_TOGGLED' },
+    { label: 'Mock scenario changed', value: 'MOCK_SCENARIO_CHANGED' },
     { label: 'Task created', value: 'TASK_CREATED' },
     { label: 'Task completed', value: 'TASK_COMPLETED' },
     { label: 'Task failed', value: 'TASK_FAILED' },
@@ -68,6 +109,8 @@ const categorySeverity = (category: string) => {
     if (category === 'process') return 'info';
     if (category === 'system')  return 'secondary';
     if (category === 'task')    return 'warn';
+    if (category === 'design')  return 'contrast';
+    if (category === 'admin')   return 'danger';
     return 'secondary';
 };
 

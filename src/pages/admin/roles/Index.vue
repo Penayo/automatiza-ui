@@ -22,7 +22,7 @@ const params = ref({ page: 1, rowsPerPage: rowsPerPage.value });
 
 const fetchData = async () => {
 	loading.value = true;
-	const pageRequest: RoleRequestQuery = { ...params.value };
+	const pageRequest: RoleRequestQuery = { ...params.value, keys: [] };
 	pageRequest.search = search.value;
 
 	try {

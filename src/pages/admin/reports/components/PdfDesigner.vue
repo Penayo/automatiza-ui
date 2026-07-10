@@ -5,7 +5,7 @@ const props = defineProps<{
     template?: Record<string, any> | null;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
     'save': [template: Record<string, any>];
 }>();
 

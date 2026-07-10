@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useToast, Dialog, DataTable, Column, InputIcon, IconField, InputText, Button } from 'primevue';
 import { onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 import type { IForm } from '@services/FormsService';
 import { $api } from '@services/api';
 
@@ -12,7 +11,6 @@ const props = defineProps<{
 const emit = defineEmits(["hide", "load"])
 
 const toast = useToast();
-const $router = useRouter();
 
 const selectedItem = ref<IForm | null>();
 const loading = ref<boolean>(false);

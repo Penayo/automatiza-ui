@@ -3,7 +3,7 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.32.1
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
@@ -17,7 +17,7 @@ ARG VITE_CRYPTO_KEY
 ENV VITE_API_HOST=$VITE_API_HOST
 ENV VITE_CRYPTO_KEY=$VITE_CRYPTO_KEY
 
-RUN pnpm run build
+RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm run build
 
 # Production stage
 FROM nginx:1.27-alpine AS production

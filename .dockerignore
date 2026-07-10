@@ -1,0 +1,17 @@
+# macOS metadata
+._*
+.DS_Store
+
+# secrets / local config
+.env
+.env.*
+
+# dependencies (reinstalled inside image)
+node_modules/
+
+# build output
+dist/
+
+# git
+.git/
+.gitignore

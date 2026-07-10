@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useTheme } from '@/composables/useTheme';
 import { AuthService } from '@services/AuthService';
+import TenantSelector from '@layout/components/TenantSelector.vue';
 
 const COMPANY_NAME_CLASSES: Record<string, string> = {
     display:    'text-lg font-bold tracking-tight',
@@ -89,6 +90,9 @@ const roleBadge   = computed(() => isAdmin.value ? 'ADMIN' : 'USER');
 
 		<!-- Right side -->
 		<div class="flex items-center gap-3 ml-auto">
+			<!-- Tenant switcher (SUPER_ADMIN only) -->
+			<TenantSelector />
+
 			<!-- Dark / light toggle -->
 			<button
 				@click="toggle"

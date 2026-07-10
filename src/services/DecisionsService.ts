@@ -38,7 +38,7 @@ export class DecisionsService extends ModelApiService {
         return this.post<DecisionDefinition>(`${id}/deploy`);
     }
 
-    remove(id: string): Promise<void> {
+    remove(id: string): Promise<boolean> {
         return this.delete(id);
     }
 

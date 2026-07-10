@@ -8,7 +8,7 @@ export class ReadOnlyAPI extends BaseService {
     super(resource);
   }
 
-  async fetch<T>(url: string = "", config?: AxiosRequestConfig): Promise<T | void> {
+  async fetch<T>(url: string = "", config?: AxiosRequestConfig): Promise<T> {
     try {
       config = config ?? {}
       config.headers = { ...this.getAuthorizationHeader() }
@@ -16,16 +16,17 @@ export class ReadOnlyAPI extends BaseService {
       const { data } = await axios.get(this.getUrl(url), config);
       if (data && data.statusCode === 401) {
         navigateTo('/login')
-        return
+        throw new Error('Unauthorized')
       }
-  
+
       return data;
     } catch (err) {
       this.handleErrors(err);
+      throw err;
     }
   }
 
-  async get<T>(id: string): Promise<T | void> {
+  async get<T>(id: string): Promise<T> {
     try {
       if (!id) throw Error("Id is not provided");
 
@@ -35,12 +36,13 @@ export class ReadOnlyAPI extends BaseService {
       const { data } = await axios.get(this.getUrl(id), config);
       if (data && data.statusCode === 401) {
         navigateTo('/login')
-        return
+        throw new Error('Unauthorized')
       }
 
-      return data ;
+      return data;
     } catch (err) {
       this.handleErrors(err);
+      throw err;
     }
   }
 }

@@ -1,22 +1,25 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useToast } from 'primevue/usetoast';
+import { useRouter } from 'vue-router';
 import { $api } from '@services/api';
 import Form from '@pages/admin/roles/components/Form.vue';
 import type { IRole } from '@services/api';
 import Page from '@components/Page.vue';
 import { Button } from 'primevue';
 
-const $emit = defineEmits(['created'])
+const router  = useRouter();
+const toast   = useToast();
 const formRef = ref<typeof Form>();
-const visible = ref(true);
 
 async function handleFormSubmit (formValues: IRole) {
 	try {
-		const result = await $api.roles.createRole(formValues);
-		$emit('created', result);
-		setTimeout(() => visible.value = false, 500)
-	} catch(error) {
-		console.log(error) // we should handle api error globally
+		await $api.roles.createRole(formValues);
+		toast.add({ severity: 'success', summary: 'Role created', detail: `${formValues.key} was added successfully`, life: 3000 });
+		setTimeout(() => router.push('/admin/roles'), 500);
+	} catch (error: any) {
+		const detail = error?.response?.data?.message ?? 'Could not create role';
+		toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 });
 	}
 }
 </script>

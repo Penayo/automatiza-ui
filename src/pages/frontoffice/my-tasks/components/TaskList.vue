@@ -50,12 +50,7 @@ const FILTER_TAGS: { key: FilterTag; label: string; icon: string }[] = [
 
 const activeFilter = ref<FilterTag>('all');
 
-const counts = computed(() => ({
-    all:        tasks.value.length,
-    overdue:    tasks.value.filter(t => urgency(t) === 'overdue').length,
-    today:      tasks.value.filter(t => urgency(t) === 'today').length,
-    unassigned: tasks.value.filter(t => !t.assignment?.assignee).length,
-}));
+
 
 const filteredTasks = computed(() => {
     switch (activeFilter.value) {

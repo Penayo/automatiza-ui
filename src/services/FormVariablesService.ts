@@ -41,7 +41,7 @@ export class FormVariablesService extends ModelApiService {
         return this.put<FormVariable>(id, dto);
     }
 
-    remove(id: string): Promise<void> {
+    remove(id: string): Promise<boolean> {
         return this.delete(id);
     }
 }

@@ -38,7 +38,7 @@ function draw() {
     .selectAll('text')
     .attr('font-size', '11px').attr('fill', '#6b7280').attr('dy', '1.2em')
     .attr('transform', 'rotate(-25)').style('text-anchor', 'end')
-    .text((d) => d.length > 14 ? d.slice(0, 12) + '…' : d);
+    .text((d) => (d as string).length > 14 ? (d as string).slice(0, 12) + '…' : d as string);
 
   svg.selectAll('.bar')
     .data(props.data).enter().append('rect')

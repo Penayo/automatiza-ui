@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useToast, useConfirm, Button, DataTable, Column, Dialog, InputText, Textarea } from 'primevue';
 import { $api } from '@services/api';
-import type { FormVariable, FormVariableItem, SaveFormVariableDto } from '@services/FormVariablesService';
+import type { FormVariable, SaveFormVariableDto } from '@services/FormVariablesService';
 import { onApprove } from '@/utils/common';
 
 const toast   = useToast();

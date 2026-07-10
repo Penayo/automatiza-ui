@@ -5,7 +5,7 @@ import type { IPermission } from '@services/api';
 import { useRoute, useRouter } from 'vue-router';
 import Page from '@components/Page.vue';
 import { onDelete } from '@/utils/common';
-import { Button, Card, Panel, useConfirm, useToast } from 'primevue';
+import { Button, Panel, useConfirm, useToast } from 'primevue';
 
 const confirm = useConfirm();
 const $router = useRouter();

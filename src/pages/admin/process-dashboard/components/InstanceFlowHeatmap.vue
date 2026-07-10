@@ -55,7 +55,7 @@ function draw() {
     .selectAll('text')
     .attr('font-size', '11px').attr('fill', '#374151')
     .attr('transform', 'rotate(-35)').style('text-anchor', 'start')
-    .text((d) => d.length > 14 ? d.slice(0, 12) + '…' : d);
+    .text((d) => (d as string).length > 14 ? (d as string).slice(0, 12) + '…' : d as string);
 
   // Y axis — task names
   svg.append('g')
@@ -63,7 +63,7 @@ function draw() {
     .call((g) => g.select('.domain').remove())
     .selectAll('text')
     .attr('font-size', '11px').attr('fill', '#374151')
-    .text((d) => d.length > 22 ? d.slice(0, 20) + '…' : d);
+    .text((d) => (d as string).length > 22 ? (d as string).slice(0, 20) + '…' : d as string);
 }
 
 onMounted(draw);

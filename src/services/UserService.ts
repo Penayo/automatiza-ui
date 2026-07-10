@@ -26,8 +26,7 @@ export class UserService extends ModelApiService {
     }
 
     getUser(userName: string): Promise<IUser> {
-        return this.get(this.getUrl(), { params: { username: userName } })
-            .then((d) => d.data) as Promise<IUser>;
+        return this.get<IUser>('', { params: { username: userName } });
     }
 
     createUser(user: IUser): Promise<IUser> {
@@ -35,7 +34,13 @@ export class UserService extends ModelApiService {
     }
 
     update(userId: string, user: IUser): Promise<IUser> {
-        return this.post(userId, user) as Promise<IUser>;
+        // Strip fields the update DTO rejects: Mongo internals (_id, __v) and the
+        // immutable username. The backend ValidationPipe uses forbidNonWhitelisted.
+        const payload = { ...user } as Partial<IUser> & { __v?: number };
+        delete payload._id;
+        delete payload.username;
+        delete payload.__v;
+        return this.post(userId, payload) as Promise<IUser>;
     }
 
     async findById(id: string): Promise<IUser> {

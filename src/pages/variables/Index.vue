@@ -14,7 +14,7 @@ const loading = ref(false);
 
 const fetchData = async () => {
 	loading.value = true;
-	const data = await $api.variables.fetch();
+	const data = await $api.variables.get<IVariable[]>();
 
 	loading.value = false;
 	items.value = data;

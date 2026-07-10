@@ -2,13 +2,27 @@ import { BaseService } from '@services/BaseService';
 
 export type AuditLogAction =
     | 'PROCESS_STARTED' | 'PROCESS_COMPLETED' | 'PROCESS_FAILED'
+    | 'PROCESS_PAUSED'  | 'PROCESS_RESUMED'   | 'PROCESS_TERMINATED'
+    | 'PROCESS_DEFINITION_CREATED' | 'PROCESS_DEFINITION_UPDATED'
+    | 'PROCESS_DEFINITION_DEPLOYED' | 'PROCESS_WEBHOOK_TOKEN_REGENERATED'
+    | 'FORM_CREATED' | 'FORM_UPDATED' | 'FORM_DELETED'
+    | 'REPORT_CREATED' | 'REPORT_UPDATED' | 'REPORT_DELETED'
+    | 'DECISION_CREATED' | 'DECISION_DEPLOYED' | 'DECISION_DELETED'
+    | 'EMAIL_TEMPLATE_CREATED' | 'EMAIL_TEMPLATE_UPDATED' | 'EMAIL_TEMPLATE_DELETED'
+    | 'FORM_VARIABLE_CREATED' | 'FORM_VARIABLE_UPDATED' | 'FORM_VARIABLE_DELETED'
+    | 'USER_CREATED' | 'USER_UPDATED' | 'USER_DELETED'
+    | 'ROLE_CREATED' | 'ROLE_UPDATED' | 'ROLE_DELETED'
+    | 'PERMISSION_CREATED' | 'PERMISSION_UPDATED' | 'PERMISSION_DELETED'
+    | 'SECRET_CREATED' | 'SECRET_UPDATED' | 'SECRET_DELETED'
+    | 'MOCK_CREATED' | 'MOCK_UPDATED' | 'MOCK_DELETED' | 'MOCK_TOGGLED' | 'MOCK_SCENARIO_CHANGED'
     | 'TASK_CREATED'    | 'TASK_COMPLETED'    | 'TASK_FAILED'
-    | 'TASK_ASSIGNED'   | 'TASK_UNASSIGNED'   | 'TASK_CLAIMED';
+    | 'TASK_ASSIGNED'   | 'TASK_UNASSIGNED'   | 'TASK_CLAIMED'
+    | 'USER_LOGIN'      | 'USER_LOGIN_FAILED';
 
 export interface AuditLog {
     _id: string;
     timestamp: string;
-    category: 'process' | 'system' | 'task' | 'queue';
+    category: 'process' | 'system' | 'task' | 'queue' | 'design' | 'admin';
     level: 'info' | 'warn' | 'error' | 'debug';
     action?: AuditLogAction;
     message: string;

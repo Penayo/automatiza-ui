@@ -4,7 +4,7 @@
 	import z from 'zod';
 	import { parseZodError, type FormErrorMap } from '@/utils/error';
 	import FormField from '@components/form/FormField.vue';
-	import type { IUser, IRole, PageResponse } from '@services/api';
+	import type { IUser, IRole } from '@services/api';
 	import { $api } from '@services/api';
 	import { AuthService } from '@services/AuthService';
 	import type { ITenant } from '@services/TenantsService';
@@ -84,7 +84,7 @@
 	watch(() => props.defaultValues, assignDefaultValues)
 
 	async function fetchRoles() {
-		const result = await $api.roles.fetchRoles({});
+		const result = await $api.roles.fetchRoles({ keys: [] });
 
 		if (Array.isArray(result)) {
 			allRoles.value = result;

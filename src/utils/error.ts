@@ -43,7 +43,7 @@ export const parseZodError = (zodError: ZodError): FormErrorMap => {
 export const parseApiError = (error: any): ApiErrorInfo => {
 	// Check if it's an Axios error with response
 	if (error?.response?.data) {
-		const { severity, statusCode, error: errorSummary, message } = error.response.data;
+		const { severity, error: errorSummary, message } = error.response.data;
 
 		// Generic API error
 		return {

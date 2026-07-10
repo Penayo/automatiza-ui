@@ -15,7 +15,7 @@
 		<nav class="flex flex-col mt-4 text-base px-2 gap-2">
 			<PanelMenu :model="menuItems" class="w-full md:w-80 pt-1">
 				<template #item="{ item }">
-					<a v-ripple class="flex items-center px-4 py-2 cursor-pointer group" @click="item.command?.()">
+					<a v-ripple class="flex items-center px-4 py-2 cursor-pointer group" @click="(e) => item.command?.({ originalEvent: e, item })">
 						<span :class="[item.icon, 'text-primary group-hover:text-inherit']" />
 						<span :class="['ml-2', { 'font-semibold': item.items }]">{{ item.label }}</span>
 						<!-- Dynamic failed-instances badge on Process Instances item -->
@@ -129,12 +129,18 @@
 			]
 		},
 		{
+			label: 'Reports',
+			icon: 'pi pi-chart-bar',
+			items: [
+				{ label: 'User Activity', icon: 'pi pi-users',     command: () => nav('/admin/audit/reports/user-activity') },
+				{ label: 'Task Timing',   icon: 'pi pi-stopwatch', command: () => nav('/admin/audit/reports/task-timing') },
+			]
+		},
+		{
 			label: 'System',
 			icon: 'pi pi-cog',
 			items: [
 				{ label: 'Audit Logs',    icon: 'pi pi-eye',       command: () => nav('/admin/audit') },
-					{ label: 'User Activity', icon: 'pi pi-users',     command: () => nav('/admin/audit/reports/user-activity') },
-					{ label: 'Task Timing',   icon: 'pi pi-stopwatch', command: () => nav('/admin/audit/reports/task-timing') },
 				{ label: 'Messages',    icon: 'pi pi-envelope',     command: () => nav('/admin/messages') },
 				{ label: 'Recovery',    icon: 'pi pi-wrench',       command: () => nav('/admin/recovery') },
 				{ label: 'Users',       icon: 'pi pi-users',   command: () => nav('/admin/users') },

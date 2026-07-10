@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue';
 import { Dialog, Button, InputText, useToast } from 'primevue';
 import { $api } from '@services/api';
-import type { Task, TaskVariable } from '@services/TasksService';
+import type { Task } from '@services/TasksService';
 
 const props = defineProps<{
     visible: boolean;

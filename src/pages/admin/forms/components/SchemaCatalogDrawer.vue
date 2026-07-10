@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { Button } from 'primevue';
 
-const props = defineProps<{ visible: boolean }>();
+defineProps<{ visible: boolean }>();
 const emit  = defineEmits<{ 'update:visible': [v: boolean] }>();
 
 const close = () => emit('update:visible', false);

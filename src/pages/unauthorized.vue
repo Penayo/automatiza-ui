@@ -6,9 +6,6 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-const qrRef = ref();
-
 </script>
 
 <style scoped>

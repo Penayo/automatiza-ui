@@ -50,7 +50,7 @@ async function getTaskForm() {
     try {
         loading.value = true
         const data = await $api.tasks.getTaskForm(props.task?.id as string)
-        formSchema.value = data;
+        formSchema.value = data.formSchema;
     } catch (error) {
         const errorInfo = parseApiError(error);
         toast.add({ ...errorInfo, life: 3000 });
