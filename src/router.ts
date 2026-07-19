@@ -29,6 +29,7 @@ const routes = [
       { path: 'processes', name: 'FrontofficeProcesses', component: () => import('./pages/frontoffice/processes/Index.vue') },
       { path: 'processes/:id', name: 'FrontofficeProcessDetail', component: () => import('./pages/frontoffice/processes/_id.vue') },
       { path: 'documents', name: 'FrontofficeDocuments', component: () => import('./pages/frontoffice/documents/Index.vue') },
+      { path: 'profile', name: 'FrontofficeProfile', component: () => import('./pages/frontoffice/profile/Index.vue') },
     ],
   },
 
@@ -107,6 +108,9 @@ const routes = [
       { path: 'email-templates',       name: 'EmailTemplatesList', component: () => import('./pages/admin/email-templates/Index.vue') },
       { path: 'email-templates/new',   name: 'EmailTemplateNew',   component: () => import('./pages/admin/email-templates/Designer.vue') },
       { path: 'email-templates/:id',   name: 'EmailTemplateEdit',  component: () => import('./pages/admin/email-templates/Designer.vue') },
+
+      // Profile (self-service — available in the admin layout too)
+      { path: 'profile', name: 'AdminProfile', component: () => import('./pages/frontoffice/profile/Index.vue') },
 
       // System
       { path: 'audit',    name: 'AuditLogs', component: () => import('./pages/admin/audit/Index.vue') },

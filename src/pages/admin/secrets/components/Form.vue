@@ -1,11 +1,22 @@
 <script setup lang="ts">
-	import { onMounted, ref, watch } from 'vue';
+	import { onMounted, ref, watch, type PropType } from 'vue';
 	import { InputText, Panel, Password, Textarea } from 'primevue';
 	import z from 'zod';
 	import { parseZodError, type FormErrorMap } from '@/utils/error';
 	import FormField from '@components/form/FormField.vue';
 
-	const props = defineProps(['defaultValues'])
+	type Secret = {
+		key: string;
+		value: string;
+		description: string;
+	}
+
+	// keyEditable=false locks the key field: a secret's key is its immutable
+	// identifier (backend update ignores key changes), so Edit mode disables it.
+	const props = defineProps({
+		defaultValues: { type: Object as PropType<Secret>, default: null },
+		keyEditable:   { type: Boolean, default: true },
+	})
 	const $emit = defineEmits(['submit'])
 
 	const formSchema = z.object({
@@ -19,7 +30,7 @@
 
 	const validationError = ref<FormErrorMap | null>(null);
 
-	const secret = ref({
+	const secret = ref<Secret>({
 		key: '',
 		value: '',
 		description: '',
@@ -60,7 +71,8 @@
 			<div class="grid grid-cols-3 gap-4">
 				<div>
 					<FormField label="Key" label-for="key" :error="validationError?.key">
-						<InputText id="key" v-model="secret.key" aria-describedby="key-help" />
+						<InputText id="key" v-model="secret.key" aria-describedby="key-help" :disabled="!keyEditable" fluid />
+						<small v-if="!keyEditable" class="text-gray-400">The key is a permanent identifier and can't be changed.</small>
 					</FormField>
 				</div>
 				<div class="col-span-2">

@@ -1,21 +1,23 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { $api } from '@services/api';
 import Form from '@pages/admin/secrets/components/Form.vue';
 import Page from '@components/Page.vue';
-import { Button } from 'primevue';
+import { Button, useToast } from 'primevue';
 
-const $emit = defineEmits(['created'])
+const router = useRouter();
+const toast = useToast();
 const formRef = ref<typeof Form>();
-const visible = ref(true);
 
 async function handleFormSubmit (formValues: { key: string; value: string; description?: string }) {
 	try {
-		const result = await $api.secrets.createSecret(formValues);
-		$emit('created', result);
-		setTimeout(() => visible.value = false, 500)
-	} catch(error) {
-		console.log(error) // we should handle api error globally
+		await $api.secrets.createSecret(formValues);
+		toast.add({ severity: 'success', summary: 'Success', detail: 'Secret created!', life: 3000 });
+		router.push({ name: 'SecretsIndex' });
+	} catch (error: any) {
+		const detail = error?.response?.data?.message ?? 'Failed to create secret';
+		toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 });
 	}
 }
 </script>

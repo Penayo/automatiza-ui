@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useTheme } from '@/composables/useTheme';
 import { AuthService } from '@services/AuthService';
 import TenantSelector from '@layout/components/TenantSelector.vue';
@@ -41,12 +42,40 @@ const logoContainerStyle = computed(() => ({
     borderRadius:    props.logoPadding ? '4px' : undefined,
 }));
 
+const router      = useRouter();
+const route       = useRoute();
 const authService = new AuthService();
 const accessInfo  = authService.getAccessInfo();
 
 const displayName = computed(() => accessInfo?.user?.username ?? 'User');
 const isAdmin     = computed(() => Array.isArray(accessInfo?.user?.roles) && accessInfo!.user.roles.includes('ADMIN'));
 const roleBadge   = computed(() => isAdmin.value ? 'ADMIN' : 'USER');
+
+// ── User menu (Profile / Sign out) ───────────────────────────────────────────
+const menuOpen = ref(false);
+const menuRef  = ref<HTMLElement | null>(null);
+
+function goProfile() {
+    menuOpen.value = false;
+    // Stay within the layout the menu was opened from: /admin/profile in the
+    // back office, /profile in the front office.
+    router.push(route.path.startsWith('/admin') ? '/admin/profile' : '/profile');
+}
+
+function logout() {
+    menuOpen.value = false;
+    authService.logout();
+    router.push('/login');
+}
+
+function onClickOutside(e: MouseEvent) {
+    if (menuOpen.value && menuRef.value && !menuRef.value.contains(e.target as Node)) {
+        menuOpen.value = false;
+    }
+}
+
+onMounted(() => document.addEventListener('click', onClickOutside));
+onBeforeUnmount(() => document.removeEventListener('click', onClickOutside));
 </script>
 
 <template>
@@ -118,12 +147,39 @@ const roleBadge   = computed(() => isAdmin.value ? 'ADMIN' : 'USER');
 				{{ displayName }}
 			</span>
 
-			<!-- Avatar placeholder -->
-			<div
-				class="w-9 h-9 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-sm font-bold"
-				style="background-color: var(--layout-header-bg); color: var(--layout-header-text);"
-			>
-				{{ displayName.charAt(0).toUpperCase() }}
+			<!-- Avatar + user menu -->
+			<div ref="menuRef" class="relative">
+				<button
+					class="w-9 h-9 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
+					style="background-color: var(--layout-header-bg); color: var(--layout-header-text);"
+					aria-label="Open user menu"
+					:aria-expanded="menuOpen"
+					@click.stop="menuOpen = !menuOpen"
+				>
+					{{ displayName.charAt(0).toUpperCase() }}
+				</button>
+
+				<div
+					v-if="menuOpen"
+					class="absolute right-0 mt-2 w-48 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg py-1 z-50"
+				>
+					<div class="px-4 py-2 border-b border-zinc-100 dark:border-zinc-800">
+						<div class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{{ displayName }}</div>
+						<div class="text-xs text-zinc-400">{{ roleBadge }}</div>
+					</div>
+					<button
+						class="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2"
+						@click="goProfile"
+					>
+						<i class="pi pi-user" /> My Profile
+					</button>
+					<button
+						class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2"
+						@click="logout"
+					>
+						<i class="pi pi-sign-out" /> Sign out
+					</button>
+				</div>
 			</div>
 		</div>
 	</header>

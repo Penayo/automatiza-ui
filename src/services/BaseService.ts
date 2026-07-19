@@ -130,11 +130,28 @@ export class BaseService {
       localStorage.setItem('errors', JSON.stringify(errors.slice(-50)));
     } catch { /* ignore storage errors */ }
 
+    const status = err?.response?.status ?? err?.status;
+
     // Handle 401 Unauthorized error
-    if (err?.response?.status === 401 || err?.status === 401) {
+    if (status === 401) {
       localStorage.removeItem('token');
       navigateTo('/login');
       window.dispatchEvent(new CustomEvent('api-unauthorized'));
+    }
+
+    // Surface cross-cutting failures that components typically don't handle, so
+    // they never fail silently again. 429 (rate limited) and network errors (no
+    // response) are the usual silent culprits; a global listener in App.vue turns
+    // these into a toast. Component-level errors (4xx/5xx with their own handling)
+    // are left alone to avoid double toasts.
+    if (status === 429) {
+      window.dispatchEvent(new CustomEvent('api-error', {
+        detail: { summary: 'Too many requests', message: 'Slow down for a moment and try again.' },
+      }));
+    } else if (!err?.response) {
+      window.dispatchEvent(new CustomEvent('api-error', {
+        detail: { summary: 'Network error', message: 'Could not reach the server. Check your connection and try again.' },
+      }));
     }
 
     throw err;

@@ -4,25 +4,24 @@ import { $api } from '@services/api';
 import Form from '@pages/admin/secrets/components/Form.vue';
 import Page from '@components/Page.vue';
 import { Button, useToast } from 'primevue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const $route = useRoute();
+const router = useRouter();
 const toast = useToast();
-const $emit = defineEmits(['updated'])
 const formRef = ref<typeof Form>();
-const visible = ref(true);
 const secret = ref();
 
 const key = $route.params.key as string;
 
 async function handleFormSubmit (formValues: { value: string; description?: string }) {
 	try {
-		const result = await $api.secrets.updateSecret(key, formValues);
-		$emit('updated', result);
-		toast.add({ severity: 'success', summary: 'Success', detail: 'Secret Updated!', life: 3000 });
-		setTimeout(() => visible.value = false, 500)
-	} catch(error) {
-		console.log(error) // we should handle api error globally
+		await $api.secrets.updateSecret(key, formValues);
+		toast.add({ severity: 'success', summary: 'Success', detail: 'Secret updated!', life: 3000 });
+		router.push({ name: 'SecretsIndex' });
+	} catch (error: any) {
+		const detail = error?.response?.data?.message ?? 'Failed to update secret';
+		toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 });
 	}
 }
 
@@ -52,7 +51,7 @@ onMounted(async () => {
         </template>
 
 		<div class="m-0">
-			<Form @submit="handleFormSubmit" :defaultValues="secret" ref="formRef" />
+			<Form @submit="handleFormSubmit" :defaultValues="secret" :keyEditable="false" ref="formRef" />
 		</div>
 	</Page>
 </template>

@@ -68,9 +68,15 @@ const hint  = computed(() => PANEL_HINTS[props.contextType]);
 
 const baseUrl = import.meta.env.VITE_API_HOST as string;
 
-function authHeader(): Record<string, string> {
-    const token = localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
+// Mirror BaseService.getRequestHeaders: send auth + the SUPER_ADMIN tenant
+// selector's X-Tenant-Id so the AI key resolves to the tenant currently in view.
+function requestHeaders(): Record<string, string> {
+    const token    = localStorage.getItem('token');
+    const tenantId = localStorage.getItem('selectedTenantId');
+    return {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
+    };
 }
 
 async function scrollToBottom() {
@@ -102,7 +108,7 @@ async function send() {
     try {
         const res = await fetch(`${baseUrl}/bpmn/ai/chat`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeader() },
+            headers: { 'Content-Type': 'application/json', ...requestHeaders() },
             body: JSON.stringify({
                 contextType: props.contextType,
                 context:     props.context,

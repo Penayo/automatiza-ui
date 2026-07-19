@@ -1,10 +1,29 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { Toast, ConfirmDialog } from 'primevue';
+import { onMounted, onBeforeUnmount } from 'vue';
+import { Toast, ConfirmDialog, useToast } from 'primevue';
 import { useTheme } from '@/composables/useTheme';
 
 const { init } = useTheme();
-onMounted(() => init());
+const toast = useToast();
+
+// Global fallback for cross-cutting API failures (rate limits, network errors)
+// dispatched by BaseService. Prevents them from failing silently in components
+// that don't handle them (e.g. the tenant selector's 429).
+function onApiError(e: Event) {
+  const { summary, message } = (e as CustomEvent).detail ?? {};
+  toast.add({
+    severity: 'warn',
+    summary: summary ?? 'Something went wrong',
+    detail: message,
+    life: 5000,
+  });
+}
+
+onMounted(() => {
+  init();
+  window.addEventListener('api-error', onApiError);
+});
+onBeforeUnmount(() => window.removeEventListener('api-error', onApiError));
 </script>
 
 <template>

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import { EmailEditor, createDefaultDocument } from '@lab2view/vue-email-editor';
 import '@lab2view/vue-email-editor/style.css';
-import { useTheme } from '@/composables/useTheme';
 
 export interface EmailExport {
     design: Record<string, any>;
@@ -13,60 +12,20 @@ const props = defineProps<{
     design?: Record<string, any> | null;
 }>();
 
-const { isDark } = useTheme();
-
-// ── Theme definitions ────────────────────────────────────────────────────────
-const LIGHT_THEME = {
-    primaryColor:       '#3b82f6',  // blue-500
-    primaryHover:       '#2563eb',  // blue-600
-    primaryActive:      '#1d4ed8',  // blue-700
-    backgroundColor:    '#ffffff',
-    backgroundHover:    '#f4f4f5',  // zinc-100
-    backgroundActive:   '#e4e4e7',  // zinc-200
-    textPrimary:        '#18181b',  // zinc-900
-    textSecondary:      '#3f3f46',  // zinc-700
-    textMuted:          '#71717a',  // zinc-500
-    borderColor:        '#e4e4e7',  // zinc-200
-    borderColorHover:   '#d4d4d8',  // zinc-300
-    canvasBg:           '#f4f4f5',  // zinc-100
-    canvasBorder:       '#e4e4e7',  // zinc-200
-    sidebarBg:          '#fafafa',  // zinc-50
-    sidebarBorder:      '#e4e4e7',  // zinc-200
-    panelHeaderBg:      '#f4f4f5',  // zinc-100
-    toolbarBg:          '#ffffff',
-    toolbarBorder:      '#e4e4e7',  // zinc-200
-    selectionColor:     '#3b82f6',  // blue-500
-    hoverColor:         '#f4f4f5',  // zinc-100
-    dropIndicatorColor: '#3b82f6',  // blue-500
-    borderRadius:       '6px',
+// ── Theme ────────────────────────────────────────────────────────────────────
+// The library owns all surface colors: its base stylesheet hardcodes the light
+// surfaces (e.g. `.ebb-toolbar{background:#fff}`) and its built-in
+// `html[data-theme=dark] .ebb-*` rules provide a coherent dark palette. Dark
+// mode is activated globally by useTheme() setting `data-theme="dark"` on
+// <html>, so we must NOT re-skin surfaces here — a second palette on the ~16
+// themeable CSS vars only fights the library's dark rules and produces the
+// two-tone mismatch. We override just the brand accent (emerald), which the
+// library applies via `var(--ee-primary)` in both light and dark.
+const editorTheme = {
+    primaryColor:  '#10b981',  // emerald-500  (--layout-accent-color)
+    primaryHover:  '#059669',  // emerald-600
+    primaryActive: '#065f46',  // emerald-800  (--layout-sidebar-active-bg, dark)
 };
-
-const DARK_THEME = {
-    primaryColor:       '#10b981',  // emerald-500  — matches sidebar active accent
-    primaryHover:       '#059669',  // emerald-600
-    primaryActive:      '#065f46',  // --layout-sidebar-active-bg
-    backgroundColor:    '#27272a',  // --layout-header-bg
-    backgroundHover:    '#3f3f46',  // --layout-header-border (one step lighter)
-    backgroundActive:   '#3f3f46',  // --layout-sidebar-border
-    textPrimary:        '#fafafa',  // --layout-header-text
-    textSecondary:      '#d4d4d8',  // zinc-300
-    textMuted:          '#a1a1aa',  // zinc-400
-    borderColor:        '#3f3f46',  // --layout-header-border
-    borderColorHover:   '#52525b',  // zinc-600
-    canvasBg:           '#18181b',  // --layout-sidebar-bg (deepest)
-    canvasBorder:       '#3f3f46',  // --layout-sidebar-border
-    sidebarBg:          '#18181b',  // --layout-sidebar-bg
-    sidebarBorder:      '#3f3f46',  // --layout-sidebar-border
-    panelHeaderBg:      '#18181b',  // --layout-sidebar-bg
-    toolbarBg:          '#27272a',  // --layout-header-bg
-    toolbarBorder:      '#3f3f46',  // --layout-header-border
-    selectionColor:     '#065f46',  // --layout-sidebar-active-bg
-    hoverColor:         '#3f3f46',  // --layout-sidebar-border
-    dropIndicatorColor: '#10b981',  // emerald-500
-    borderRadius:       '6px',
-};
-
-const editorTheme = computed(() => isDark.value ? DARK_THEME : LIGHT_THEME);
 
 // ── Internal reactive state ──────────────────────────────────────────────────
 const currentMjml   = ref<string>('');   // required v-model (MJML source)
@@ -141,8 +100,27 @@ defineExpose({ exportDesign });
         ref="editorRef"
         v-model="currentMjml"
         :theme="editorTheme"
+        class="email-designer-fill"
         style="height: 100%; width: 100%;"
         @update:compiled-html="currentHtml = $event"
         @update:design-json="currentDesign = $event"
     />
 </template>
+
+<style scoped>
+/*
+ * The library's root `.ebb-shell` is styled for standalone page use:
+ *   height: calc(100vh - 180px);  min-height: 500px;  border-radius: 12px;
+ * Embedded in our full-height flex panel (below a square toolbar) that leaves a
+ * gap / overflow and shows an out-of-place rounded corner. Make it fill its
+ * container and drop the standalone chrome. `--ee-border-radius` is never read
+ * by the library, so this is the only way to correct the radius.
+ */
+.email-designer-fill :deep(.ebb-shell) {
+    height: 100%;
+    min-height: 0;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+}
+</style>

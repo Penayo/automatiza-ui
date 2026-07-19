@@ -25,6 +25,22 @@ export interface IAccess {
     user: IUser;
 }
 
+export interface IProfile {
+    id: string;
+    username: string;
+    email: string;
+    roles: string[];
+    groups: string[];
+    status: string;
+    person?: import("@services/PersonService").INaturalPerson;
+    tenantId: string;
+}
+
+export interface IChangePassword {
+    currentPassword: string;
+    newPassword: string;
+}
+
 export class AuthService extends ModelApiService {
     constructor() {
         super("auth");
@@ -46,6 +62,23 @@ export class AuthService extends ModelApiService {
     saveAccessInfo(access: IAccess) {
         const accessInfo = CryptoJS.AES.encrypt(JSON.stringify(access), SECRET_KEY).toString();
         localStorage.setItem('accessInfo', accessInfo);
+    }
+
+    /** The current user's own profile (GET /auth/me). */
+    getProfile(): Promise<IProfile> {
+        return this.get<IProfile>('me');
+    }
+
+    /** Self-service password change. Requires the current password. */
+    async changePassword(payload: IChangePassword): Promise<void> {
+        await this.post('change-password', payload);
+    }
+
+    /** Clears all client-side auth state. Callers should redirect to /login afterwards. */
+    logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('accessInfo');
+        localStorage.removeItem('selectedTenantId');
     }
 
     getAccessInfo(): IAccess | null {

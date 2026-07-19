@@ -10,7 +10,10 @@ export default defineConfig({
     global: {},
   },
   resolve: {
-    dedupe: ['@bpmn-io/form-js-viewer', 'preact', 'preact/hooks'],
+    dedupe: [
+      '@bpmn-io/form-js-viewer', 'preact', 'preact/hooks',
+      '@codemirror/state', '@codemirror/view',
+    ],
     alias: {
       '@':           fileURLToPath(new URL('./src', import.meta.url)),
       '@pages':      fileURLToPath(new URL('./src/pages', import.meta.url)),
@@ -21,7 +24,15 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['mjml-browser'],
+    include: [
+      'mjml-browser',
+      'codemirror',
+      '@codemirror/state',
+      '@codemirror/view',
+      '@codemirror/lang-xml',
+      '@codemirror/lang-json',
+      '@codemirror/theme-one-dark',
+    ],
   },
   server: {
     host: true
