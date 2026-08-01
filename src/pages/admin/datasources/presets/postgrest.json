@@ -1,0 +1,75 @@
+{
+  "id": "postgrest",
+  "name": "PostgREST / Supabase",
+  "description": "Auto-generated REST API over PostgreSQL. Supabase's REST layer is PostgREST, so this preset fits both.",
+  "docsUrl": "https://docs.postgrest.org/en/v14/references/api/tables_views.html",
+  "verified": "2026-07-30 against PostgREST 12.2.12 — see datasources.spec.md §14.1",
+  "notes": [
+    "Filters put the operator inside the value: ?plate=ilike.*ABC*",
+    "A paged read returns HTTP 206, not 200.",
+    "The total arrives in the Content-Range response header, and only if Prefer: count=exact is sent. Without it the header reads 0-1/* — unknown, not zero.",
+    "A missing row is 406/PGRST116 for a single-object read, but 200 [] via a filtered list. A wrong path is 404/42P01. The `get` operation below uses the list form so absent and misconfigured stay distinguishable.",
+    "Table names are the path segments; adjust /vehicles to your table."
+  ],
+  "template": {
+    "baseUrl": "http://localhost:3010",
+    "timeoutMs": 10000,
+    "auth": { "type": "bearer" },
+    "filterStyle": { "mode": "params" },
+    "sortStyle": { "mode": "param", "param": "order", "asc": "{{field}}.asc", "desc": "{{field}}.desc" },
+    "pagination": {
+      "style": "range",
+      "headers": { "Range-Unit": "items", "Range": "{{offset}}-{{end}}" },
+      "requestHeaders": { "Prefer": "count=exact" },
+      "total": { "from": "header", "header": "Content-Range", "format": "content-range" }
+    },
+    "healthCheck": "search",
+    "operations": [
+      {
+        "key": "search",
+        "kind": "query",
+        "method": "GET",
+        "path": "/vehicles",
+        "filters": [
+          { "key": "search", "label": "Plate", "type": "text", "param": "plate", "value": "ilike.*{{value}}*" },
+          { "key": "make", "label": "Make", "type": "text", "param": "make", "value": "eq.{{value}}" }
+        ],
+        "result": {
+          "keyField": "id",
+          "labelField": "plate",
+          "fields": [
+            { "name": "ownerName", "path": "owner_name", "label": "Owner" },
+            { "name": "vin", "path": "vin" },
+            { "name": "make", "path": "make" },
+            { "name": "model", "path": "model" }
+          ]
+        }
+      },
+      {
+        "key": "get",
+        "kind": "single",
+        "method": "GET",
+        "path": "/vehicles",
+        "filters": [
+          { "key": "search", "label": "Plate", "type": "text", "param": "plate", "value": "eq.{{value}}" }
+        ],
+        "notFound": { "match": { "emptyArray": true }, "behavior": "null" },
+        "result": {
+          "keyField": "id",
+          "labelField": "plate",
+          "fields": [{ "name": "ownerName", "path": "owner_name" }]
+        }
+      },
+      {
+        "key": "upsert",
+        "kind": "write",
+        "method": "POST",
+        "path": "/vehicles",
+        "idempotent": true,
+        "headers": { "Prefer": "resolution=merge-duplicates,return=representation" },
+        "body": "{{data}}",
+        "result": { "keyField": "id", "labelField": "plate" }
+      }
+    ]
+  }
+}

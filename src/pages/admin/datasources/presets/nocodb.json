@@ -1,0 +1,74 @@
+{
+  "id": "nocodb",
+  "name": "NocoDB",
+  "description": "Hosted spreadsheet-database with a REST API. A good fit for a customer who has no system at all.",
+  "docsUrl": "https://docs.nocodb.com/0.109.7/developer-resources/rest-apis",
+  "verified": null,
+  "notes": [
+    "NOT YET VERIFIED against a live instance — written from documentation. The PostgREST preset was too, and the live run corrected three assumptions, so treat this as a starting point and use the Test panel before trusting it.",
+    "Filters merge into ONE `where` param joined by ~and, unlike PostgREST's independent params. This is the only preset exercising filterStyle mode `composed`.",
+    "The total is in the response body at pageInfo.totalRows, not a header.",
+    "baseUrl ends with the table id: .../api/v2/tables/{tableId}",
+    "A filter value containing the ~and separator is rejected rather than escaped — the per-API escaping grammar is unconfirmed."
+  ],
+  "template": {
+    "baseUrl": "https://app.nocodb.com/api/v2/tables/REPLACE_TABLE_ID",
+    "timeoutMs": 10000,
+    "auth": { "type": "apiKey", "apiKeyLocation": "header", "name": "xc-token" },
+    "filterStyle": { "mode": "composed", "param": "where", "join": "~and" },
+    "sortStyle": { "mode": "param", "param": "sort", "asc": "{{field}}", "desc": "-{{field}}" },
+    "pagination": {
+      "style": "offset",
+      "params": { "limit": "limit", "offset": "offset" },
+      "total": { "from": "body", "path": "pageInfo.totalRows" }
+    },
+    "healthCheck": "search",
+    "operations": [
+      {
+        "key": "search",
+        "kind": "query",
+        "method": "GET",
+        "path": "/records",
+        "filters": [
+          { "key": "search", "label": "Plate", "type": "text", "fragment": "(plate,like,%{{value}}%)" },
+          { "key": "make", "label": "Make", "type": "text", "fragment": "(make,eq,{{value}})" }
+        ],
+        "result": {
+          "itemsPath": "list",
+          "keyField": "Id",
+          "labelField": "plate",
+          "fields": [
+            { "name": "ownerName", "path": "owner_name", "label": "Owner" },
+            { "name": "vin", "path": "vin" },
+            { "name": "make", "path": "make" }
+          ]
+        }
+      },
+      {
+        "key": "get",
+        "kind": "single",
+        "method": "GET",
+        "path": "/records",
+        "filters": [
+          { "key": "search", "label": "Plate", "type": "text", "fragment": "(plate,eq,{{value}})" }
+        ],
+        "notFound": { "match": { "emptyArray": true }, "behavior": "null" },
+        "result": {
+          "itemsPath": "list",
+          "keyField": "Id",
+          "labelField": "plate",
+          "fields": [{ "name": "ownerName", "path": "owner_name" }]
+        }
+      },
+      {
+        "key": "create",
+        "kind": "write",
+        "method": "POST",
+        "path": "/records",
+        "idempotent": false,
+        "body": "{{data}}",
+        "result": { "keyField": "Id", "labelField": "plate" }
+      }
+    ]
+  }
+}

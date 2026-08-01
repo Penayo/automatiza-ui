@@ -124,6 +124,7 @@
 				{ label: 'Forms',            icon: 'pi pi-file-edit', command: () => nav('/admin/forms') },
 				{ label: 'Decision',         icon: 'pi pi-table',     command: () => nav('/admin/decisions') },
 				{ label: 'Form Variables', icon: 'pi pi-list',      command: () => nav('/admin/form-variables') },
+				{ label: 'Datasources',    icon: 'pi pi-database',  command: () => nav('/admin/datasources') },
 				{ label: 'Reports',        icon: 'pi pi-file-pdf',  command: () => nav('/admin/reports') },
 				{ label: 'Email Templates', icon: 'pi pi-envelope',  command: () => nav('/admin/email-templates') },
 			]

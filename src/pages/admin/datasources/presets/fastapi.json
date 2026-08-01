@@ -1,0 +1,77 @@
+{
+  "id": "fastapi",
+  "name": "FastAPI (fastapi-pagination)",
+  "description": "A hand-written Python API. Unlike the others this is a convention, not a specification — FastAPI imposes no shape, so adjust the paths and param names to the actual service.",
+  "docsUrl": "https://uriyyo-fastapi-pagination.netlify.app/",
+  "verified": null,
+  "notes": [
+    "NOT YET VERIFIED — and cannot be in general: FastAPI is a framework, so every service differs. This encodes the most common convention: fastapi-pagination's Page[T] response, plain query-param filters, and /resource/{id} detail routes.",
+    "Assumes the response envelope { items, total, page, size, pages }. A service returning a bare list needs itemsPath removed and total.from set to none.",
+    "Filters are plain equality (?make=Toyota). For a partial match the service must expose its own param, e.g. ?plate__contains= — change the filter's `param` and `value` accordingly.",
+    "A by-id route usually 404s for a missing record, which the default notFound already handles. If the path can also 404 when misconfigured, prefer a filtered list operation with match.emptyArray instead — see spec §9.1."
+  ],
+  "template": {
+    "baseUrl": "http://localhost:8000",
+    "timeoutMs": 10000,
+    "auth": { "type": "bearer" },
+    "filterStyle": { "mode": "params" },
+    "pagination": {
+      "style": "page",
+      "params": { "page": "page", "size": "size" },
+      "total": { "from": "body", "path": "total" }
+    },
+    "healthCheck": "search",
+    "operations": [
+      {
+        "key": "search",
+        "kind": "query",
+        "method": "GET",
+        "path": "/vehicles",
+        "filters": [
+          { "key": "search", "label": "Plate", "type": "text", "param": "plate", "value": "{{value}}" },
+          { "key": "make", "label": "Make", "type": "text", "param": "make", "value": "{{value}}" }
+        ],
+        "result": {
+          "itemsPath": "items",
+          "keyField": "id",
+          "labelField": "plate",
+          "fields": [
+            { "name": "ownerName", "path": "owner_name", "label": "Owner" },
+            { "name": "vin", "path": "vin" },
+            { "name": "make", "path": "make" }
+          ]
+        }
+      },
+      {
+        "key": "get",
+        "kind": "single",
+        "method": "GET",
+        "path": "/vehicles/{{key}}",
+        "notFound": { "match": { "status": [404] }, "behavior": "null" },
+        "result": {
+          "keyField": "id",
+          "labelField": "plate",
+          "fields": [{ "name": "ownerName", "path": "owner_name" }]
+        }
+      },
+      {
+        "key": "create",
+        "kind": "write",
+        "method": "POST",
+        "path": "/vehicles",
+        "idempotent": false,
+        "body": "{{data}}",
+        "result": { "keyField": "id", "labelField": "plate" }
+      },
+      {
+        "key": "update",
+        "kind": "write",
+        "method": "PUT",
+        "path": "/vehicles/{{key}}",
+        "idempotent": true,
+        "body": "{{data}}",
+        "result": { "keyField": "id", "labelField": "plate" }
+      }
+    ]
+  }
+}

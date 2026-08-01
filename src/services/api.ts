@@ -10,6 +10,7 @@ export type { IRole } from "@services/RoleService.ts"
 export type { IPermission } from "@services/PermissionService.ts"
 export type { ISecret } from "@services/SecretsService.ts"
 export type { IApiKey, IApiKeyCreateResponse } from "@services/ApiKeyService.ts"
+export type { Datasource, DatasourceOperation, SaveDatasourceDto } from "@services/DatasourcesService"
 
 import { TasksService } from "@services/TasksService";
 import { FormsService } from "@services/FormsService.ts";
@@ -24,6 +25,7 @@ import { AuditService } from "@services/AuditService.ts";
 import { MessagesService } from "@services/MessagesService";
 import { DecisionsService } from "@services/DecisionsService";
 import { FormVariablesService } from "@services/FormVariablesService";
+import { DatasourcesService } from "@services/DatasourcesService";
 import { ReportsService } from "@services/ReportsService";
 import { EmailTemplatesService } from "@services/EmailTemplatesService";
 import { FilesService } from "@services/FilesService";
@@ -79,6 +81,7 @@ export const $api = {
 	messages: new MessagesService(),
 	decisions: new DecisionsService(),
 	formVariables: new FormVariablesService(),
+	datasources: new DatasourcesService(),
 	reports: new ReportsService(),
 	emailTemplates: new EmailTemplatesService(),
 	files: new FilesService(),

@@ -186,6 +186,7 @@ async function loadTemplates() {
 	const names = [
 		'email-connector', 'sendgrid-connector', 'whatsapp-connector',
 		'openai-connector', 'dropbox-sign-connector', 'docusign-connector', 'report-connector',
+		'datasource-connector',
 	];
 	const restNames = ['rest/http-json-connector', 'rest/http-json-connector-hybrid'];
 

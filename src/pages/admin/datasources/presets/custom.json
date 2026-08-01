@@ -1,0 +1,36 @@
+{
+  "id": "custom",
+  "name": "Custom",
+  "description": "Blank declaration. Use this for an API that matches none of the presets — an ERP, an internal service, a vendor API.",
+  "docsUrl": null,
+  "verified": null,
+  "notes": [
+    "Start from the closest preset instead if one is even roughly similar — the Test panel makes correcting it faster than writing from scratch.",
+    "Decide filterStyle first: does the API take one query param per filter (mode `params`), or merge them into a single expression param (mode `composed`)?",
+    "Then pagination: how a page is requested (query params vs a Range header), and where the total comes back (response body path, response header, or not at all).",
+    "Finally, per operation, decide how the API signals 'no such record' — and make sure it is distinguishable from a wrong URL. See spec §9.1; a filtered list endpoint is usually the safer shape."
+  ],
+  "template": {
+    "baseUrl": "",
+    "timeoutMs": 10000,
+    "auth": { "type": "none" },
+    "filterStyle": { "mode": "params" },
+    "pagination": { "style": "none", "total": { "from": "none" } },
+    "operations": [
+      {
+        "key": "search",
+        "kind": "query",
+        "method": "GET",
+        "path": "/resource",
+        "filters": [
+          { "key": "search", "label": "Search", "type": "text", "param": "q", "value": "{{value}}" }
+        ],
+        "result": {
+          "keyField": "id",
+          "labelField": "name",
+          "fields": [{ "name": "name", "path": "name" }]
+        }
+      }
+    ]
+  }
+}

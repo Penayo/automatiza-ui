@@ -1,0 +1,120 @@
+[
+  {
+    "$schema": "https://unpkg.com/@camunda/zeebe-element-templates-json-schema/resources/schema.json",
+    "name": "Datasource",
+    "id": "io.processlinker:datasource:v1",
+    "description": "Read from or write to an external data API declared as a Datasource. The platform stores only the declaration — the data lives in the remote system.",
+    "appliesTo": ["bpmn:Task"],
+    "elementType": { "value": "bpmn:ServiceTask" },
+    "groups": [
+      { "id": "target",  "label": "Datasource" },
+      { "id": "input",   "label": "Inputs" },
+      { "id": "paging",  "label": "Paging (query operations)" },
+      { "id": "output",  "label": "Output" },
+      { "id": "advanced","label": "Advanced" }
+    ],
+    "properties": [
+      {
+        "type": "Hidden",
+        "value": "io.processlinker:datasource:v1",
+        "binding": { "type": "zeebe:taskDefinition:type" }
+      },
+
+      {
+        "label": "Datasource Key",
+        "description": "The key of the Datasource declaration (Admin → Datasources). E.g. vehicles",
+        "group": "target",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "datasource" },
+        "constraints": { "notEmpty": true }
+      },
+      {
+        "label": "Operation Key",
+        "description": "Which declared operation to run. Its kind (query / single / write) decides how the result is bound.",
+        "group": "target",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "operation" },
+        "constraints": { "notEmpty": true }
+      },
+
+      {
+        "label": "Record Key",
+        "description": "Value for the operation's {{key}} placeholder — the record identifier. Required only when the operation's path contains {{key}}. FEEL supported, e.g. = plate",
+        "group": "input",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "key" }
+      },
+      {
+        "label": "Filters",
+        "description": "FEEL expression returning an object keyed by the operation's declared filter keys. Free-text search uses the reserved key `search`. E.g. = { search: plate, make: vehicleMake }",
+        "group": "input",
+        "type": "String",
+        "feel": "required",
+        "binding": { "type": "zeebe:input", "name": "filters" }
+      },
+      {
+        "label": "Data",
+        "description": "Payload for a write operation's {{data}} placeholder. FEEL expression returning an object. E.g. = { plate: plate, vin: vin, make: make }",
+        "group": "input",
+        "type": "String",
+        "feel": "required",
+        "binding": { "type": "zeebe:input", "name": "data" }
+      },
+
+      {
+        "label": "Limit",
+        "description": "Maximum rows to return. Ignored by single/write operations.",
+        "group": "paging",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "limit" }
+      },
+      {
+        "label": "Offset",
+        "description": "Rows to skip. Leave empty and set Page instead to page by number.",
+        "group": "paging",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "offset" }
+      },
+      {
+        "label": "Page",
+        "description": "1-based page number. Offset is derived from Page and Limit when Offset is empty.",
+        "group": "paging",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "page" }
+      },
+
+      {
+        "label": "Result Variable",
+        "description": "Process variable to store the result in. A query stores { items, total }; a single or write stores the mapped record, or null when the record does not exist. Defaults to datasourceResult.",
+        "group": "output",
+        "type": "String",
+        "feel": "optional",
+        "value": "datasourceResult",
+        "binding": { "type": "zeebe:input", "name": "resultVariable" }
+      },
+
+      {
+        "label": "Retries",
+        "description": "Attempts before the task fails. Reads default to 2. A write operation must be declared idempotent before this may exceed 0 — a retried non-idempotent write can duplicate the record, so the task is rejected before anything is sent.",
+        "group": "advanced",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "retries" }
+      },
+      {
+        "label": "Retry Backoff",
+        "description": "ISO 8601 duration between attempts, e.g. PT10S",
+        "group": "advanced",
+        "type": "String",
+        "feel": "optional",
+        "binding": { "type": "zeebe:input", "name": "retryBackoff" }
+      }
+    ]
+  }
+]

@@ -96,6 +96,9 @@ const routes = [
       // Form Variables
       { path: 'form-variables',   name: 'FormVariablesIndex', component: () => import('./pages/admin/form-variables/Index.vue') },
 
+      // Datasources
+      { path: 'datasources',      name: 'DatasourcesIndex', component: () => import('./pages/admin/datasources/Index.vue') },
+
       // Reports
       { path: 'reports',          name: 'ReportsList', component: () => import('./pages/admin/reports/Index.vue') },
       { path: 'reports/new',      name: 'ReportNew',   component: () => import('./pages/admin/reports/Designer.vue') },

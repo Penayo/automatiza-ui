@@ -12,5 +12,6 @@ import type { Component } from 'vue';
  * only when that specific task type is encountered.
  */
 export const CUSTOM_TASK_VIEWS: Record<string, () => Promise<{ default: Component }>> = {
-    'tracking-grid': () => import('./TrackingGridView.vue'),
+    'tracking-grid':   () => import('./TrackingGridView.vue'),
+    'vehicle-history': () => import('./VehicleServiceHistoryView.vue'),
 };
