@@ -4,18 +4,44 @@ import { navigateTo } from '@services/routerRef';
 // Axios 1.x serializes arrays as keys[]=v (bracket notation). NestJS ValidationPipe
 // with forbidNonWhitelisted:true rejects the literal "keys[]" property name.
 // Serialize arrays as repeated plain keys instead: keys=v&keys=v.
-function serializeParams(params: Record<string, any>): string {
+//
+// Plain objects nest with brackets — filter[name][like]=x — which is what Express'
+// qs parser rebuilds into the nested filter DTOs on the paginated list endpoints.
+// Without this they would stringify to "[object Object]".
+export function serializeParams(params: Record<string, any>): string {
   const parts: string[] = [];
-  for (const key of Object.keys(params)) {
-    const val = params[key];
-    if (val === undefined || val === null) continue;
+
+  const append = (key: string, val: any): void => {
+    if (val === undefined || val === null) return;
+
     if (Array.isArray(val)) {
-      val.forEach(v => parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`));
-    } else {
-      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`);
+      val.forEach(v => append(key, v));
+      return;
     }
-  }
+
+    // Dates and other boxed values stringify fine; only plain objects nest.
+    if (typeof val === 'object' && !(val instanceof Date)) {
+      for (const childKey of Object.keys(val)) {
+        append(`${key}[${childKey}]`, val[childKey]);
+      }
+      return;
+    }
+
+    parts.push(`${encodeKey(key)}=${encodeURIComponent(val)}`);
+  };
+
+  for (const key of Object.keys(params)) append(key, params[key]);
+
   return parts.join('&');
+}
+
+// Encode the key but keep the [ ] structural brackets literal — percent-encoding
+// them still parses, but leaves unreadable URLs in logs and dev tools.
+function encodeKey(key: string): string {
+  return key
+    .split(/([[\]])/)
+    .map(part => (part === '[' || part === ']' ? part : encodeURIComponent(part)))
+    .join('');
 }
 
 export type ILog = {
@@ -88,6 +114,20 @@ export class BaseService {
       config = config ?? {}
       config.headers = this.getRequestHeaders()
       const { data } = await axios.put(this.getUrl(id), putData, config);
+      return data as T;
+    } catch (err) {
+      this.handleErrors(err);
+      throw err;
+    }
+  }
+
+  async patch<T>(id: string, patchData = {}, config?: AxiosRequestConfig): Promise<T> {
+    if (!id) throw Error("Id was not provided");
+
+    try {
+      config = config ?? {}
+      config.headers = this.getRequestHeaders()
+      const { data } = await axios.patch(this.getUrl(id), patchData, config);
       return data as T;
     } catch (err) {
       this.handleErrors(err);

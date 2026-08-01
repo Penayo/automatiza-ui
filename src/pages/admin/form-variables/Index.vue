@@ -1,25 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useToast, useConfirm, Button, DataTable, Column, Dialog, InputText, Textarea } from 'primevue';
+import { ref } from 'vue';
+import { useToast, useConfirm, Button, DataTable, Column, Dialog, InputText, Textarea, IconField, InputIcon } from 'primevue';
 import { $api } from '@services/api';
 import type { FormVariable, SaveFormVariableDto } from '@services/FormVariablesService';
 import { onApprove } from '@/utils/common';
+import { useTableQuery, ROWS_PER_PAGE_OPTIONS } from '@/composables/useTableQuery';
 
 const toast   = useToast();
 const confirm = useConfirm();
 
 // ── List ──────────────────────────────────────────────────────────────────────
-const items   = ref<FormVariable[]>([]);
-const loading = ref(false);
-
-async function load() {
-    loading.value = true;
-    try {
-        items.value = await $api.formVariables.getAll();
-    } finally {
-        loading.value = false;
-    }
-}
+const {
+    items, totalRecords, loading, search, activeSearch,
+    firstRow, rowsPerPage, reload, onPage, onSort, clearSearch,
+} = useTableQuery<FormVariable>({
+    load: (params) => $api.formVariables.getPage(params),
+});
 
 // ── Dialog ────────────────────────────────────────────────────────────────────
 const dialogVisible = ref(false);
@@ -76,7 +72,8 @@ async function save() {
             toast.add({ severity: 'success', summary: 'Created', detail: `"${dto.label}" created.`, life: 3000 });
         }
         closeDialog();
-        await load();
+        // reload(), not fetchPage() — an edit shouldn't kick the user back to page 1.
+        await reload();
     } catch (err: any) {
         toast.add({ severity: 'error', summary: 'Error', detail: err?.response?.data?.message ?? 'Could not save.', life: 4000 });
     } finally {
@@ -90,14 +87,12 @@ function remove(v: FormVariable) {
         try {
             await $api.formVariables.remove(v.id);
             toast.add({ severity: 'success', summary: 'Deleted', detail: `"${v.label}" deleted.`, life: 3000 });
-            await load();
+            await reload();
         } catch {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Could not delete.', life: 3000 });
         }
     });
 }
-
-onMounted(load);
 </script>
 
 <template>
@@ -111,17 +106,47 @@ onMounted(load);
                     Named option lists injected into form fields via <code class="text-xs bg-surface-100 dark:bg-zinc-800 px-1 rounded">valuesExpression</code>
                 </p>
             </div>
-            <Button label="New Form Variable" icon="pi pi-plus" @click="openNew" />
+            <div class="flex items-center gap-2">
+                <IconField>
+                    <InputIcon><i class="pi pi-search" /></InputIcon>
+                    <InputText
+                        v-model="search"
+                        placeholder="Search form variables..."
+                        size="small"
+                        style="width: 220px"
+                    />
+                </IconField>
+                <Button icon="pi pi-refresh" size="small" text rounded v-tooltip.top="'Refresh'" @click="reload" />
+                <Button label="New Form Variable" icon="pi pi-plus" size="small" @click="openNew" />
+            </div>
         </div>
 
         <!-- Table -->
         <DataTable
             :value="items"
             :loading="loading"
-            emptyMessage="No Form Variables yet. Click 'New Form Variable' to create one."
+            dataKey="id"
             size="small"
+            lazy
+            paginator
+            :first="firstRow"
+            :rows="rowsPerPage"
+            :totalRecords="totalRecords"
+            :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
+            @page="onPage"
+            @sort="onSort"
         >
-            <Column header="Key" style="width: 200px">
+            <template #empty>
+                <div class="text-center py-6 text-surface-400">
+                    <template v-if="activeSearch">
+                        <div>No matches for &ldquo;{{ activeSearch }}&rdquo;.</div>
+                        <Button label="Clear search" text size="small" @click="clearSearch" />
+                    </template>
+                    <template v-else>No Form Variables yet. Click 'New Form Variable' to create one.</template>
+                </div>
+            </template>
+
+            <Column header="Key" field="key" sortable style="width: 220px">
                 <template #body="{ data }">
                     <code class="text-xs bg-surface-100 dark:bg-zinc-800 px-2 py-0.5 rounded font-mono text-(--layout-accent-color)">
                         {{ data.key }}
@@ -129,7 +154,7 @@ onMounted(load);
                 </template>
             </Column>
 
-            <Column header="Label" field="label" />
+            <Column header="Label" field="label" sortable />
 
             <Column header="Description">
                 <template #body="{ data }">

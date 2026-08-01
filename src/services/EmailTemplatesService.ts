@@ -1,4 +1,5 @@
 import { ModelApiService } from '@services/ModelAPI';
+import type { ListQuery, PageResponse } from '@services/api';
 
 export interface EmailTemplateDefinition {
     id:           string;
@@ -22,8 +23,14 @@ export interface SaveEmailTemplateDto {
 export class EmailTemplatesService extends ModelApiService {
     constructor() { super('email-templates'); }
 
+    /** Full list. */
     getAll(): Promise<EmailTemplateDefinition[]> {
         return this.get<EmailTemplateDefinition[]>() as Promise<EmailTemplateDefinition[]>;
+    }
+
+    /** One page. `page` is what makes the backend return the envelope. */
+    getPage(params: ListQuery & { page: number }): Promise<PageResponse<EmailTemplateDefinition>> {
+        return this.get<PageResponse<EmailTemplateDefinition>>('', { params });
     }
 
     findById(id: string): Promise<EmailTemplateDefinition> {

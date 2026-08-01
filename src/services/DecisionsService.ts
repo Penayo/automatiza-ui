@@ -1,5 +1,6 @@
 import type { APIData } from '@services/BaseService';
 import { ModelApiService } from '@services/ModelAPI';
+import type { ListQuery, PageResponse } from '@services/api';
 
 export interface DecisionDefinition extends APIData {
     id:           string;
@@ -22,8 +23,14 @@ export class DecisionsService extends ModelApiService {
         super('decisions');
     }
 
+    /** Full list. */
     getAll(): Promise<DecisionDefinition[]> {
         return this.get<DecisionDefinition[]>();
+    }
+
+    /** One page. `page` is what makes the backend return the envelope. */
+    getPage(params: ListQuery & { page: number }): Promise<PageResponse<DecisionDefinition>> {
+        return this.get<PageResponse<DecisionDefinition>>('', { params });
     }
 
     findById(id: string): Promise<DecisionDefinition> {

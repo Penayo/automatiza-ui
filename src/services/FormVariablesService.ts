@@ -1,4 +1,5 @@
 import { ModelApiService } from '@services/ModelAPI';
+import type { ListQuery, PageResponse } from '@services/api';
 
 export interface FormVariableItem {
     label: string;
@@ -25,8 +26,14 @@ export interface SaveFormVariableDto {
 export class FormVariablesService extends ModelApiService {
     constructor() { super('form-variables'); }
 
+    /** Full list — form previews resolve expression keys against every variable. */
     getAll(): Promise<FormVariable[]> {
         return this.get<FormVariable[]>();
+    }
+
+    /** One page. `page` is what makes the backend return the envelope. */
+    getPage(params: ListQuery & { page: number }): Promise<PageResponse<FormVariable>> {
+        return this.get<PageResponse<FormVariable>>('', { params });
     }
 
     findById(id: string): Promise<FormVariable> {

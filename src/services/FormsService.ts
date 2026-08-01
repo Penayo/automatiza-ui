@@ -1,5 +1,6 @@
 import type { APIData } from "@services/BaseService";
 import { ModelApiService } from "@services/ModelAPI";
+import type { ListQuery, PageResponse } from "@services/api";
 
 export interface IForm extends APIData {
     id: string;
@@ -40,9 +41,15 @@ export class FormsService extends ModelApiService {
         super("forms");
     }
 
+    /** Full list — used by pickers and previews that need every form. */
     async getAll(): Promise<IForm[]> {
         const data = await this.get<IForm[]>() ;
         return data as IForm[];
+    }
+
+    /** One page. `page` is what makes the backend return the envelope. */
+    async getPage(params: ListQuery & { page: number }): Promise<PageResponse<IForm>> {
+        return this.get<PageResponse<IForm>>('', { params });
     }
 
     async findById(id: string): Promise<IForm> {

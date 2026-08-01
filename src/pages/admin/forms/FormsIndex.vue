@@ -1,19 +1,30 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useToast, Button, DataTable, Column, InputText, SplitButton, Tag } from 'primevue';
+import { Button, DataTable, Column, InputText, IconField, InputIcon, SplitButton, Tag } from 'primevue';
 import type { IForm } from '@services/FormsService';
 import { $api } from '@services/api';
+import { useTableQuery, ROWS_PER_PAGE_OPTIONS } from '@/composables/useTableQuery';
 
-const router  = useRouter();
-const toast   = useToast();
-const forms   = ref<IForm[]>([]);
-const loading = ref(false);
-const search  = ref('');
+const router = useRouter();
 
 // Type filter: null = all, 'jsonschema' = JSON Schema only, 'formjs' = form-js only
 type TypeFilter = null | 'jsonschema' | 'formjs';
 const typeFilter = ref<TypeFilter>(null);
+
+// "Visual" is every type that is not jsonschema ('default' | 'form' | 'Form' |
+// 'custom'), so it needs notEqualsTo rather than an equality match.
+const {
+    items: forms, totalRecords, loading, search, activeSearch,
+    firstRow, rowsPerPage, reload, onPage, onSort, clearSearch,
+} = useTableQuery<IForm>({
+    load: (params) => $api.forms.getPage(params),
+    filter: () => {
+        if (typeFilter.value === 'jsonschema') return { type: { equalsTo: 'jsonschema' } };
+        if (typeFilter.value === 'formjs')     return { type: { notEqualsTo: 'jsonschema' } };
+        return undefined;
+    },
+});
 
 const newFormItems = [
     {
@@ -28,24 +39,6 @@ const newFormItems = [
     },
 ];
 
-const filtered = computed(() => {
-    let result = forms.value;
-
-    if (typeFilter.value === 'jsonschema') {
-        result = result.filter(f => f.type === 'jsonschema');
-    } else if (typeFilter.value === 'formjs') {
-        result = result.filter(f => f.type !== 'jsonschema');
-    }
-
-    const q = search.value.trim().toLowerCase();
-    if (!q) return result;
-    return result.filter(f =>
-        f.name?.toLowerCase().includes(q) ||
-        f.id?.toLowerCase().includes(q) ||
-        f.description?.toLowerCase().includes(q)
-    );
-});
-
 function openEditor(data: IForm) {
     if (data.type === 'jsonschema') {
         router.push({ name: 'JsonSchemaEdit', params: { id: data.id } });
@@ -53,19 +46,6 @@ function openEditor(data: IForm) {
         router.push({ name: 'FormsEdit', params: { id: data.id } });
     }
 }
-
-async function load() {
-    loading.value = true;
-    try {
-        forms.value = await $api.forms.getAll();
-    } catch {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load forms.', life: 3000 });
-    } finally {
-        loading.value = false;
-    }
-}
-
-onMounted(load);
 </script>
 
 <template>
@@ -76,13 +56,16 @@ onMounted(load);
                 <p class="text-sm text-surface-400 mt-0.5">Form schemas for user tasks and start events</p>
             </div>
             <div class="flex items-center gap-2">
-                <InputText
-                    v-model="search"
-                    placeholder="Search forms..."
-                    size="small"
-                    style="width: 200px"
-                />
-                <Button size="small" icon="pi pi-refresh" text rounded @click="load" />
+                <IconField>
+                    <InputIcon><i class="pi pi-search" /></InputIcon>
+                    <InputText
+                        v-model="search"
+                        placeholder="Search forms..."
+                        size="small"
+                        style="width: 200px"
+                    />
+                </IconField>
+                <Button size="small" icon="pi pi-refresh" text rounded v-tooltip.top="'Refresh'" @click="reload" />
                 <SplitButton
                     size="small"
                     label="New Form"
@@ -102,7 +85,7 @@ onMounted(load);
                     ? 'bg-surface-800 dark:bg-surface-200 text-white dark:text-surface-900 border-transparent'
                     : 'border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:border-surface-400'"
             >
-                All ({{ forms.length }})
+                All
             </button>
             <button
                 @click="typeFilter = 'formjs'"
@@ -112,7 +95,7 @@ onMounted(load);
                     : 'border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:border-surface-400'"
             >
                 <i class="pi pi-objects-column mr-1" style="font-size: 0.7rem" />
-                Visual ({{ forms.filter(f => f.type !== 'jsonschema').length }})
+                Visual
             </button>
             <button
                 @click="typeFilter = 'jsonschema'"
@@ -122,17 +105,39 @@ onMounted(load);
                     : 'border-violet-300 dark:border-violet-700 text-violet-600 dark:text-violet-400 hover:border-violet-400'"
             >
                 <i class="pi pi-code mr-1" style="font-size: 0.7rem" />
-                JSON Schema ({{ forms.filter(f => f.type === 'jsonschema').length }})
+                JSON Schema
             </button>
+
+            <span class="text-xs text-surface-400 ml-1">
+                {{ totalRecords }} form{{ totalRecords === 1 ? '' : 's' }}
+            </span>
         </div>
 
         <DataTable
-            :value="filtered"
+            :value="forms"
             :loading="loading"
-            emptyMessage="No forms found."
+            dataKey="id"
             size="small"
+            lazy
+            paginator
+            :first="firstRow"
+            :rows="rowsPerPage"
+            :totalRecords="totalRecords"
+            :rowsPerPageOptions="ROWS_PER_PAGE_OPTIONS"
+            @page="onPage"
+            @sort="onSort"
         >
-            <Column header="Name">
+            <template #empty>
+                <div class="text-center py-6 text-surface-400">
+                    <template v-if="activeSearch">
+                        <div>No matches for &ldquo;{{ activeSearch }}&rdquo;.</div>
+                        <Button label="Clear search" text size="small" @click="clearSearch" />
+                    </template>
+                    <template v-else>No forms found.</template>
+                </div>
+            </template>
+
+            <Column header="Name" field="name" sortable>
                 <template #body="{ data }: { data: IForm }">
                     <div class="flex flex-col py-0.5">
                         <div class="flex items-center gap-2">
@@ -153,13 +158,13 @@ onMounted(load);
                 </template>
             </Column>
 
-            <Column header="ID" style="width: 220px">
+            <Column header="ID" field="id" sortable style="width: 220px">
                 <template #body="{ data }">
                     <span class="text-xs font-mono text-surface-400">{{ data.id }}</span>
                 </template>
             </Column>
 
-            <Column header="Version" style="width: 90px">
+            <Column header="Version" field="version" sortable style="width: 110px">
                 <template #body="{ data }">
                     <span class="text-xs font-mono bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded text-surface-500">
                         v{{ data.version }}

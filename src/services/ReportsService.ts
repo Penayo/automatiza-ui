@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ModelApiService } from '@services/ModelAPI';
+import type { ListQuery, PageResponse } from '@services/api';
 
 export interface ReportDefinition {
     id:           string;
@@ -21,8 +22,14 @@ export interface SaveReportDto {
 export class ReportsService extends ModelApiService {
     constructor() { super('reports'); }
 
+    /** Full list. */
     getAll(): Promise<ReportDefinition[]> {
         return this.get<ReportDefinition[]>() as Promise<ReportDefinition[]>;
+    }
+
+    /** One page. `page` is what makes the backend return the envelope. */
+    getPage(params: ListQuery & { page: number }): Promise<PageResponse<ReportDefinition>> {
+        return this.get<PageResponse<ReportDefinition>>('', { params });
     }
 
     findById(id: string): Promise<ReportDefinition> {
@@ -33,8 +40,9 @@ export class ReportsService extends ModelApiService {
         return this.post<ReportDefinition>('', dto) as Promise<ReportDefinition>;
     }
 
+    /** Backend route is PATCH /reports/:id — a PUT here 404s. */
     update(id: string, dto: SaveReportDto): Promise<ReportDefinition> {
-        return this.put<ReportDefinition>(id, dto);
+        return this.patch<ReportDefinition>(id, dto);
     }
 
     remove(id: string): Promise<boolean> {

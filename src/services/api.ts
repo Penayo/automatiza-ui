@@ -40,6 +40,27 @@ export type PageRequest = {
 export type PageResponse<T> = {
 	totalRecords: number;
 	rows: T[];
+	page?: number;
+	rowsPerPage?: number;
+}
+
+/** Per-field filter operators, serialized as filter[field][like]=… */
+export type StringFilter = {
+	equalsTo?: string;
+	notEqualsTo?: string;
+	like?: string;
+}
+
+/**
+ * Query for the searchable/sortable list endpoints (forms, decisions, reports,
+ * email templates, form variables). Omitting `page` returns the full array;
+ * including it returns a PageResponse envelope.
+ */
+export type ListQuery = PageRequest & {
+	search?: string;
+	sortField?: string;
+	sortOrder?: 1 | -1;
+	filter?: Record<string, StringFilter | undefined>;
 }
 
 export const $api = {
