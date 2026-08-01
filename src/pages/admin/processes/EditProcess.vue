@@ -16,6 +16,7 @@ const router  = useRouter();
 const toast   = useToast();
 const confirm = useConfirm();
 
+const modelerRef = ref<InstanceType<typeof CamundaModeler> | null>(null);
 const process   = ref<ProcessDefinition | null>(null);
 const loading   = ref(false);
 const activeTab = ref<'info' | 'diagram' | 'instances' | 'stats'>('info');
@@ -67,6 +68,7 @@ async function saveDiagram(xml: string) {
             router.replace({ name: 'ProcessEdit', params: { id: saved.id } });
         }
 
+        modelerRef.value?.markSaved();
         toast.add({ severity: 'success', summary: 'Saved', detail: `Diagram saved — v${saved?.version ?? ''}.`, life: 3000 });
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not save diagram.', life: 3000 });
@@ -306,7 +308,7 @@ onMounted(fetchProcess);
             />
 
             <div v-else-if="activeTab === 'diagram'" class="h-full flex flex-col overflow-hidden">
-                <CamundaModeler v-if="process" :process="process" @save="saveDiagram" />
+                <CamundaModeler v-if="process" ref="modelerRef" :process="process" @save="saveDiagram" />
             </div>
 
             <ProcessStats

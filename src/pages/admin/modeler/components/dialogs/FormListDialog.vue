@@ -1,58 +1,63 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { Dialog, DataTable, Column, Button } from 'primevue';
-import { useRouter } from 'vue-router';
+import { Column, Button, Tag } from 'primevue';
 import { $api } from '@services/api';
+import { useDirtyNavigation } from '@/composables/useDirtyNavigation';
+import EntityListDialog from './EntityListDialog.vue';
 import type { IForm } from '@services/FormsService';
 import dayjs from 'dayjs';
 
-const visible = defineModel<boolean>('visible', { default: false });
-const router  = useRouter();
+const visible  = defineModel<boolean>('visible', { default: false });
+const props    = defineProps<{ dirty?: boolean }>();
+const navigate = useDirtyNavigation(visible, () => !!props.dirty);
 
-const items   = ref<IForm[]>([]);
-const loading = ref(false);
-
-async function load() {
-    loading.value = true;
-    try {
-        items.value = await $api.forms.getAll() as IForm[];
-    } finally {
-        loading.value = false;
-    }
+/** JSON Schema forms and form-js forms have separate editors. */
+function openForm(form: IForm) {
+    navigate(form.type === 'jsonschema'
+        ? { name: 'JsonSchemaEdit', params: { id: form.id } }
+        : { name: 'FormsEdit',      params: { id: form.id } });
 }
-
-watch(visible, (v) => { if (v) load(); });
 </script>
 
 <template>
-    <Dialog
+    <EntityListDialog
         v-model:visible="visible"
-        modal
         header="Forms"
-        :style="{ width: '680px' }"
-        :dismissableMask="true"
+        :load="$api.forms.getPage.bind($api.forms)"
+        empty-text="No forms defined yet."
+        search-placeholder="Search forms…"
     >
-        <DataTable :value="items" :loading="loading" size="small" stripedRows>
-            <template #empty><div class="text-center py-6 text-surface-400">No forms defined yet.</div></template>
-            <Column field="id"   header="ID"   class="font-mono text-xs" style="width:220px" />
-            <Column field="name" header="Name" />
-            <Column field="createdAt" header="Created" style="width:120px">
+        <template #columns>
+            <Column field="id" header="ID" class="font-mono text-xs" style="width:220px" sortable />
+            <Column field="name" header="Name" sortable>
+                <template #body="{ data }: { data: IForm }">
+                    <div class="flex items-center gap-2">
+                        <span>{{ data.name }}</span>
+                        <Tag
+                            v-if="data.type === 'jsonschema'"
+                            value="JSON Schema"
+                            severity="secondary"
+                            style="font-size: 0.65rem; padding: 1px 6px;"
+                        />
+                    </div>
+                </template>
+            </Column>
+            <Column field="createdAt" header="Created" style="width:120px" sortable>
                 <template #body="{ data }">
                     <span class="text-xs text-surface-400">{{ data.createdAt ? dayjs(data.createdAt).format('MMM D, YYYY') : '—' }}</span>
                 </template>
             </Column>
             <Column style="width:60px">
-                <template #body>
+                <template #body="{ data }: { data: IForm }">
                     <Button icon="pi pi-pencil" text rounded size="small" severity="secondary"
-                        v-tooltip.top="'Open Form Builder'"
-                        @click="router.push({ name: 'FormsList' }); visible = false" />
+                        v-tooltip.top="data.type === 'jsonschema' ? 'Open JSON Schema editor' : 'Open in Form Builder'"
+                        @click="openForm(data)" />
                 </template>
             </Column>
-        </DataTable>
+        </template>
 
         <template #footer>
             <Button label="Form Builder" icon="pi pi-file-edit" size="small"
-                @click="router.push({ name: 'FormsList' }); visible = false" />
+                @click="navigate({ name: 'FormsList' })" />
         </template>
-    </Dialog>
+    </EntityListDialog>
 </template>

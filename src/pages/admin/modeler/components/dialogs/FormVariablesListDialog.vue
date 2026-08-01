@@ -1,40 +1,25 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { Dialog, DataTable, Column, Button, Tag } from 'primevue';
-import { useRouter } from 'vue-router';
+import { Column, Button, Tag } from 'primevue';
 import { $api } from '@services/api';
-import type { FormVariable } from '@services/FormVariablesService';
+import { useDirtyNavigation } from '@/composables/useDirtyNavigation';
+import EntityListDialog from './EntityListDialog.vue';
 
-const visible = defineModel<boolean>('visible', { default: false });
-const router  = useRouter();
-
-const items   = ref<FormVariable[]>([]);
-const loading = ref(false);
-
-async function load() {
-    loading.value = true;
-    try {
-        items.value = await $api.formVariables.getAll();
-    } finally {
-        loading.value = false;
-    }
-}
-
-watch(visible, (v) => { if (v) load(); });
+const visible  = defineModel<boolean>('visible', { default: false });
+const props    = defineProps<{ dirty?: boolean }>();
+const navigate = useDirtyNavigation(visible, () => !!props.dirty);
 </script>
 
 <template>
-    <Dialog
+    <EntityListDialog
         v-model:visible="visible"
-        modal
         header="Form Variables"
-        :style="{ width: '680px' }"
-        :dismissableMask="true"
+        :load="$api.formVariables.getPage.bind($api.formVariables)"
+        empty-text="No form variables defined yet."
+        search-placeholder="Search variables…"
     >
-        <DataTable :value="items" :loading="loading" size="small" stripedRows>
-            <template #empty><div class="text-center py-6 text-surface-400">No form variables defined yet.</div></template>
-            <Column field="key"   header="Key"   class="font-mono text-xs" style="width:180px" />
-            <Column field="label" header="Label" />
+        <template #columns>
+            <Column field="key"   header="Key"   class="font-mono text-xs" style="width:180px" sortable />
+            <Column field="label" header="Label" sortable />
             <Column field="description" header="Description" class="text-surface-400 text-sm" />
             <Column header="Options" style="width:90px">
                 <template #body="{ data }">
@@ -45,14 +30,14 @@ watch(visible, (v) => { if (v) load(); });
                 <template #body>
                     <Button icon="pi pi-pencil" text rounded size="small" severity="secondary"
                         v-tooltip.top="'Manage'"
-                        @click="router.push({ name: 'FormVariablesIndex' }); visible = false" />
+                        @click="navigate({ name: 'FormVariablesIndex' })" />
                 </template>
             </Column>
-        </DataTable>
+        </template>
 
         <template #footer>
             <Button label="Manage Variables" icon="pi pi-list" size="small"
-                @click="router.push({ name: 'FormVariablesIndex' }); visible = false" />
+                @click="navigate({ name: 'FormVariablesIndex' })" />
         </template>
-    </Dialog>
+    </EntityListDialog>
 </template>

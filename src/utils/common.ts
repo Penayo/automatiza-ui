@@ -27,6 +27,27 @@ export function onApprove(
 	});
 }
 
+/**
+ * Runs `callback` straight away when there is nothing to lose, otherwise asks
+ * the user to confirm they are fine discarding the unsaved work first.
+ */
+export function confirmIfDirty(
+	confirm: any,
+	dirty: boolean,
+	callback: () => void,
+	message = 'The diagram has unsaved changes. Leaving the designer will discard them. Save it first, or continue anyway?'
+) {
+	if (!dirty) {
+		callback();
+		return;
+	}
+
+	onApprove(confirm, message, callback, {
+		acceptPropsLabel: 'Leave without saving',
+		acceptPropsSeverity: 'danger',
+	});
+}
+
 export function onDelete<T>(
 	confirm: any,
 	item: T | null,

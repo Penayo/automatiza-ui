@@ -49,6 +49,22 @@ const xmlText    = ref('');
 const xmlError   = ref('');
 const currentXml = ref('');
 
+// ── Unsaved changes ───────────────────────────────────────────────────────────
+/** Set by the bpmn-js command stack; cleared on import and on a successful save. */
+const dirty = ref(false);
+
+/** Edits typed in the XML tab count too, even before they are applied. */
+const hasUnsavedChanges = computed(() =>
+	dirty.value || (activeTab.value === 'xml' && xmlText.value !== currentXml.value)
+);
+
+/** Called by the parent once the diagram has actually been persisted. */
+function markSaved() {
+	dirty.value = false;
+}
+
+defineExpose({ markSaved });
+
 async function getXml(): Promise<string> {
 	if (!modeler.value) return '';
 	const { xml } = await modeler.value.saveXML({ format: true });
@@ -86,6 +102,9 @@ async function applyXmlToDesigner() {
 		const { warnings } = await modeler.value?.importXML(xml) ?? { warnings: [] };
 		activeTab.value = 'designer';
 		xmlError.value = '';
+		// The XML is now in the designer but not yet persisted.
+		currentXml.value = xml;
+		dirty.value = true;
 		if (warnings?.length) {
 			toast.add({ severity: 'warn', summary: 'Imported with warnings', detail: warnings[0]?.message, life: 4000 });
 		} else {
@@ -125,6 +144,7 @@ async function save() {
 	saving.value = true;
 	try {
 		const xml = activeTab.value === 'xml' ? xmlText.value : await getXml();
+		currentXml.value = xml;
 		emit('save', xml);
 	} finally {
 		saving.value = false;
@@ -206,6 +226,11 @@ onMounted(async () => {
 		await bpmnModeler.importXML(xmlToLoad);
 		modeler.value = bpmnModeler;
 		currentXml.value = xmlToLoad;
+
+		// Subscribed after the initial import so the import's own stack reset
+		// doesn't count as a user edit.
+		dirty.value = false;
+		bpmnModeler.on('commandStack.changed', () => { dirty.value = true; });
 	} catch (err) {
 		console.error('Error initialising BPMN modeler:', err);
 	}
@@ -220,6 +245,8 @@ watch(() => props.process, async (p) => {
 	if (!p?.bpmnXml || !modeler.value) return;
 	await modeler.value.importXML(p.bpmnXml);
 	currentXml.value = p.bpmnXml;
+	xmlText.value = activeTab.value === 'xml' ? p.bpmnXml : xmlText.value;
+	dirty.value = false;
 });
 </script>
 
@@ -339,11 +366,11 @@ watch(() => props.process, async (p) => {
 
 	<!-- Drawers & dialogs -->
 	<DocsDrawer               v-model:visible="docsVisible" />
-	<ReportListDialog         v-model:visible="showReports" />
-	<FormListDialog           v-model:visible="showForms" />
-	<EmailTemplatesListDialog v-model:visible="showEmailTemplates" />
-	<FormVariablesListDialog  v-model:visible="showFormVariables" />
-	<DmnListDialog            v-model:visible="showDmn" />
+	<ReportListDialog         v-model:visible="showReports"        :dirty="hasUnsavedChanges" />
+	<FormListDialog           v-model:visible="showForms"          :dirty="hasUnsavedChanges" />
+	<EmailTemplatesListDialog v-model:visible="showEmailTemplates" :dirty="hasUnsavedChanges" />
+	<FormVariablesListDialog  v-model:visible="showFormVariables"  :dirty="hasUnsavedChanges" />
+	<DmnListDialog            v-model:visible="showDmn"            :dirty="hasUnsavedChanges" />
 
 	<!-- AI panel -->
 	<AiChatPanel context-type="bpmn-designer" :context="aiContext" />
