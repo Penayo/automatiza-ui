@@ -62,7 +62,9 @@ const openNew   = () => $router.push({ name: 'ProcessNew' });
 
 const copyLink = async (proc: ProcessDefinition, e: MouseEvent) => {
     e.stopPropagation();
-    const token = proc.webhookToken ? `?token=${proc.webhookToken}` : '';
+    // Publicly startable processes need no credential; otherwise share the unlisted
+    // token. The webhookToken is machine-only and never belongs in a shared link.
+    const token = proc.publiclyStartable || !proc.publicStartToken ? '' : `?token=${proc.publicStartToken}`;
     const url = `${window.location.origin}/start/${proc.id}${token}`;
     if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);

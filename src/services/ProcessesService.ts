@@ -20,7 +20,11 @@ export interface ProcessDefinition extends APIData {
     starterGroups?: string[];
     starterUsers?: string[];
     responsibleContacts?: string[];
+    /** M2M Bearer credential — never put this in a shareable URL. */
     webhookToken?: string;
+    /** Credential for unlisted /start/:id?token=… links. */
+    publicStartToken?: string;
+    publiclyStartable?: boolean;
     hasStartForm?: boolean;
 }
 
@@ -29,6 +33,7 @@ export interface UpdateProcessMetaDto {
     responsibleContacts?: string[];
     starterGroups?: string[];
     starterUsers?: string[];
+    publiclyStartable?: boolean;
 }
 
 export interface ProcessVariable {
@@ -168,9 +173,19 @@ export class ProcessesService extends ModelApiService {
         }
     }
 
+    /** Backend route is PATCH /bpmn/processes/:id — a PUT here 404s. */
     async updateProcessMeta(id: string, dto: UpdateProcessMetaDto): Promise<ProcessDefinition> {
-        const response = await this.put(id, dto);
-        return (response as any)?.data as ProcessDefinition;
+        return await this.patch<ProcessDefinition>(id, dto);
+    }
+
+    /**
+     * Rotates one of the two process credentials. They are independent: rotating the
+     * M2M token never invalidates shared start links, and vice versa.
+     */
+    async regenerateToken(id: string, scope: 'webhook' | 'public' = 'webhook'):
+        Promise<{ webhookToken?: string; publicStartToken?: string }> {
+        const response = await this.post(`${id}/regenerate-token?scope=${scope}`);
+        return response as { webhookToken?: string; publicStartToken?: string };
     }
 
     async pauseInstance(instanceId: string, comment: string): Promise<ProcessInstance> {

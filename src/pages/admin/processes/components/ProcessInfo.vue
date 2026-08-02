@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { useToast, Button, InputText, Textarea } from 'primevue';
+import { computed, ref, watch } from 'vue';
+import { useToast, Button, InputText, Textarea, ToggleSwitch } from 'primevue';
 import { $api } from '@services/api';
 import type { ProcessDefinition, UpdateProcessMetaDto } from '@services/ProcessesService';
 
 const props = defineProps<{
-    processId?:  string;
-    initialMeta: UpdateProcessMetaDto;
-    readonly?:   boolean;
+    processId?:        string;
+    initialMeta:       UpdateProcessMetaDto;
+    readonly?:         boolean;
+    /** Credential for the unlisted link, used only when publiclyStartable is off. */
+    publicStartToken?: string;
 }>();
 
 const emit = defineEmits<{
     saved: [updated: ProcessDefinition];
+    'token-changed': [publicStartToken: string];
 }>();
 
 const toast = useToast();
@@ -44,6 +47,66 @@ function addUser() {
     const v = userInput.value.trim();
     if (v && !meta.value.starterUsers!.includes(v)) meta.value.starterUsers!.push(v);
     userInput.value = '';
+}
+
+// ── Public start link ─────────────────────────────────────────────────────────
+
+/**
+ * Two shapes, never a third: an open campaign link with no credential in it, or an
+ * unlisted link carrying publicStartToken. The webhookToken is a machine credential
+ * and deliberately never appears here.
+ */
+const startUrl = computed(() => {
+    if (!props.processId) return '';
+    const base = `${window.location.origin}/start/${props.processId}`;
+    if (meta.value.publiclyStartable) return base;
+    return props.publicStartToken ? `${base}?token=${props.publicStartToken}` : base;
+});
+
+/** A restricted process rejects anonymous starts whatever the link says. */
+const isRestricted = computed(() =>
+    (meta.value.starterGroups?.length ?? 0) > 0 || (meta.value.starterUsers?.length ?? 0) > 0,
+);
+
+/** True once the toggle differs from what the server has — the link isn't live yet. */
+const linkDirty = computed(
+    () => !!meta.value.publiclyStartable !== !!props.initialMeta.publiclyStartable,
+);
+
+/**
+ * Mints or rotates the unlisted-link token. Also covers processes deployed before
+ * publicStartToken existed, which carry none until they are redeployed.
+ */
+const rotating = ref(false);
+async function rotateStartToken() {
+    if (!props.processId) return;
+    rotating.value = true;
+    try {
+        const { publicStartToken } = await $api.processes.regenerateToken(props.processId, 'public');
+        if (publicStartToken) emit('token-changed', publicStartToken);
+        toast.add({
+            severity: 'success',
+            summary: 'Start token updated',
+            detail: 'Previously shared links no longer work.',
+            life: 3000,
+        });
+    } catch (err: any) {
+        toast.add({ severity: 'error', summary: 'Error', detail: err?.message ?? 'Could not update the token', life: 4000 });
+    } finally {
+        rotating.value = false;
+    }
+}
+
+async function copyStartUrl() {
+    if (!startUrl.value) return;
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(startUrl.value);
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = startUrl.value; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    toast.add({ severity: 'success', summary: 'Copied', detail: 'Start link copied to clipboard', life: 2000 });
 }
 
 // ── Save ──────────────────────────────────────────────────────────────────────
@@ -146,6 +209,68 @@ async function save() {
                 </span>
                 <span v-if="readonly && !meta.starterUsers?.length" class="text-sm text-surface-400">—</span>
             </div>
+        </div>
+
+        <!-- ── Public Start Link (admin-only: it can carry the unlisted token) ── -->
+        <div v-if="processId && !readonly" class="space-y-3 pt-2 border-t border-surface-200 dark:border-surface-700">
+            <label class="text-xs font-medium text-surface-400 uppercase tracking-wide">Public Start Link</label>
+
+            <div class="flex items-start gap-3">
+                <ToggleSwitch v-model="meta.publiclyStartable" inputId="publiclyStartableToggle" class="mt-0.5" />
+                <label for="publiclyStartableToggle" class="text-sm text-surface-700 dark:text-surface-300 cursor-pointer">
+                    Anyone with the link can start this process
+                    <span class="block text-xs text-surface-500 mt-0.5">
+                        Turn on for links you distribute openly — campaigns, landing pages, QR codes.
+                        Off means the link only works with its private token.
+                    </span>
+                </label>
+            </div>
+
+            <!-- Restricted processes reject anonymous starts no matter what the link says -->
+            <div
+                v-if="isRestricted"
+                class="flex items-start gap-2 text-xs rounded-lg px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300"
+            >
+                <i class="pi pi-exclamation-triangle text-xs mt-0.5" />
+                <span>
+                    Starter roles or users are set, so this process always requires a login —
+                    the link will send visitors to the sign-in page. Clear both lists for a truly public link.
+                </span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <code class="flex-1 truncate text-xs bg-surface-100 dark:bg-surface-800 rounded-lg px-3 py-2 text-surface-700 dark:text-surface-300 font-mono">
+                    {{ startUrl }}
+                </code>
+                <button
+                    class="shrink-0 p-2 rounded-lg bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+                    v-tooltip.top="'Copy start link'"
+                    @click="copyStartUrl"
+                >
+                    <i class="pi pi-copy text-sm text-surface-500" />
+                </button>
+                <button
+                    v-if="!meta.publiclyStartable"
+                    class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                    v-tooltip.top="publicStartToken ? 'New token — links already shared stop working' : 'Generate a token for this link'"
+                    :disabled="rotating"
+                    @click="rotateStartToken"
+                >
+                    <i :class="rotating ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'" class="text-xs" />
+                    {{ publicStartToken ? 'Regenerate' : 'Generate' }}
+                </button>
+            </div>
+
+            <p v-if="linkDirty" class="text-xs text-amber-600 dark:text-amber-400">
+                <i class="pi pi-info-circle text-[10px]" />
+                Save to apply this change — the link above is not live yet.
+            </p>
+            <p v-else-if="!meta.publiclyStartable && !publicStartToken" class="text-xs text-surface-500">
+                This link needs a token — generate one, or turn on open access above.
+            </p>
+            <p v-else-if="!meta.publiclyStartable" class="text-xs text-surface-500">
+                Unlisted link — treat it as a secret; anyone holding it can start the process.
+            </p>
         </div>
 
         <!-- ── Save ──────────────────────────────────────────────────────── -->

@@ -37,6 +37,7 @@ const initialMeta = (): UpdateProcessMetaDto => ({
     responsibleContacts: [...(process.value?.responsibleContacts ?? [])],
     starterGroups:       [...(process.value?.starterGroups       ?? [])],
     starterUsers:        [...(process.value?.starterUsers        ?? [])],
+    publiclyStartable:   process.value?.publiclyStartable        ?? false,
 });
 
 // ── Load ──────────────────────────────────────────────────────────────────────
@@ -81,22 +82,20 @@ function onInfoSaved(updated: ProcessDefinition) {
     process.value = updated;
 }
 
-// ── Webhook / public-start section ───────────────────────────────────────────
+// ── API start (machine-to-machine) section ───────────────────────────────────
 
 const tokenMasked   = ref(true);
 const regenerating  = ref(false);
 
 const BASE = import.meta.env.VITE_API_HOST ?? 'http://localhost:3000';
 
-const startFormUrl = computed(() => {
-    if (!process.value?.hasStartForm || !process.value?.id) return null;
-    const token = process.value.webhookToken ? `?token=${process.value.webhookToken}` : '';
-    return `${window.location.origin}/start/${process.value.id}${token}`;
-});
+// In production VITE_API_HOST is the relative "/api" (nginx proxies it to the engine),
+// so absolutize it — this URL is meant to be copied into an external system.
+const API_ORIGIN = BASE.startsWith('http') ? BASE : `${window.location.origin}${BASE}`;
 
-const webhookUrl = computed(() => {
+const apiStartUrl = computed(() => {
     if (!process.value?.id) return null;
-    return `${BASE}/bpmn/processes/${process.value.id}/webhook`;
+    return `${API_ORIGIN}/bpmn/processes/${process.value.id}/api-start`;
 });
 
 const displayedToken = computed(() => {
@@ -215,7 +214,9 @@ onMounted(fetchProcess);
                 <ProcessInfo
                     :process-id="process.id!"
                     :initial-meta="initialMeta()"
+                    :public-start-token="process.publicStartToken"
                     @saved="onInfoSaved"
+                    @token-changed="(t: string) => process && (process.publicStartToken = t)"
                 />
 
                 <!-- ── Webhook / Public Link ────────────────────────────── -->
@@ -223,40 +224,23 @@ onMounted(fetchProcess);
                     <div class="border-t border-surface-200 dark:border-surface-700 pt-6">
                         <h2 class="text-xs font-medium text-surface-400 uppercase tracking-wide mb-4">Integrations</h2>
 
-                        <!-- Start form link (only when hasStartForm) -->
-                        <div v-if="process.hasStartForm" class="space-y-1.5 mb-5">
-                            <label class="text-xs font-medium text-surface-500">Public Start Form URL</label>
-                            <p class="text-xs text-surface-400">Share this link to let external users fill and submit the start form.</p>
-                            <div class="flex items-center gap-2 mt-1">
-                                <code class="flex-1 truncate text-xs bg-surface-100 dark:bg-surface-800 rounded-lg px-3 py-2 text-surface-700 dark:text-surface-300 font-mono">
-                                    {{ startFormUrl }}
-                                </code>
-                                <button
-                                    class="shrink-0 p-2 rounded-lg bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
-                                    v-tooltip.top="'Copy URL'"
-                                    @click="copyText(startFormUrl)"
-                                >
-                                    <i class="pi pi-copy text-sm text-surface-500" />
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Webhook URL -->
+                        <!-- API trigger URL (the human-facing link lives in ProcessInfo above) -->
                         <div class="space-y-1.5 mb-5">
-                            <label class="text-xs font-medium text-surface-500">Webhook URL</label>
+                            <label class="text-xs font-medium text-surface-500">API Trigger URL</label>
                             <p class="text-xs text-surface-400">
-                                Machine-to-machine endpoint. <code class="font-mono">POST</code> with
-                                <code class="font-mono">Authorization: Bearer &lt;token&gt;</code> to trigger the process.
-                                <code class="font-mono">GET</code> returns the start form schema.
+                                For other systems, not for people. <code class="font-mono">POST</code> with
+                                <code class="font-mono">Authorization: Bearer &lt;token&gt;</code> and a JSON body of
+                                <code class="font-mono">{ "variables": { … } }</code> to start an instance.
+                                To share the form with people, use the Public Start Link above.
                             </p>
                             <div class="flex items-center gap-2 mt-1">
                                 <code class="flex-1 truncate text-xs bg-surface-100 dark:bg-surface-800 rounded-lg px-3 py-2 text-surface-700 dark:text-surface-300 font-mono">
-                                    {{ webhookUrl }}
+                                    {{ apiStartUrl }}
                                 </code>
                                 <button
                                     class="shrink-0 p-2 rounded-lg bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
                                     v-tooltip.top="'Copy URL'"
-                                    @click="copyText(webhookUrl)"
+                                    @click="copyText(apiStartUrl)"
                                 >
                                     <i class="pi pi-copy text-sm text-surface-500" />
                                 </button>
@@ -265,8 +249,11 @@ onMounted(fetchProcess);
 
                         <!-- Token -->
                         <div class="space-y-1.5">
-                            <label class="text-xs font-medium text-surface-500">Webhook Token</label>
-                            <p class="text-xs text-surface-400">Used as Bearer token for POST webhook and as <code class="font-mono">?token=</code> in the public form URL.</p>
+                            <label class="text-xs font-medium text-surface-500">API Token</label>
+                            <p class="text-xs text-surface-400">
+                                Secret. Send it as the <code class="font-mono">Bearer</code> token on the POST above —
+                                never put it in a URL or a shared link. Regenerating breaks any integration using the old value.
+                            </p>
                             <div class="flex items-center gap-2 mt-1">
                                 <code class="flex-1 text-xs bg-surface-100 dark:bg-surface-800 rounded-lg px-3 py-2 text-surface-700 dark:text-surface-300 font-mono tracking-wider">
                                     {{ displayedToken }}

@@ -1,6 +1,9 @@
 import { ref, onMounted, type Ref } from 'vue';
 import { $api } from '@services/api';
-import type { BrandingTheme, CompanyNameStyle } from '@services/TenantsService';
+import type { BrandingTheme, CompanyNameStyle, TenantBrandingResponse } from '@services/TenantsService';
+
+/** Branding as delivered by either /tenants/branding or the public-start payload. */
+export type TenantBranding = TenantBrandingResponse;
 
 type Palette = Record<string, string>;
 
@@ -148,6 +151,29 @@ function clearPalette(el: HTMLElement, prefix: string = 'fo-brand') {
     });
 }
 
+/**
+ * Applies a tenant's palette to one element as --fo-brand-* / --fo-secondary-*
+ * variables. Shared by the frontoffice layout and the public start page, which
+ * gets its branding from the public-start payload instead of /tenants/branding.
+ */
+export function applyBrandingPalette(el: HTMLElement | null, branding: Partial<TenantBranding> | null) {
+    if (!el || !branding) return;
+
+    // Primary: custom color overrides preset theme
+    if (branding.customPrimaryColor) {
+        applyPalette(el, generateShades(branding.customPrimaryColor), 'fo-brand');
+    } else if (branding.theme && branding.theme in PALETTES) {
+        applyPalette(el, PALETTES[branding.theme], 'fo-brand');
+    }
+
+    // Secondary: always independent
+    if (branding.customSecondaryColor) {
+        applyPalette(el, generateShades(branding.customSecondaryColor), 'fo-secondary');
+    } else {
+        clearPalette(el, 'fo-secondary');
+    }
+}
+
 // ── Composable ───────────────────────────────────────────────────────────────
 
 export function useTenantBranding(containerRef: Ref<HTMLElement | null>) {
@@ -172,22 +198,7 @@ export function useTenantBranding(containerRef: Ref<HTMLElement | null>) {
             showCompanyName.value  = branding.showCompanyName  ?? true;
             companyNameStyle.value = branding.companyNameStyle ?? 'subheading';
 
-            const el = containerRef.value;
-            if (!el) return;
-
-            // Primary: custom color overrides preset theme
-            if (branding.customPrimaryColor) {
-                applyPalette(el, generateShades(branding.customPrimaryColor), 'fo-brand');
-            } else if (branding.theme && branding.theme in PALETTES) {
-                applyPalette(el, PALETTES[branding.theme], 'fo-brand');
-            }
-
-            // Secondary: always independent
-            if (branding.customSecondaryColor) {
-                applyPalette(el, generateShades(branding.customSecondaryColor), 'fo-secondary');
-            } else {
-                clearPalette(el, 'fo-secondary');
-            }
+            applyBrandingPalette(containerRef.value, branding);
         } catch {
             // Silently ignore — CSS defaults remain active
         }

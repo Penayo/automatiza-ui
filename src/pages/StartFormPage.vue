@@ -5,20 +5,22 @@ import { LinkModule } from '@/form-fields/LinkField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { ref, watch, onMounted } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useTheme } from '@/composables/useTheme';
+import { applyBrandingPalette, type TenantBranding } from '@/composables/useTenantBranding';
 
 const BASE = import.meta.env.VITE_API_HOST ?? 'http://localhost:3000';
 
 const { isDark } = useTheme();
-const companyName = import.meta.env.VITE_COMPANY_NAME ?? 'Process Linker';
+const fallbackCompanyName = import.meta.env.VITE_COMPANY_NAME ?? 'Process Linker';
 
 const route  = useRoute();
 const router = useRouter();
 const processId    = route.params.processId as string;
-const webhookToken = route.query.token as string | undefined;
+/** Only present for unlisted links; publicly startable processes carry no token. */
+const startToken = route.query.token as string | undefined;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 type PageState = 'loading' | 'form' | 'login-required' | 'forbidden' | 'done' | 'error';
@@ -33,10 +35,45 @@ const submitting   = ref(false);
 const formRef    = ref<HTMLElement | null>(null);
 const formViewer = ref<Form>();
 
+// ── Tenant branding ───────────────────────────────────────────────────────────
+// This page is anonymous, so it cannot call /tenants/branding (that resolves the
+// tenant from the JWT). Branding rides along in the public-start payload instead.
+const pageRef  = ref<HTMLElement | null>(null);
+const branding = ref<TenantBranding | null>(null);
+
+const companyName = computed(() => branding.value?.companyName || fallbackCompanyName);
+const logo        = computed(() =>
+    (isDark.value ? branding.value?.logoDarkUrl : branding.value?.logoUrl) ?? branding.value?.logoUrl ?? null,
+);
+// Larger than the frontoffice header's: this is a landing page, often the first
+// thing an external visitor sees, so the brand leads.
+const logoStyle = computed(() => ({
+    height:     `${branding.value?.logoSize ?? 56}px`,
+    padding:    `${branding.value?.logoPadding ?? 0}px`,
+    background: branding.value?.logoBgColor ?? 'transparent',
+}));
+
+/** Company name scale, honouring the tenant's companyNameStyle setting. */
+const companyNameClass = computed(() => {
+    switch (branding.value?.companyNameStyle) {
+        case 'display':  return 'text-2xl font-bold';
+        case 'heading':  return 'text-xl font-semibold';
+        case 'caption':  return 'text-sm font-medium';
+        default:         return 'text-lg font-semibold'; // subheading
+    }
+});
+/** Brand color for buttons/accents, falling back to the PrimeVue primary. */
+const accent = 'var(--fo-brand-500, var(--p-primary-500, #6366f1))';
+
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 function authHeaders(): Record<string, string> {
     const token = localStorage.getItem('token');
     return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/** The link's token, forwarded on both load and submit. */
+function tokenParam(): string {
+    return startToken ? `?token=${encodeURIComponent(startToken)}` : '';
 }
 
 // ── Load ──────────────────────────────────────────────────────────────────────
@@ -44,16 +81,21 @@ async function load() {
     state.value = 'loading';
     try {
         const { data } = await axios.get(
-            `${BASE}/bpmn/processes/${processId}/public-start`,
+            `${BASE}/bpmn/processes/${processId}/public-start${tokenParam()}`,
             { headers: authHeaders() },
         );
         processName.value = data.processName;
         description.value = data.description ?? '';
         formSchema.value  = data.formSchema ?? null;
+        branding.value    = data.branding ?? null;
+        applyBrandingPalette(pageRef.value, branding.value);
         state.value = 'form';
     } catch (err: any) {
         const status = err?.response?.status;
         if (status === 401) {
+            // 401 covers both "this link needs a login" and "this link's token is
+            // missing or wrong" — show whichever the server actually said.
+            errorMsg.value = err?.response?.data?.message ?? '';
             state.value = 'login-required';
         } else if (status === 403) {
             state.value = 'forbidden';
@@ -82,9 +124,8 @@ watch(state, (s) => {
 async function submit(variables: Record<string, any>) {
     submitting.value = true;
     try {
-        const tokenParam = webhookToken ? `?token=${encodeURIComponent(webhookToken)}` : '';
         await axios.post(
-            `${BASE}/bpmn/processes/${processId}/public-start${tokenParam}`,
+            `${BASE}/bpmn/processes/${processId}/public-start${tokenParam()}`,
             { variables },
             { headers: authHeaders() },
         );
@@ -110,7 +151,7 @@ function submitForm() {
 }
 
 function goLogin() {
-    const tokenSuffix = webhookToken ? `?token=${encodeURIComponent(webhookToken)}` : '';
+    const tokenSuffix = startToken ? `?token=${encodeURIComponent(startToken)}` : '';
     const redirect = encodeURIComponent(`/start/${processId}${tokenSuffix}`);
     router.push(`/login?redirect=${redirect}`);
 }
@@ -119,18 +160,31 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="min-h-screen flex flex-col bg-surface-50 dark:bg-zinc-950">
+    <div ref="pageRef" class="min-h-screen flex flex-col bg-surface-50 dark:bg-zinc-950">
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <header class="bg-white dark:bg-zinc-900 border-b border-surface-200 dark:border-zinc-800 shadow-sm shrink-0">
-            <div class="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
-                <div class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
-                     style="background: var(--p-primary-500, #6366f1)">
-                    <i class="pi pi-sitemap text-white text-base" />
+            <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+                <img
+                    v-if="logo"
+                    :src="logo"
+                    :alt="companyName"
+                    class="shrink-0 w-auto object-contain rounded-lg"
+                    :style="logoStyle"
+                />
+                <div v-else class="flex items-center justify-center w-14 h-14 rounded-xl shrink-0"
+                     :style="{ background: accent }">
+                    <i class="pi pi-sitemap text-white text-2xl" />
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-medium text-surface-400 leading-none">{{ companyName }}</p>
-                    <p v-if="processName" class="text-sm font-semibold text-surface-800 dark:text-surface-100 truncate leading-snug mt-0.5">
+                    <p
+                        v-if="branding?.showCompanyName !== false"
+                        class="text-surface-800 dark:text-surface-100 leading-tight truncate"
+                        :class="companyNameClass"
+                    >
+                        {{ companyName }}
+                    </p>
+                    <p v-if="processName" class="text-sm text-surface-500 dark:text-surface-400 truncate leading-snug mt-0.5">
                         {{ processName }}
                     </p>
                 </div>
@@ -154,14 +208,14 @@ onMounted(load);
                         <i class="pi pi-lock text-blue-500 text-2xl" />
                     </div>
                     <div>
-                        <h2 class="text-lg font-semibold text-surface-700 dark:text-surface-200">Login required</h2>
+                        <h2 class="text-lg font-semibold text-surface-700 dark:text-surface-200">This link can't be opened</h2>
                         <p class="text-sm text-surface-400 mt-1 max-w-xs">
-                            You need to log in to access this process.
+                            {{ errorMsg || 'You need to log in to access this process.' }}
                         </p>
                     </div>
                     <button
                         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
-                        style="background: var(--p-primary-500, #6366f1)"
+                        :style="{ background: accent }"
                         @click="goLogin"
                     >
                         <i class="pi pi-sign-in" /> Log in to continue
@@ -216,7 +270,7 @@ onMounted(load);
                             <div class="flex justify-end mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800">
                                 <button
                                     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity"
-                                    style="background: var(--p-primary-500, #6366f1)"
+                                    :style="{ background: accent }"
                                     :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
                                     :disabled="submitting"
                                     @click="submitForm"
@@ -233,7 +287,7 @@ onMounted(load);
                             <p class="text-sm text-surface-500">Click below to start the process.</p>
                             <button
                                 class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium text-white transition-opacity"
-                                style="background: var(--p-primary-500, #6366f1)"
+                                :style="{ background: accent }"
                                 :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
                                 :disabled="submitting"
                                 @click="submitForm"
