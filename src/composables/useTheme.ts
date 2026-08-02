@@ -5,7 +5,14 @@ const STORAGE_KEY = 'theme'
 // Module-level ref — shared across every component that calls useTheme()
 const isDark = ref(false)
 
+let initialized = false
+
+// Called from main.ts before the app mounts, so isDark and the .dark class on
+// <html> are already in agreement for the first render. Safe to call again.
 function init() {
+  if (initialized) return
+  initialized = true
+
   const stored = localStorage.getItem(STORAGE_KEY)
 
   if (stored === 'dark') {

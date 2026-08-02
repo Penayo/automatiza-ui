@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount } from 'vue';
 import { Toast, ConfirmDialog, useToast } from 'primevue';
-import { useTheme } from '@/composables/useTheme';
 
-const { init } = useTheme();
 const toast = useToast();
 
 // Global fallback for cross-cutting API failures (rate limits, network errors)
@@ -20,7 +18,6 @@ function onApiError(e: Event) {
 }
 
 onMounted(() => {
-  init();
   window.addEventListener('api-error', onApiError);
 });
 onBeforeUnmount(() => window.removeEventListener('api-error', onApiError));

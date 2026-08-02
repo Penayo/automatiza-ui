@@ -4,6 +4,7 @@ import './style.css'
 
 import App from '@/App.vue'
 import router from '@/router';
+import { useTheme } from '@/composables/useTheme';
 import { setRouter } from '@services/routerRef';
 import PrimeVue from 'primevue/config';
 import { definePreset } from '@primeuix/themes';
@@ -70,6 +71,12 @@ const MyPreset = definePreset(Aura, {
         }
     }
 });
+
+// Resolve the theme BEFORE the first render. Components pick their skin from
+// useTheme().isDark while global CSS keys off .dark on <html>; if the two are
+// resolved at different times they disagree for the first paint — which is how
+// form-js ends up with its light background under dark-mode text tokens.
+useTheme().init();
 
 const app = createApp(App)
 app.use(ElementPlus, { locale: en })
