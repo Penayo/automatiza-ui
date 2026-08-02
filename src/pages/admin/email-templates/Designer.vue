@@ -97,7 +97,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="flex flex-col" style="height: 100vh">
+    <div class="flex flex-col" style="height: calc(100vh - 50px)">
 
         <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
         <div class="flex items-center gap-3 px-4 py-2 border-b border-surface-200 dark:border-surface-700 bg-white dark:bg-zinc-950 shrink-0">

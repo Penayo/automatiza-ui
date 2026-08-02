@@ -108,19 +108,5 @@ defineExpose({ exportDesign });
 </template>
 
 <style scoped>
-/*
- * The library's root `.ebb-shell` is styled for standalone page use:
- *   height: calc(100vh - 180px);  min-height: 500px;  border-radius: 12px;
- * Embedded in our full-height flex panel (below a square toolbar) that leaves a
- * gap / overflow and shows an out-of-place rounded corner. Make it fill its
- * container and drop the standalone chrome. `--ee-border-radius` is never read
- * by the library, so this is the only way to correct the radius.
- */
-.email-designer-fill :deep(.ebb-shell) {
-    height: 100%;
-    min-height: 0;
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
-}
+
 </style>
