@@ -48,6 +48,7 @@
 	import { DashboardService } from '@services/DashboardService';
 	import { useTestEmailUnread } from '@/composables/useTestEmailUnread';
 	import { AuthService } from '@services/AuthService';
+	import { DatasourcesService, type BrowsableDatasource } from '@services/DatasourcesService';
 
 	defineProps({ sidebarOpen: Boolean });
 	const emit = defineEmits(['toggle-sidebar']);
@@ -55,6 +56,7 @@
 	const router      = useRouter();
 	const currentMenu = ref('dashboard');
 	const failedCount = ref(0);
+	const dataSources = ref<BrowsableDatasource[]>([]);
 	const { unreadCount, refresh: refreshUnread  } = useTestEmailUnread();
 
 	const isSuperAdmin = computed(() => {
@@ -73,9 +75,18 @@
 		}
 	}
 
+	async function loadDataSources() {
+		try {
+			dataSources.value = await new DatasourcesService().browsable();
+		} catch {
+			// informational — the "Data" section simply doesn't appear
+		}
+	}
+
 	onMounted(() => {
 		refreshFailedCount();
 		refreshUnread();
+		loadDataSources();
 		pollTimer = setInterval(() => { refreshFailedCount(); refreshUnread(); }, 60_000);
 	});
 
@@ -116,6 +127,15 @@
 				{ label: 'All Documents', icon: 'pi pi-file', command: () => nav('/admin/documents') },
 			]
 		},
+		...(dataSources.value.length ? [{
+			label: 'Data',
+			icon: 'pi pi-database',
+			items: dataSources.value.map(ds => ({
+				label: ds.name,
+				icon: 'pi pi-table',
+				command: () => nav('/admin/data/' + ds.key),
+			})),
+		}] : []),
 		{
 			label: 'Design',
 			icon: 'pi pi-palette',

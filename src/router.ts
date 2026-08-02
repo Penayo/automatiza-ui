@@ -29,6 +29,8 @@ const routes = [
       { path: 'processes', name: 'FrontofficeProcesses', component: () => import('./pages/frontoffice/processes/Index.vue') },
       { path: 'processes/:id', name: 'FrontofficeProcessDetail', component: () => import('./pages/frontoffice/processes/_id.vue') },
       { path: 'documents', name: 'FrontofficeDocuments', component: () => import('./pages/frontoffice/documents/Index.vue') },
+      { path: 'data/:datasourceKey', name: 'FrontofficeDataBrowse', component: () => import('./pages/data/Browse.vue') },
+      { path: 'data/:datasourceKey/:id', name: 'FrontofficeDataDetail', component: () => import('./pages/data/Detail.vue') },
       { path: 'profile', name: 'FrontofficeProfile', component: () => import('./pages/frontoffice/profile/Index.vue') },
     ],
   },
@@ -106,6 +108,10 @@ const routes = [
 
       // Documents
       { path: 'documents', name: 'DocumentsList', component: () => import('./pages/admin/documents/Index.vue') },
+
+      // Data (browse datasources)
+      { path: 'data/:datasourceKey', name: 'AdminDataBrowse', component: () => import('./pages/data/Browse.vue') },
+      { path: 'data/:datasourceKey/:id', name: 'AdminDataDetail', component: () => import('./pages/data/Detail.vue') },
 
       // Email Templates
       { path: 'email-templates',       name: 'EmailTemplatesList', component: () => import('./pages/admin/email-templates/Index.vue') },

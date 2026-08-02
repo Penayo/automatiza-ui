@@ -30,6 +30,21 @@
 					{{ pendingCount > 99 ? '99+' : pendingCount }}
 				</span>
 			</button>
+
+			<!-- Data — browsable datasources -->
+			<template v-if="dataSources.length">
+				<p class="px-4 pt-4 pb-1 text-xs uppercase tracking-wide text-zinc-400">Data</p>
+				<button
+					v-for="ds in dataSources"
+					:key="ds.key"
+					class="cursor-pointer rounded-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex flex-row items-center gap-4 px-4 py-2 transition-colors"
+					:class="{ 'sidebar-active font-semibold': route.path.startsWith('/data/' + ds.key) }"
+					@click="go('/data/' + ds.key)"
+				>
+					<span class="pi pi-table" style="font-size: 1.2rem" />
+					<span class="flex-1 text-left">{{ ds.name }}</span>
+				</button>
+			</template>
 		</nav>
 	</aside>
 
@@ -45,6 +60,7 @@
 	import { ref, computed, onMounted, onUnmounted } from 'vue';
 	import { useRouter, useRoute } from 'vue-router';
 	import { $api } from '@services/api';
+	import { DatasourcesService, type BrowsableDatasource } from '@services/DatasourcesService';
 
 	defineProps({ sidebarOpen: Boolean });
 	defineEmits(['toggle-sidebar']);
@@ -52,6 +68,7 @@
 	const router       = useRouter();
 	const route        = useRoute();
 	const pendingCount = ref(0);
+	const dataSources  = ref<BrowsableDatasource[]>([]);
 
 	const menuItems = [
 		{ label: 'Dashboard', icon: 'pi pi-chart-line',  path: '/dashboard'  },
@@ -76,8 +93,17 @@
 		}
 	}
 
+	async function loadDataSources() {
+		try {
+			dataSources.value = await new DatasourcesService().browsable();
+		} catch {
+			// informational — the "Data" section simply doesn't appear
+		}
+	}
+
 	onMounted(() => {
 		refreshPendingCount();
+		loadDataSources();
 		pollTimer = setInterval(refreshPendingCount, 60_000);
 	});
 
