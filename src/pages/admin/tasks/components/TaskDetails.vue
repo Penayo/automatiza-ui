@@ -73,7 +73,7 @@ async function updateTask(key: string, value: string) {
 
     <!-- Task detail -->
     <div class="w-full" v-else>
-        <div class="px-5 pt-4">
+        <div class="px-5 pt-4 pb-3 sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b border-surface-100 dark:border-zinc-800">
             <h3 class="text-(--layout-accent-color) text-2xl font-semibold">{{ props.currentTask?.name }}</h3>
 
             <div

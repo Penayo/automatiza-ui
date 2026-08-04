@@ -213,7 +213,7 @@ onMounted(load);
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <header class="bg-white dark:bg-zinc-900 border-b border-surface-200 dark:border-zinc-800 shadow-sm shrink-0">
-            <div class="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
+            <div class="max-w-5xl mx-auto px-6 py-4 flex items-center gap-3">
                 <!-- Logo / brand mark -->
                 <div class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
                      style="background: var(--p-primary-500, #6366f1)">
@@ -233,7 +233,7 @@ onMounted(load);
 
         <!-- ── Body ──────────────────────────────────────────────────────── -->
         <main class="flex-1 flex flex-col items-center px-4 py-10">
-            <div class="w-full max-w-2xl">
+            <div class="w-full max-w-5xl">
 
                 <!-- Loading skeleton -->
                 <div v-if="state === 'loading'" class="space-y-4">

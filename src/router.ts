@@ -30,6 +30,7 @@ const routes = [
       { path: 'processes/:id', name: 'FrontofficeProcessDetail', component: () => import('./pages/frontoffice/processes/_id.vue') },
       { path: 'documents', name: 'FrontofficeDocuments', component: () => import('./pages/frontoffice/documents/Index.vue') },
       { path: 'data/:datasourceKey', name: 'FrontofficeDataBrowse', component: () => import('./pages/data/Browse.vue') },
+      { path: 'data/:datasourceKey/new', name: 'FrontofficeDataNew', component: () => import('./pages/data/New.vue') },
       { path: 'data/:datasourceKey/:id', name: 'FrontofficeDataDetail', component: () => import('./pages/data/Detail.vue') },
       { path: 'profile', name: 'FrontofficeProfile', component: () => import('./pages/frontoffice/profile/Index.vue') },
     ],
@@ -111,6 +112,7 @@ const routes = [
 
       // Data (browse datasources)
       { path: 'data/:datasourceKey', name: 'AdminDataBrowse', component: () => import('./pages/data/Browse.vue') },
+      { path: 'data/:datasourceKey/new', name: 'AdminDataNew', component: () => import('./pages/data/New.vue') },
       { path: 'data/:datasourceKey/:id', name: 'AdminDataDetail', component: () => import('./pages/data/Detail.vue') },
 
       // Email Templates

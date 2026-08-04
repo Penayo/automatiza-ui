@@ -7,15 +7,28 @@
  * (which re-fetches via the datasource's `single` operation when one exists).
  * Routes: /admin/data/:datasourceKey/:id and /data/:datasourceKey/:id.
  */
-import { ref, computed, onMounted } from 'vue';
+import { ref, shallowRef, computed, defineAsyncComponent, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Button } from 'primevue';
+import { Button, Message } from 'primevue';
 import {
   DatasourcesService,
   type BrowsableDatasource,
   type BrowsableOperation,
+  type BrowsableField,
 } from '@services/DatasourcesService';
 import { recallRecord } from './record-cache';
+import FieldValue from '@components/data/FieldValue.vue';
+
+// §10.4 — an operation may declare `result.viewComponent`, a bare name resolved here to a
+// hand-authored layout instead of the generic section grid below. Fixed folder, so the name
+// is never used to build an arbitrary path.
+const customViewModules = import.meta.glob('/src/pages/datasources/views/*.vue');
+
+// Literal class names, not built from a template string — Tailwind's build-time
+// scanner needs the full utility name present verbatim in the source to emit it.
+const COLSPAN_CLASS: Record<1 | 2 | 3, string> = {
+  1: '', 2: 'sm:col-span-2', 3: 'sm:col-span-2 xl:col-span-3',
+};
 
 const route  = useRoute();
 const router = useRouter();
@@ -32,11 +45,44 @@ const loading    = ref(false);
 const error      = ref<string | null>(null);
 const notFound   = ref(false);
 
-function formatValue(v: any): string {
-  if (v === null || v === undefined || v === '') return '—';
-  if (typeof v === 'object') return JSON.stringify(v);
-  return String(v);
+const customView        = shallowRef<any>(null);
+const customViewMissing = ref(false);
+
+function resolveCustomView() {
+  customView.value = null;
+  customViewMissing.value = false;
+  const name = operation.value?.viewComponent;
+  if (!name) return;
+  const loader = customViewModules[`/src/pages/datasources/views/${name}.vue`];
+  if (!loader) { customViewMissing.value = true; return; }
+  customView.value = defineAsyncComponent(loader as () => Promise<any>);
 }
+
+/**
+ * Groups the operation's fields by `view.section` — ungrouped fields (no
+ * `section`, or blank) form an unnamed group first, then each named section in
+ * the order it first appears among the fields. Within a group, fields with an
+ * explicit `view.order` sort by it; unordered fields keep their declaration
+ * position (docs/specs/datasources.spec.md §6, §10.4).
+ */
+const sections = computed(() => {
+  const fields = operation.value?.fields ?? [];
+  const ungrouped: { f: BrowsableField; i: number }[] = [];
+  const named = new Map<string, { f: BrowsableField; i: number }[]>();
+  fields.forEach((f, i) => {
+    const name = f.view?.section?.trim();
+    if (!name) { ungrouped.push({ f, i }); return; }
+    if (!named.has(name)) named.set(name, []);
+    named.get(name)!.push({ f, i });
+  });
+  const byOrder = (a: { f: BrowsableField; i: number }, b: { f: BrowsableField; i: number }) =>
+    (a.f.view?.order ?? a.i) - (b.f.view?.order ?? b.i);
+
+  const groups: { name: string | null; fields: BrowsableField[] }[] = [];
+  if (ungrouped.length) groups.push({ name: null, fields: ungrouped.sort(byOrder).map(x => x.f) });
+  for (const [name, entries] of named) groups.push({ name, fields: entries.sort(byOrder).map(x => x.f) });
+  return groups;
+});
 
 async function load() {
   loading.value = true;
@@ -48,6 +94,7 @@ async function load() {
     if (!ds || !ds.operations.length) { notFound.value = true; return; }
     datasource.value = ds;
     operation.value  = ds.operations.find(o => o.key === 'browse') ?? ds.operations[0];
+    resolveCustomView();
 
     // 1. Handed over from the list (has every field already).
     const cached = recallRecord(ds.key, recordId.value);
@@ -77,7 +124,7 @@ onMounted(load);
 </script>
 
 <template>
-  <div class="p-4 flex flex-col gap-4 max-w-3xl">
+  <div class="p-4 flex flex-col gap-4 w-full">
     <!-- Header -->
     <div class="flex items-center gap-3">
       <Button icon="pi pi-arrow-left" text rounded size="small" v-tooltip.right="'Back to list'" @click="goBack" />
@@ -109,16 +156,48 @@ onMounted(load);
       <Button label="Back" size="small" text class="ml-auto" @click="goBack" />
     </div>
 
-    <!-- All fields -->
-    <div v-else-if="record" class="rounded-lg border border-surface-200 dark:border-surface-700 divide-y divide-surface-100 dark:divide-surface-800">
+    <template v-else-if="record">
+      <Message v-if="customViewMissing" severity="warn" size="small" :closable="false" class="mb-2">
+        Custom view component "{{ operation?.viewComponent }}" was not found — showing the default layout.
+      </Message>
+
+      <!-- Custom view component (§10.4) -->
+      <component
+        v-if="customView"
+        :is="customView"
+        :record="record"
+        :operation="operation"
+        :datasource="datasource"
+        :datasource-key="datasourceKey"
+        :record-id="recordId"
+      />
+
+      <!-- All fields, grouped by section -->
+      <div v-else class="flex flex-col gap-4">
       <div
-        v-for="f in (operation?.fields ?? [])"
-        :key="f.name"
-        class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4 px-4 py-2.5"
+        v-for="(section, i) in sections"
+        :key="section.name ?? `_ungrouped_${i}`"
+        class="rounded-lg border border-surface-200 dark:border-surface-700 overflow-hidden"
       >
-        <span class="text-xs text-surface-500 sm:w-48 shrink-0">{{ f.label }}</span>
-        <span class="text-sm wrap-break-word">{{ formatValue(record[f.name]) }}</span>
+        <div
+          v-if="section.name"
+          class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-surface-500 bg-surface-50 dark:bg-surface-900 border-b border-surface-200 dark:border-surface-700"
+        >
+          {{ section.name }}
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 divide-y sm:divide-y-0 divide-surface-100 dark:divide-surface-800 p-4">
+          <div
+            v-for="f in section.fields"
+            :key="f.name"
+            class="flex flex-col gap-0.5 py-2 sm:py-1.5"
+            :class="f.view?.colSpan ? COLSPAN_CLASS[f.view.colSpan] : ''"
+          >
+            <span class="text-xs text-surface-500">{{ f.label }}</span>
+            <FieldValue :value="record[f.name]" :display="f.view?.display" :record="record" />
+          </div>
+        </div>
       </div>
     </div>
+    </template>
   </div>
 </template>

@@ -5,11 +5,19 @@ import { LinkModule } from '@/form-fields/LinkField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { computed, ref, watch, onMounted } from 'vue';
+import { computed, ref, watch, onMounted, markRaw, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useTheme } from '@/composables/useTheme';
 import { applyBrandingPalette, type TenantBranding } from '@/composables/useTenantBranding';
+import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
+
+// JSON Schema form renderer
+import VueForm from '@lljj/vue3-form-element';
+import 'element-plus/dist/index.css';
+import 'element-plus/theme-chalk/dark/css-vars.css';
+import { ElConfigProvider } from 'element-plus';
+import en from 'element-plus/es/locale/lang/en';
 
 const BASE = import.meta.env.VITE_API_HOST ?? 'http://localhost:3000';
 
@@ -34,6 +42,23 @@ const submitting   = ref(false);
 // bpmn-io form
 const formRef    = ref<HTMLElement | null>(null);
 const formViewer = ref<Form>();
+
+// ── Form-type discrimination ───────────────────────────────────────────────────
+// The backend resolves the start event's form the same way it resolves task forms:
+// a stored form-js schema, a stored JSON-Schema form (type: 'jsonschema'), or a
+// custom-view descriptor (type: 'custom', key) rendered by a registered Vue view.
+const isCustom     = computed(() => formSchema.value?.type === 'custom');
+const isJsonSchema = computed(() => formSchema.value?.type === 'jsonschema');
+
+// Custom Vue view
+const customView    = ref<Component | null>(null);
+const customViewRef = ref<{ getVariables: () => Record<string, any> } | null>(null);
+
+// JSON Schema live data (two-way bound to VueForm)
+const jsonFormData = ref<Record<string, any>>({});
+
+// Minimal process-like object passed to custom views (there is no task on a start form).
+const processLike = computed(() => ({ name: processName.value }));
 
 // ── Tenant branding ───────────────────────────────────────────────────────────
 // This page is anonymous, so it cannot call /tenants/branding (that resolves the
@@ -89,6 +114,16 @@ async function load() {
         formSchema.value  = data.formSchema ?? null;
         branding.value    = data.branding ?? null;
         applyBrandingPalette(pageRef.value, branding.value);
+
+        const schema = formSchema.value;
+        if (schema?.type === 'custom' && schema.key) {
+            const loader = CUSTOM_TASK_VIEWS[schema.key];
+            if (loader) {
+                const mod = await loader();
+                customView.value = markRaw(mod.default);
+            }
+        }
+
         state.value = 'form';
     } catch (err: any) {
         const status = err?.response?.status;
@@ -108,7 +143,8 @@ async function load() {
 
 // ── Mount BPMN form once data arrives ────────────────────────────────────────
 watch(state, (s) => {
-    if (s !== 'form' || !formSchema.value) return;
+    // Custom views and JSON-Schema forms are rendered by Vue, not the form-js viewer.
+    if (s !== 'form' || !formSchema.value || isCustom.value || isJsonSchema.value) return;
     setTimeout(() => {
         if (!formRef.value) return;
         const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule, LinkModule] });
@@ -142,11 +178,19 @@ async function submit(variables: Record<string, any>) {
     }
 }
 
+function getCurrentVars(): Record<string, any> {
+    if (isCustom.value)     return customViewRef.value?.getVariables() ?? {};
+    if (isJsonSchema.value) return { ...jsonFormData.value };
+    return {};
+}
+
 function submitForm() {
-    if (formViewer.value) {
+    // form-js runs its own validation via the `submit` event; custom / JSON-Schema
+    // submit their collected variables directly.
+    if (!isCustom.value && !isJsonSchema.value && formViewer.value) {
         formViewer.value.submit();
     } else {
-        submit({});
+        submit(getCurrentVars());
     }
 }
 
@@ -164,7 +208,7 @@ onMounted(load);
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <header class="bg-white dark:bg-zinc-900 border-b border-surface-200 dark:border-zinc-800 shadow-sm shrink-0">
-            <div class="max-w-2xl mx-auto px-6 py-5 flex items-center gap-4">
+            <div class="max-w-5xl mx-auto px-6 py-5 flex items-center gap-4">
                 <img
                     v-if="logo"
                     :src="logo"
@@ -193,7 +237,7 @@ onMounted(load);
 
         <!-- ── Body ──────────────────────────────────────────────────────── -->
         <main class="flex-1 flex flex-col items-center px-4 py-10">
-            <div class="w-full max-w-2xl">
+            <div class="w-full max-w-5xl">
 
                 <!-- Loading -->
                 <div v-if="state === 'loading'" class="space-y-4">
@@ -248,7 +292,7 @@ onMounted(load);
                         <i class="pi pi-check-circle text-green-500" style="font-size: 2.5rem" />
                     </div>
                     <div>
-                        <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">Process started!</h2>
+                        <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">Form submitted!</h2>
                         <p class="text-sm text-surface-500 mt-1 max-w-xs">
                             Your submission has been received. You may close this page.
                         </p>
@@ -264,9 +308,41 @@ onMounted(load);
 
                     <div class="rounded-2xl border border-surface-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
 
-                        <!-- bpmn-io form -->
+                        <!-- Rendered form (custom view / JSON-Schema / form-js) -->
                         <div v-if="formSchema" class="p-6">
-                            <div ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
+
+                            <!-- Custom Vue component renderer -->
+                            <component
+                                v-if="isCustom && customView"
+                                :is="customView"
+                                ref="customViewRef"
+                                :task="processLike"
+                                :variables="{}"
+                                :read-only="false"
+                            />
+                            <div
+                                v-else-if="isCustom && !customView"
+                                class="flex flex-col items-center gap-2 py-12 text-surface-400"
+                            >
+                                <i class="pi pi-exclamation-triangle text-2xl" />
+                                <span class="text-sm">Custom view not found for key "{{ formSchema.key }}"</span>
+                            </div>
+
+                            <!-- JSON Schema renderer -->
+                            <div v-else-if="isJsonSchema" class="jsf-preview-root">
+                                <ElConfigProvider :locale="en">
+                                    <VueForm
+                                        v-model="jsonFormData"
+                                        :schema="formSchema.jsonSchema ?? {}"
+                                        :ui-schema="formSchema.uiSchema ?? {}"
+                                        :form-footer="{ show: false }"
+                                    />
+                                </ElConfigProvider>
+                            </div>
+
+                            <!-- form-js renderer -->
+                            <div v-else ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
+
                             <div class="flex justify-end mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800">
                                 <button
                                     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity"
@@ -276,26 +352,20 @@ onMounted(load);
                                     @click="submitForm"
                                 >
                                     <i v-if="submitting" class="pi pi-spin pi-spinner" />
-                                    <i v-else class="pi pi-play" />
-                                    {{ submitting ? 'Starting…' : 'Start process' }}
+                                    <i v-else class="pi pi-send" />
+                                    {{ submitting ? 'Submitting…' : 'Submit' }}
                                 </button>
                             </div>
                         </div>
 
-                        <!-- No form: simple start button -->
-                        <div v-else class="p-6 flex flex-col items-center gap-4 py-10">
-                            <p class="text-sm text-surface-500">Click below to start the process.</p>
-                            <button
-                                class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium text-white transition-opacity"
-                                :style="{ background: accent }"
-                                :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
-                                :disabled="submitting"
-                                @click="submitForm"
-                            >
-                                <i v-if="submitting" class="pi pi-spin pi-spinner" />
-                                <i v-else class="pi pi-play" />
-                                {{ submitting ? 'Starting…' : 'Start process' }}
-                            </button>
+                        <!-- No form: nothing to submit from this page -->
+                        <div v-else class="p-6 flex flex-col items-center gap-3 py-10 text-center">
+                            <div class="w-12 h-12 rounded-full bg-surface-100 dark:bg-zinc-800 flex items-center justify-center">
+                                <i class="pi pi-info-circle text-surface-400 text-xl" />
+                            </div>
+                            <p class="text-sm text-surface-500 max-w-xs">
+                                This process has no start form configured, so it can't be started from this page.
+                            </p>
                         </div>
 
                     </div>
@@ -311,3 +381,20 @@ onMounted(load);
 
     </div>
 </template>
+
+<style>
+.jsf-preview-root {
+    font-family: inherit;
+}
+
+.jsf-preview-root .el-form-item__label {
+    font-size: 0.875rem;
+}
+
+.jsf-preview-root .el-button--primary {
+    --el-button-bg-color: #0f62fe;
+    --el-button-border-color: #0f62fe;
+    --el-button-hover-bg-color: #0353e9;
+    --el-button-hover-border-color: #0353e9;
+}
+</style>

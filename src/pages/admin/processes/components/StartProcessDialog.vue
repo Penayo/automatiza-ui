@@ -2,7 +2,7 @@
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { ref, watch } from 'vue';
+import { ref, watch, computed, markRaw, type Component } from 'vue';
 import { Button, Dialog, ToggleSwitch, Select, useToast } from 'primevue';
 import { useTheme } from '@/composables/useTheme';
 import JsonEditor from 'vue3-ts-jsoneditor';
@@ -11,6 +11,14 @@ import { DocumentListModule } from '@/form-fields/DocumentListField';
 import { LinkModule } from '@/form-fields/LinkField';
 import { $api } from '@services/api';
 import type { IForm } from '@services/FormsService';
+import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
+
+// JSON Schema form renderer
+import VueForm from '@lljj/vue3-form-element';
+import 'element-plus/dist/index.css';
+import 'element-plus/theme-chalk/dark/css-vars.css';
+import { ElConfigProvider } from 'element-plus';
+import en from 'element-plus/es/locale/lang/en';
 
 const props = defineProps<{
     visible: boolean;
@@ -33,6 +41,18 @@ const formSchema = ref<IForm | null>(null);
 const formViewer = ref<InstanceType<typeof Form> | null>(null);
 const processVars = ref('{}');
 
+// ── Form-type discrimination ───────────────────────────────────────────────────
+// Mirrors the task-form contract: a stored form-js schema, a stored JSON-Schema
+// form (type: 'jsonschema'), or a custom-view descriptor (type: 'custom', key).
+const isCustom     = computed(() => formSchema.value?.type === 'custom');
+const isJsonSchema = computed(() => formSchema.value?.type === 'jsonschema');
+
+const customView    = ref<Component | null>(null);
+const customViewRef = ref<{ getVariables: () => Record<string, any> } | null>(null);
+const jsonFormData  = ref<Record<string, any>>({});
+
+const processLike = computed(() => ({ name: props.processName }));
+
 const testMode = ref(false);
 const testType = ref<'auto-stub' | 'pause-and-fill'>('auto-stub');
 const testTypeOptions = [
@@ -46,6 +66,8 @@ watch(() => props.visible, async (open) => {
     if (!open) return;
     formSchema.value  = null;
     formViewer.value  = null;
+    customView.value  = null;
+    jsonFormData.value = {};
     processVars.value = '{}';
     testMode.value    = false;
     testType.value    = 'auto-stub';
@@ -53,6 +75,15 @@ watch(() => props.visible, async (open) => {
     loading.value = true;
     try {
         formSchema.value = await $api.processes.getStartForm(props.processDefinitionId);
+
+        const schema = formSchema.value;
+        if (schema?.type === 'custom' && schema.key) {
+            const loader = CUSTOM_TASK_VIEWS[schema.key];
+            if (loader) {
+                const mod = await loader();
+                customView.value = markRaw(mod.default);
+            }
+        }
     } catch {
         // no start form — fall back to JSON editor
     } finally {
@@ -60,14 +91,15 @@ watch(() => props.visible, async (open) => {
     }
 });
 
-// Mount formjs once the container div is rendered
+// Mount formjs once the container div is rendered (custom / JSON-Schema forms are
+// rendered by Vue, not the form-js viewer)
 watch(formSchema, (schema) => {
-    if (!schema) return;
+    if (!schema || isCustom.value || isJsonSchema.value) return;
     setTimeout(() => mountForm(), 0);
 });
 
 function onDialogShow() {
-    if (formSchema.value && formRef.value) mountForm();
+    if (formSchema.value && formRef.value && !isCustom.value && !isJsonSchema.value) mountForm();
 }
 
 function mountForm() {
@@ -103,7 +135,11 @@ async function submitStart(variables: Record<string, any>) {
 }
 
 function handleSubmit() {
-    if (formViewer.value && formSchema.value) {
+    if (isCustom.value) {
+        submitStart(customViewRef.value?.getVariables() ?? {});
+    } else if (isJsonSchema.value) {
+        submitStart({ ...jsonFormData.value });
+    } else if (formViewer.value && formSchema.value) {
         formViewer.value.submit();
     } else {
         try {
@@ -152,7 +188,39 @@ function handleSubmit() {
             </div>
 
             <!-- Start form or JSON variables editor ─────────────────────────── -->
-            <div v-if="formSchema" ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
+            <template v-if="formSchema">
+                <!-- Custom Vue component renderer -->
+                <component
+                    v-if="isCustom && customView"
+                    :is="customView"
+                    ref="customViewRef"
+                    :task="processLike"
+                    :variables="{}"
+                    :read-only="false"
+                />
+                <div
+                    v-else-if="isCustom && !customView"
+                    class="flex flex-col items-center gap-2 py-8 text-surface-400"
+                >
+                    <i class="pi pi-exclamation-triangle text-2xl" />
+                    <span class="text-sm">Custom view not found for key "{{ formSchema.key }}"</span>
+                </div>
+
+                <!-- JSON Schema renderer -->
+                <div v-else-if="isJsonSchema" class="jsf-preview-root">
+                    <ElConfigProvider :locale="en">
+                        <VueForm
+                            v-model="jsonFormData"
+                            :schema="formSchema.jsonSchema ?? {}"
+                            :ui-schema="formSchema.uiSchema ?? {}"
+                            :form-footer="{ show: false }"
+                        />
+                    </ElConfigProvider>
+                </div>
+
+                <!-- form-js renderer -->
+                <div v-else ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
+            </template>
             <div v-else class="flex flex-col gap-2">
                 <p class="text-sm text-surface-500">No start form configured. Provide initial variables as JSON (optional).</p>
                 <JsonEditor
@@ -180,3 +248,20 @@ function handleSubmit() {
         </template>
     </Dialog>
 </template>
+
+<style>
+.jsf-preview-root {
+    font-family: inherit;
+}
+
+.jsf-preview-root .el-form-item__label {
+    font-size: 0.875rem;
+}
+
+.jsf-preview-root .el-button--primary {
+    --el-button-bg-color: #0f62fe;
+    --el-button-border-color: #0f62fe;
+    --el-button-hover-bg-color: #0353e9;
+    --el-button-hover-border-color: #0353e9;
+}
+</style>

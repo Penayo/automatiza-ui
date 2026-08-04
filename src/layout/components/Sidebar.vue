@@ -5,6 +5,7 @@
 		transform transition-transform duration-200 ease-in-out
 		md:relative md:translate-x-0
 		min-w-72
+		overflow-y-auto
 		"
 		style="
 			background-color: var(--layout-sidebar-bg);
@@ -12,8 +13,8 @@
 		"
 		:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
 	>
-		<nav class="flex flex-col mt-4 text-base px-2 gap-2">
-			<PanelMenu :model="menuItems" class="w-full md:w-80 pt-1">
+		<nav class="flex flex-col mt-2 text-base px-1 gap-2">
+			<PanelMenu :model="menuItems" class="w-full md:w-80">
 				<template #item="{ item }">
 					<a v-ripple class="flex items-center px-4 py-2 cursor-pointer group" @click="(e) => item.command?.({ originalEvent: e, item })">
 						<span :class="[item.icon, 'text-primary group-hover:text-inherit']" />

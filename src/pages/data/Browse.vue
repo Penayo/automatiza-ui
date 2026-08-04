@@ -14,9 +14,11 @@ import {
   DatasourcesService,
   type BrowsableDatasource,
   type BrowsableOperation,
+  type FieldDisplay,
 } from '@services/DatasourcesService';
 import { rememberRecord } from './record-cache';
 import { AuthService } from '@services/AuthService';
+import FieldValue from '@components/data/FieldValue.vue';
 
 const route  = useRoute();
 const router = useRouter();
@@ -50,17 +52,31 @@ const filterValues = ref<Record<string, any>>({});
 // Out-of-order guard — a slow response must never overwrite a newer one.
 let reqSeq = 0;
 
-// ── Columns (index shows inList fields; details shows all) ──────────────────────
-const columns = computed(() => {
+// ── Columns (index shows index.visible fields; details shows all) ───────────────
+interface Col {
+  field: string; header: string; sortable: boolean;
+  width?: string; align?: 'left' | 'center' | 'right'; frozen?: boolean; display?: FieldDisplay;
+}
+
+// Literal class names, not built from a template string — Tailwind's build-time
+// scanner needs the full utility name present verbatim in the source to emit it.
+const ALIGN_CLASS: Record<'left' | 'center' | 'right', string> = {
+  left: 'text-left', center: 'text-center', right: 'text-right',
+};
+
+const columns = computed<Col[]>(() => {
   const op = operation.value;
   if (!op) return [];
   const canSort = op.sortable;
-  const cols: { field: string; header: string; sortable: boolean }[] = [
+  const cols: Col[] = [
     { field: '_label', header: op.labelField || 'Label', sortable: canSort },
   ];
   for (const f of op.fields) {
-    if (!f.inList) continue; // hidden from the index grid; still in details
-    cols.push({ field: f.name, header: f.label, sortable: canSort && f.sortable });
+    if (!f.index.visible) continue; // hidden from the index grid; still in details
+    cols.push({
+      field: f.name, header: f.label, sortable: canSort && f.index.sortable,
+      width: f.index.width, align: f.index.align, frozen: f.index.frozen, display: f.index.display,
+    });
   }
   return cols;
 });
@@ -75,6 +91,10 @@ function goDetails(row: Record<string, any>) {
   // Hand the already-loaded row (all fields) to the details page for an instant view.
   rememberRecord(datasourceKey.value, id, row);
   router.push(`${route.path}/${encodeURIComponent(id)}`);
+}
+
+function goCreate() {
+  router.push(`${route.path}/new`);
 }
 
 const searchFilter = computed(() => operation.value?.filters.find(f => f.key === 'search') ?? null);
@@ -282,7 +302,7 @@ onMounted(loadDatasource);
         </div>
         </div>
 
-        <!-- Row actions — for now: view details of the selected row; more options later -->
+        <!-- Row actions -->
         <div class="flex items-end gap-2 ml-auto">
           <Button
             label="View details"
@@ -291,6 +311,13 @@ onMounted(loadDatasource);
             severity="secondary"
             :disabled="!selected"
             @click="selected && goDetails(selected)"
+          />
+          <Button
+            v-if="datasource?.canCreate"
+            label="New"
+            icon="pi pi-plus"
+            size="small"
+            @click="goCreate"
           />
         </div>
       </div>
@@ -339,7 +366,15 @@ onMounted(loadDatasource);
           :field="col.field"
           :header="col.header"
           :sortable="col.sortable"
-        />
+          :frozen="col.frozen"
+          :style="col.width ? { width: col.width } : undefined"
+          :body-class="col.align ? ALIGN_CLASS[col.align] : undefined"
+          :header-class="col.align ? ALIGN_CLASS[col.align] : undefined"
+        >
+          <template v-if="col.display" #body="{ data }">
+            <FieldValue :value="data[col.field]" :display="col.display" :record="data" />
+          </template>
+        </Column>
 
         <Column :style="{ width: '4rem' }" body-class="text-right">
           <template #body="{ data }">

@@ -5,6 +5,7 @@
 		transform transition-transform duration-200 ease-in-out
 		md:relative md:translate-x-0
 		min-w-72
+		overflow-y-auto
 		"
 		style="
 			background-color: var(--layout-sidebar-bg);

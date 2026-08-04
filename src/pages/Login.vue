@@ -27,7 +27,9 @@ const handleLogin = (event: Event) => {
     })
         .then((access: IAccess) => {
             $api.authService.saveAccessInfo(access);
-            router.push('/dashboard');
+            const roles = access.user.roles ?? [];
+            const isAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN');
+            router.push(isAdmin ? '/admin/dashboard' : '/dashboard');
             setTimeout(() => toast.add({ severity: 'success', summary: 'Ok', detail: 'Login successfully!' }), 1000);
         })
         .catch((error: any) => {
