@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { onApprove } from '@/utils/common';
 import { Button, Dialog, Tab, TabList, TabPanel, TabPanels, Tabs, Tag, useToast, useConfirm } from 'primevue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { $api } from '@services/api';
 import type { ProcessInstance } from '@services/ProcessesService';
 import DataItem from '@components/data/DataItem.vue';
@@ -18,12 +18,19 @@ import DiagramTab from '@pages/admin/process-instances/components/DiagramTab.vue
 const toast   = useToast();
 const confirm = useConfirm();
 const route   = useRoute();
+const router  = useRouter();
 const visible = ref(true);
 const instance = ref<ProcessInstance>();
 const loading = ref(false);
 
-const diagramTabRef = ref<InstanceType<typeof DiagramTab> | null>(null);
-const dialogRef     = ref<any>(null);
+const dialogRef = ref<any>(null);
+
+const activeTab = computed<string>({
+  get: () => (route.query.tab as string) ?? '0',
+  set: (val) => {
+    router.replace({ query: { ...route.query, tab: val } });
+  },
+});
 
 const fetchInstance = async () => {
   loading.value = true;
@@ -94,11 +101,11 @@ function confirmTerminate() {
     </div>
 
     <div v-else>
-      <Tabs value="0">
+      <Tabs v-model:value="activeTab">
         <TabList>
             <Tab value="0">Instance Data</Tab>
             <Tab value="1">Tasks</Tab>
-            <Tab value="2" @click="diagramTabRef?.loadTasks()">Diagram</Tab>
+            <Tab value="2">Diagram</Tab>
             <Tab value="3">Log</Tab>
             <Tab value="4">Exceptions</Tab>
             <Tab value="5">Documents</Tab>
@@ -106,7 +113,7 @@ function confirmTerminate() {
         </TabList>
         <TabPanels class="overflow-y-auto" style="height: calc(100vh - 140px)">
             <TabPanel value="0">
-              <div class="flex flex-col mt-4 gap-4">
+              <div v-if="activeTab === '0'" class="flex flex-col mt-4 gap-4">
                 <div class="flex flex-col gap-3 text-zinc-600 dark:text-zinc-200">
 
                   <Tag v-if="instance?.testMode" severity="warn" class="self-start mb-1">
@@ -130,19 +137,19 @@ function confirmTerminate() {
             </TabPanel>
 
             <TabPanel value="1">
-              <TaskList ref="taskListRef" :processInstanceId="instance?.id" />
+              <TaskList v-if="activeTab === '1'" ref="taskListRef" :processInstanceId="instance?.id" />
             </TabPanel>
 
             <TabPanel value="2" class="p-0! overflow-hidden!" style="height:100%;">
-              <DiagramTab ref="diagramTabRef" :instance="instance" style="height:100%;" />
+              <DiagramTab v-if="activeTab === '2'" :instance="instance" style="height:100%;" />
             </TabPanel>
 
             <TabPanel value="3">
-              <ProcessInstanceLog :processInstanceId="instance?.id" />
+              <ProcessInstanceLog v-if="activeTab === '3'" :processInstanceId="instance?.id" />
             </TabPanel>
 
             <TabPanel value="4">
-              <div v-if="instance?.exceptions?.length" class="flex flex-col gap-4 mt-2">
+              <div v-if="activeTab === '4' && instance?.exceptions?.length" class="flex flex-col gap-4 mt-2">
                 <div
                   v-for="exception in instance.exceptions"
                   :key="exception.taskId"
@@ -156,16 +163,16 @@ function confirmTerminate() {
                 </div>
               </div>
 
-              <div v-else class="flex items-center justify-center h-24 text-surface-400 text-sm">
+              <div v-else-if="activeTab === '4'" class="flex items-center justify-center h-24 text-surface-400 text-sm">
                 No exceptions recorded.
               </div>
             </TabPanel>
             <TabPanel value="5">
-              <DocumentsTab :variables="instance?.variables" />
+              <DocumentsTab v-if="activeTab === '5'" :variables="instance?.variables" />
             </TabPanel>
 
             <TabPanel value="6">
-              <ProcessInstanceTimeline :processInstanceId="instance?.id" />
+              <ProcessInstanceTimeline v-if="activeTab === '6'" :processInstanceId="instance?.id" />
             </TabPanel>
           </TabPanels>
       </Tabs>

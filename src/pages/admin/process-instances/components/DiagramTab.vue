@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { Badge, useToast } from 'primevue';
 import { $api } from '@services/api';
 import type { Task } from '@services/TasksService';
@@ -39,7 +39,10 @@ watch(() => props.instance, () => {
     loaded.value      = false;
     tasks.value       = [];
     selectedTask.value = null;
+    loadTasks();
 });
+
+onMounted(loadTasks);
 
 defineExpose({ loadTasks });
 </script>
