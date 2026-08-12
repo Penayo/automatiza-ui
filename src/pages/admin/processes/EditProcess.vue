@@ -1,22 +1,35 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast, useConfirm } from 'primevue';
 import { $api } from '@services/api';
 import axios from 'axios';
 import { onApprove } from '@/utils/common';
 import type { ProcessDefinition, UpdateProcessMetaDto } from '@services/ProcessesService';
-import CamundaModeler from '@pages/admin/modeler/components/CamundaModeler.vue';
+import type CamundaModelerType from '@pages/admin/modeler/components/CamundaModeler.vue';
 import ProcessInfo      from './components/ProcessInfo.vue';
 import ProcessInstances from './components/ProcessInstances.vue';
 import ProcessStats     from './components/ProcessStats.vue';
+
+// Lazy-loaded: pulls in the full bpmn-js/camunda-modeler stack, so keep it out
+// of this route's initial chunk until the Diagram tab is actually opened.
+const CamundaModelerLoading = {
+    template: `<div class="h-full flex items-center justify-center text-surface-400">
+        <i class="pi pi-spin pi-spinner text-xl" />
+    </div>`,
+};
+const CamundaModeler = defineAsyncComponent({
+    loader: () => import('@pages/admin/modeler/components/CamundaModeler.vue'),
+    loadingComponent: CamundaModelerLoading,
+    delay: 150,
+});
 
 const route   = useRoute();
 const router  = useRouter();
 const toast   = useToast();
 const confirm = useConfirm();
 
-const modelerRef = ref<InstanceType<typeof CamundaModeler> | null>(null);
+const modelerRef = ref<InstanceType<typeof CamundaModelerType> | null>(null);
 const process   = ref<ProcessDefinition | null>(null);
 const loading   = ref(false);
 const activeTab = ref<'info' | 'diagram' | 'instances' | 'stats'>('info');

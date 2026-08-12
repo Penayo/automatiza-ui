@@ -67,9 +67,17 @@ const pageRef  = ref<HTMLElement | null>(null);
 const branding = ref<TenantBranding | null>(null);
 
 const companyName = computed(() => branding.value?.companyName || fallbackCompanyName);
-const logo        = computed(() =>
-    (isDark.value ? branding.value?.logoDarkUrl : branding.value?.logoUrl) ?? branding.value?.logoUrl ?? null,
-);
+const logoLoadFailed = ref(false);
+const logo        = computed(() => {
+    if (logoLoadFailed.value) return null;
+    return (isDark.value ? branding.value?.logoDarkUrl : branding.value?.logoUrl) ?? branding.value?.logoUrl ?? null;
+});
+function handleLogoError() {
+    logoLoadFailed.value = true;
+}
+watch(() => branding.value, () => {
+    logoLoadFailed.value = false;
+});
 // Larger than the frontoffice header's: this is a landing page, often the first
 // thing an external visitor sees, so the brand leads.
 const logoStyle = computed(() => ({
@@ -204,7 +212,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div ref="pageRef" class="min-h-screen flex flex-col bg-surface-50 dark:bg-zinc-950">
+    <div ref="pageRef" class="h-screen overflow-hidden flex flex-col bg-surface-50 dark:bg-zinc-950">
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <header class="bg-white dark:bg-zinc-900 border-b border-surface-200 dark:border-zinc-800 shadow-sm shrink-0">
@@ -215,6 +223,7 @@ onMounted(load);
                     :alt="companyName"
                     class="shrink-0 w-auto object-contain rounded-lg"
                     :style="logoStyle"
+                    @error="handleLogoError"
                 />
                 <div v-else class="flex items-center justify-center w-14 h-14 rounded-xl shrink-0"
                      :style="{ background: accent }">
@@ -236,7 +245,7 @@ onMounted(load);
         </header>
 
         <!-- ── Body ──────────────────────────────────────────────────────── -->
-        <main class="flex-1 flex flex-col items-center px-4 py-10">
+        <main class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center px-4 py-10">
             <div class="w-full max-w-5xl">
 
                 <!-- Loading -->

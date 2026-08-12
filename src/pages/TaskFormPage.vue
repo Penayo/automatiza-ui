@@ -209,7 +209,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="min-h-screen flex flex-col bg-surface-50 dark:bg-zinc-950">
+    <div class="h-screen overflow-hidden flex flex-col bg-surface-50 dark:bg-zinc-950">
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <header class="bg-white dark:bg-zinc-900 border-b border-surface-200 dark:border-zinc-800 shadow-sm shrink-0">
@@ -232,7 +232,7 @@ onMounted(load);
         </header>
 
         <!-- ── Body ──────────────────────────────────────────────────────── -->
-        <main class="flex-1 flex flex-col items-center px-4 py-10">
+        <main class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center px-4 py-10">
             <div class="w-full max-w-5xl">
 
                 <!-- Loading skeleton -->

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useTheme } from '@/composables/useTheme';
 import { AuthService } from '@services/AuthService';
@@ -31,9 +31,21 @@ const companyNameClass = computed(() =>
 
 const { isDark, toggle } = useTheme();
 
+const logoLoadFailed = ref(false);
+
 const activeLogo = computed(() => {
+    if (logoLoadFailed.value) return '/logo.png';
     if (isDark.value) return props.logoDarkUrl ?? props.logoUrl ?? '/logo.png';
     return props.logoUrl ?? '/logo.png';
+});
+
+function handleLogoError() {
+    if (activeLogo.value === '/logo.png') return;
+    logoLoadFailed.value = true;
+}
+
+watch([() => props.logoUrl, () => props.logoDarkUrl], () => {
+    logoLoadFailed.value = false;
 });
 
 const logoContainerStyle = computed(() => ({
@@ -107,6 +119,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside));
 					:alt="companyName ?? 'Logo'"
 					class="object-contain block"
 					:style="{ height: logoSize ? `${logoSize}px` : '32px' }"
+					@error="handleLogoError"
 				/>
 			</div>
 			<span
