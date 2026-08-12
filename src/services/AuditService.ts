@@ -85,6 +85,19 @@ export interface ProcessTimelineEntry {
     taskName?: string;
 }
 
+export interface ProcessTimelineQuery {
+    page?: number;
+    limit?: number;
+}
+
+export interface ProcessTimelineResponse {
+    data: ProcessTimelineEntry[];
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+}
+
 export interface AuditReportQuery {
     from?: string;
     to?: string;
@@ -112,8 +125,12 @@ export class AuditService extends BaseService {
         return this.get<AuditLogResponse>('logs', { params }) as Promise<AuditLogResponse>;
     }
 
-    async getProcessTimeline(instanceId: string): Promise<ProcessTimelineEntry[]> {
-        return this.get<ProcessTimelineEntry[]>(`reports/process-timeline/${instanceId}`) as Promise<ProcessTimelineEntry[]>;
+    async getProcessTimeline(instanceId: string, query: ProcessTimelineQuery = {}): Promise<ProcessTimelineResponse> {
+        const params: Record<string, any> = {};
+        if (query.page)  params.page  = query.page;
+        if (query.limit) params.limit = query.limit;
+
+        return this.get<ProcessTimelineResponse>(`reports/process-timeline/${instanceId}`, { params }) as Promise<ProcessTimelineResponse>;
     }
 
     async getUserActivityReport(query: AuditReportQuery = {}): Promise<UserActivityRow[]> {

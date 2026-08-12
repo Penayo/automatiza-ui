@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
-import { Tag, useToast } from 'primevue';
+import { Button, Tag, useToast } from 'primevue';
 import { $api } from '@services/api';
 import type { ProcessTimelineEntry } from '@services/AuditService';
 
@@ -9,6 +9,10 @@ const toast = useToast();
 
 const entries = ref<ProcessTimelineEntry[]>([]);
 const loading = ref(false);
+const page    = ref(1);
+const total   = ref(0);
+const pages   = ref(1);
+const LIMIT   = 20;
 
 const actionConfig: Record<string, { label: string; severity: string; icon: string }> = {
     PROCESS_STARTED:   { label: 'Started',    severity: 'info',      icon: 'pi pi-play' },
@@ -29,11 +33,14 @@ const cfg = (action: string) =>
 
 const isHuman = (actor: string) => actor && actor !== 'system';
 
-const fetchTimeline = async () => {
+const fetchTimeline = async (append = false) => {
     if (!props.processInstanceId) return;
     loading.value = true;
     try {
-        entries.value = await $api.audit.getProcessTimeline(props.processInstanceId);
+        const res = await $api.audit.getProcessTimeline(props.processInstanceId, { page: page.value, limit: LIMIT });
+        entries.value = append ? [...entries.value, ...res.data] : res.data;
+        total.value = res.total;
+        pages.value = res.pages;
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load process timeline', life: 3000 });
     } finally {
@@ -41,8 +48,16 @@ const fetchTimeline = async () => {
     }
 };
 
-watch(() => props.processInstanceId, fetchTimeline);
-onMounted(fetchTimeline);
+const loadMore = () => {
+    page.value++;
+    fetchTimeline(true);
+};
+
+watch(() => props.processInstanceId, () => {
+    page.value = 1;
+    fetchTimeline();
+});
+onMounted(() => fetchTimeline());
 </script>
 
 <template>
@@ -107,5 +122,17 @@ onMounted(fetchTimeline);
                 </div>
             </li>
         </ol>
+
+        <div v-if="page < pages" class="flex justify-center pt-2">
+            <Button
+                label="Load more"
+                icon="pi pi-chevron-down"
+                severity="secondary"
+                variant="outlined"
+                size="small"
+                :loading="loading"
+                @click="loadMore"
+            />
+        </div>
     </div>
 </template>

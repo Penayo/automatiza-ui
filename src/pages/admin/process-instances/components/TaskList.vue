@@ -18,6 +18,10 @@ const confirm = useConfirm();
 const tasks      = ref<Task[]>([]);
 const loading    = ref(false);
 const retryingId = ref<string | null>(null);
+const page    = ref(1);
+const total   = ref(0);
+const pages   = ref(1);
+const LIMIT   = 20;
 
 // ── Retry (quick, no variable changes) ────────────────────────────────────────
 
@@ -27,7 +31,7 @@ async function retryTask(task: Task, event: MouseEvent) {
     try {
         await $api.tasks.retryTask(task.id);
         toast.add({ severity: 'success', summary: 'Retry triggered', detail: `"${task.name}" is being re-executed.`, life: 4000 });
-        setTimeout(loadTasks, 1500);
+        setTimeout(reload, 1500);
     } catch (err: any) {
         toast.add({ severity: 'error', summary: 'Retry failed', detail: err?.response?.data?.message ?? 'Could not retry task.', life: 4000 });
     } finally {
@@ -85,7 +89,7 @@ function confirmDelete(task: Task, event: MouseEvent) {
             try {
                 await $api.tasks.deleteTask(task.id);
                 toast.add({ severity: 'success', summary: 'Task deleted', life: 3000 });
-                await loadTasks();
+                await reload();
             } catch {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Could not delete task.', life: 4000 });
             }
@@ -123,22 +127,39 @@ function taskIcon(type: string) {
     return 'pi pi-bolt';
 }
 
-async function loadTasks() {
+async function loadTasks(append = false) {
     if (!props.processInstanceId) return;
     loading.value = true;
     try {
-        tasks.value = await $api.processes.getInstanceTasks(props.processInstanceId) as Task[];
+        const res = await $api.processes.getInstanceTasks(props.processInstanceId, { page: page.value, rowsPerPage: LIMIT });
+        tasks.value = append ? [...tasks.value, ...res.rows] : res.rows;
+        total.value = res.totalRecords;
+        pages.value = Math.ceil(res.totalRecords / LIMIT) || 1;
     } finally {
         loading.value = false;
     }
 }
 
-watch(() => props.processInstanceId, loadTasks, { immediate: true });
+function reload() {
+    page.value = 1;
+    return loadTasks();
+}
 
-defineExpose({ reload: loadTasks });
+function loadMore() {
+    page.value++;
+    loadTasks(true);
+}
+
+watch(() => props.processInstanceId, reload, { immediate: true });
+
+defineExpose({ reload });
 </script>
 
 <template>
+    <div class="flex justify-end mb-2">
+        <span class="text-xs text-zinc-400">{{ total }} tasks</span>
+    </div>
+
     <Accordion class="-mx-3" multiple>
         <AccordionPanel v-for="task in tasks" :key="task.id" :value="task.id">
             <AccordionHeader>
@@ -235,18 +256,31 @@ defineExpose({ reload: loadTasks });
         </AccordionPanel>
     </Accordion>
 
+    <!-- Load more -->
+    <div v-if="page < pages" class="flex justify-center pt-3">
+        <Button
+            label="Load more"
+            icon="pi pi-chevron-down"
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            :loading="loading"
+            @click="loadMore"
+        />
+    </div>
+
     <!-- Variables dialog -->
     <EditVariablesDialog
         v-model:visible="variablesDialogVisible"
         :task="variablesTask"
-        @saved="loadTasks"
+        @saved="reload"
     />
 
     <!-- Service config dialog -->
     <EditServiceConfigDialog
         v-model:visible="serviceConfigDialogVisible"
         :task="serviceConfigTask"
-        @saved="loadTasks"
+        @saved="reload"
     />
 
     <!-- Replay / retry-with-overrides dialog -->
@@ -254,6 +288,6 @@ defineExpose({ reload: loadTasks });
         v-model:visible="replayDialogVisible"
         :task="replayTask"
         :mode="replayMode"
-        @done="loadTasks"
+        @done="reload"
     />
 </template>

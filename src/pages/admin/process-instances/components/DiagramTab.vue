@@ -28,7 +28,7 @@ const STATUS_SEVERITY: Record<string, string> = {
 async function loadTasks() {
     if (loaded.value || !props.instance) return;
     try {
-        tasks.value = await $api.processes.getInstanceTasks(props.instance.id);
+        tasks.value = await $api.processes.getAllInstanceTasks(props.instance.id);
         loaded.value = true;
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load tasks for diagram.', life: 3000 });

@@ -41,6 +41,12 @@ export interface ProcessVariable {
     value: any;
 }
 
+export interface ProcessException {
+    taskId: string;
+    createdAt: Date;
+    error: any;
+}
+
 export interface ProcessInstance extends APIData {
     id: string;
     processDefinition: ProcessDefinition,
@@ -51,11 +57,7 @@ export interface ProcessInstance extends APIData {
     status: string;
     createdAt: Date;
     completedAt?: Date;
-    exceptions?: Array<{
-        taskId: string;
-        createdAt: Date;
-        error: any;
-    }>;
+    exceptions?: ProcessException[];
     indexKeys: string[];
     subscribedTo?: string[];
     testMode?: boolean;
@@ -129,11 +131,26 @@ export class ProcessesService extends ModelApiService {
         }
     }
 
-    async getInstanceTasks(instanceId: string): Promise<Task[]> {
+    async getInstanceTasks(instanceId: string, params: PageRequest = {}): Promise<PageResponse<Task>> {
         const url = `instances/${instanceId}/tasks`;
+        const response = await this.get(url, { params });
+
+        return response as PageResponse<Task>;
+    }
+
+    /** Unpaginated — only for the BPMN diagram overlay, which needs every node's status at once. */
+    async getAllInstanceTasks(instanceId: string): Promise<Task[]> {
+        const url = `instances/${instanceId}/tasks/all`;
         const response = await this.get(url);
 
-        return response as Task[] ;
+        return response as Task[];
+    }
+
+    async getInstanceExceptions(instanceId: string, params: PageRequest = {}): Promise<PageResponse<ProcessException>> {
+        const url = `instances/${instanceId}/exceptions`;
+        const response = await this.get(url, { params });
+
+        return response as PageResponse<ProcessException>;
     }
 
     async saveProcess(process: ProcessDefinition | DeployProcessDto) {
