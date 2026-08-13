@@ -4,9 +4,9 @@ import { $api } from '@services/api';
 import { useDirtyNavigation } from '@/composables/useDirtyNavigation';
 import EntityListDialog from './EntityListDialog.vue';
 
-const visible  = defineModel<boolean>('visible', { default: false });
-const props    = defineProps<{ dirty?: boolean }>();
-const navigate = useDirtyNavigation(visible, () => !!props.dirty);
+const visible = defineModel<boolean>('visible', { default: false });
+const props   = defineProps<{ dirty?: boolean }>();
+const { navigate, openInNewTab } = useDirtyNavigation(visible, () => !!props.dirty);
 </script>
 
 <template>
@@ -26,11 +26,14 @@ const navigate = useDirtyNavigation(visible, () => !!props.dirty);
                     <Tag :value="`${data.items?.length ?? 0} opts`" severity="secondary" class="text-xs" />
                 </template>
             </Column>
-            <Column style="width:60px">
+            <Column style="width:90px">
                 <template #body>
                     <Button icon="pi pi-pencil" text rounded size="small" severity="secondary"
                         v-tooltip.top="'Manage'"
                         @click="navigate({ name: 'FormVariablesIndex' })" />
+                    <Button icon="pi pi-external-link" text rounded size="small" severity="secondary"
+                        v-tooltip.top="'Open in new tab'"
+                        @click="openInNewTab({ name: 'FormVariablesIndex' })" />
                 </template>
             </Column>
         </template>

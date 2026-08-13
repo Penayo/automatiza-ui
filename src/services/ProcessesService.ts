@@ -57,18 +57,10 @@ export interface ProcessInstance extends APIData {
     status: string;
     createdAt: Date;
     completedAt?: Date;
-    exceptions?: ProcessException[];
     indexKeys: string[];
     subscribedTo?: string[];
     testMode?: boolean;
     testType?: 'auto-stub' | 'pause-and-fill';
-    log?: Array<{
-        date: Date;
-        message: string;
-        type: 'info' | 'error' | 'warning';
-        level: number;
-        variables?: Record<string, any>;
-    }>;
 }
 
 export interface DeployProcessDto {

@@ -6,15 +6,19 @@ import EntityListDialog from './EntityListDialog.vue';
 import type { IForm } from '@services/FormsService';
 import dayjs from 'dayjs';
 
-const visible  = defineModel<boolean>('visible', { default: false });
-const props    = defineProps<{ dirty?: boolean }>();
-const navigate = useDirtyNavigation(visible, () => !!props.dirty);
+const visible = defineModel<boolean>('visible', { default: false });
+const props   = defineProps<{ dirty?: boolean }>();
+const { navigate, openInNewTab } = useDirtyNavigation(visible, () => !!props.dirty);
 
 /** JSON Schema forms and form-js forms have separate editors. */
-function openForm(form: IForm) {
-    navigate(form.type === 'jsonschema'
+function formRoute(form: IForm) {
+    return form.type === 'jsonschema'
         ? { name: 'JsonSchemaEdit', params: { id: form.id } }
-        : { name: 'FormsEdit',      params: { id: form.id } });
+        : { name: 'FormsEdit',      params: { id: form.id } };
+}
+
+function openForm(form: IForm) {
+    navigate(formRoute(form));
 }
 </script>
 
@@ -46,11 +50,14 @@ function openForm(form: IForm) {
                     <span class="text-xs text-surface-400">{{ data.createdAt ? dayjs(data.createdAt).format('MMM D, YYYY') : '—' }}</span>
                 </template>
             </Column>
-            <Column style="width:60px">
+            <Column style="width:90px">
                 <template #body="{ data }: { data: IForm }">
                     <Button icon="pi pi-pencil" text rounded size="small" severity="secondary"
                         v-tooltip.top="data.type === 'jsonschema' ? 'Open JSON Schema editor' : 'Open in Form Builder'"
                         @click="openForm(data)" />
+                    <Button icon="pi pi-external-link" text rounded size="small" severity="secondary"
+                        v-tooltip.top="'Open in new tab'"
+                        @click="openInNewTab(formRoute(data))" />
                 </template>
             </Column>
         </template>

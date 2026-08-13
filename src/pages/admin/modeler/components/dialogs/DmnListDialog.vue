@@ -6,9 +6,9 @@ import EntityListDialog from './EntityListDialog.vue';
 import type { DecisionDefinition } from '@services/DecisionsService';
 import dayjs from 'dayjs';
 
-const visible  = defineModel<boolean>('visible', { default: false });
-const props    = defineProps<{ dirty?: boolean }>();
-const navigate = useDirtyNavigation(visible, () => !!props.dirty);
+const visible = defineModel<boolean>('visible', { default: false });
+const props   = defineProps<{ dirty?: boolean }>();
+const { navigate, openInNewTab } = useDirtyNavigation(visible, () => !!props.dirty);
 </script>
 
 <template>
@@ -32,11 +32,14 @@ const navigate = useDirtyNavigation(visible, () => !!props.dirty);
                     <span class="text-xs text-surface-400">{{ data.deployedAt ? dayjs(data.deployedAt).format('MMM D, YYYY') : '—' }}</span>
                 </template>
             </Column>
-            <Column style="width:60px">
+            <Column style="width:90px">
                 <template #body="{ data }: { data: DecisionDefinition }">
                     <Button icon="pi pi-pencil" text rounded size="small" severity="secondary"
                         v-tooltip.top="'Edit'"
                         @click="navigate({ name: 'DecisionEdit', params: { id: data.id } })" />
+                    <Button icon="pi pi-external-link" text rounded size="small" severity="secondary"
+                        v-tooltip.top="'Open in new tab'"
+                        @click="openInNewTab({ name: 'DecisionEdit', params: { id: data.id } })" />
                 </template>
             </Column>
         </template>

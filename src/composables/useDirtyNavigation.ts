@@ -13,10 +13,18 @@ export function useDirtyNavigation(visible: Ref<boolean>, dirty: () => boolean) 
     const router  = useRouter();
     const confirm = useConfirm();
 
-    return function navigate(to: RouteLocationRaw): void {
+    function navigate(to: RouteLocationRaw): void {
         confirmIfDirty(confirm, dirty(), () => {
             router.push(to);
             visible.value = false;
         });
-    };
+    }
+
+    // Opens in a second tab, leaving the current diagram/editor untouched —
+    // no dirty check needed since we never navigate away from it.
+    function openInNewTab(to: RouteLocationRaw): void {
+        window.open(router.resolve(to).href, '_blank');
+    }
+
+    return { navigate, openInNewTab };
 }
