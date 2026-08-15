@@ -85,15 +85,17 @@ function onErrorSchemaChange(content: any) {
 const metaVisible = ref(false);
 const metaName    = ref('');
 const metaDesc    = ref('');
+const metaCode    = ref('');
 
 function openMeta() {
     metaName.value = form.value?.name ?? '';
     metaDesc.value = form.value?.description ?? '';
+    metaCode.value = form.value?.code ?? form.value?.id ?? '';
     metaVisible.value = true;
 }
 
 async function save() {
-    if (!metaName.value.trim()) { openMeta(); return; }
+    if (!metaName.value.trim() || !metaCode.value.trim()) { openMeta(); return; }
 
     for (const [label, text] of [
         ['JSON Schema', schemaText.value],
@@ -111,6 +113,7 @@ async function save() {
         const payload: IForm = {
             ...(form.value ?? {}),
             id:           form.value?.id ?? generateId(),
+            code:         metaCode.value.trim(),
             name:         metaName.value.trim(),
             description:  metaDesc.value.trim() || undefined,
             type:         'jsonschema',
@@ -142,6 +145,7 @@ async function load() {
         form.value = await $api.forms.findById(id.value!);
         metaName.value = form.value.name ?? '';
         metaDesc.value = form.value.description ?? '';
+        metaCode.value = form.value.code ?? form.value.id ?? '';
         if (form.value.jsonSchema) {
             schemaText.value   = JSON.stringify(form.value.jsonSchema, null, 2);
             parsedSchema.value = form.value.jsonSchema;
@@ -332,13 +336,17 @@ const aiContext = computed(() => ({
                 <FormField label="Name" label-for="fname">
                     <InputText id="fname" v-model="metaName" class="w-full" placeholder="e.g. Customer Intake" />
                 </FormField>
+                <FormField label="Code" label-for="fcode">
+                    <InputText id="fcode" v-model="metaCode" class="w-full" placeholder="e.g. customer-intake" />
+                    <small class="text-surface-400">Used to reference this form from the BPMN modeler.</small>
+                </FormField>
                 <FormField label="Description" label-for="fdesc">
                     <Textarea id="fdesc" v-model="metaDesc" rows="2" class="w-full" placeholder="Optional" auto-resize />
                 </FormField>
             </div>
             <template #footer>
                 <Button label="Cancel" severity="secondary" text @click="metaVisible = false" />
-                <Button label="Save" icon="pi pi-check" :disabled="!metaName.trim()" @click="save" />
+                <Button label="Save" icon="pi pi-check" :disabled="!metaName.trim() || !metaCode.trim()" @click="save" />
             </template>
         </Dialog>
 

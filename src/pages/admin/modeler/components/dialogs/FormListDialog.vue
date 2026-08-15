@@ -31,7 +31,7 @@ function openForm(form: IForm) {
         search-placeholder="Search forms…"
     >
         <template #columns>
-            <Column field="id" header="ID" class="font-mono text-xs" style="width:220px" sortable />
+            <Column field="code" header="Code" class="font-mono text-xs" style="width:220px" sortable />
             <Column field="name" header="Name" sortable>
                 <template #body="{ data }: { data: IForm }">
                     <div class="flex items-center gap-2">

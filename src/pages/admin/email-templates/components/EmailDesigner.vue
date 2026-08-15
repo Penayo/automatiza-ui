@@ -85,10 +85,28 @@ onMounted(async () => {
     loadDoc();
 });
 
+// ── Bake heading margins inline for email-client compatibility ──────────────
+// Outlook, Gmail's app, and Yahoo strip or ignore <style> blocks, so a CSS
+// reset in <mj-head> only works in browser-based clients. The h1-h6 tags the
+// rich-text editor produces carry no styling of their own, so every client
+// falls back to its own (usually oversized) default heading margins. An
+// inline style is the only override that survives everywhere, so we inject
+// `margin:0` onto each heading tag directly in the compiled HTML — via
+// string replacement, not DOM re-serialization, to avoid corrupting the
+// MSO conditional comments / VML markup MJML emits for Outlook.
+function resetHeadingMargins(html: string): string {
+    return html.replace(/<(h[1-6])((?:\s+[^>]*)?)>/gi, (match, tag, attrs) => {
+        const styleMatch = attrs.match(/\sstyle\s*=\s*"([^"]*)"/i);
+        if (!styleMatch) return `<${tag}${attrs} style="margin:0">`;
+        if (/margin/i.test(styleMatch[1])) return match; // respect an explicit margin
+        return `<${tag}${attrs.replace(styleMatch[0], ` style="margin:0;${styleMatch[1]}"`)}>`;
+    });
+}
+
 // ── Public API exposed to parent ─────────────────────────────────────────────
 function exportDesign(): EmailExport {
     const design = editorRef.value?.getDesignJson?.() ?? currentDesign.value ?? {};
-    const html   = editorRef.value?.getHtml?.()       ?? currentHtml.value   ?? '';
+    const html   = resetHeadingMargins(editorRef.value?.getHtml?.() ?? currentHtml.value ?? '');
     return { design, html };
 }
 

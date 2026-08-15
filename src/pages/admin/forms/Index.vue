@@ -69,20 +69,23 @@ async function onJsonApply(schema: any) {
 const metaVisible = ref(false);
 const metaName    = ref('');
 const metaDesc    = ref('');
+const metaCode    = ref('');
 
 function openMeta() {
     metaName.value = form.value?.name ?? '';
     metaDesc.value = form.value?.description ?? '';
+    metaCode.value = form.value?.code ?? form.value?.id ?? '';
     metaVisible.value = true;
 }
 
 async function save() {
-    if (!metaName.value.trim()) { openMeta(); return; }
+    if (!metaName.value.trim() || !metaCode.value.trim()) { openMeta(); return; }
     saving.value = true;
     try {
         const schema = (designerRef.value?.getSchema() ?? schemaSnapshot.value) as IForm;
         schema.name        = metaName.value.trim();
         schema.description = metaDesc.value.trim() || undefined;
+        schema.code        = metaCode.value.trim();
         const saved = await $api.forms.save(schema) as IForm;
         form.value = saved;
         if (isNew.value) router.replace({ name: 'FormsEdit', params: { id: saved.id } });
@@ -96,7 +99,7 @@ async function save() {
 }
 
 function handleSave() {
-    if (!metaName.value) { openMeta(); } else { save(); }
+    if (!metaName.value || !metaCode.value) { openMeta(); } else { save(); }
 }
 
 // ── Load ──────────────────────────────────────────────────────────────────────
@@ -107,6 +110,7 @@ async function load() {
         form.value     = await $api.forms.findById(id.value!);
         metaName.value = form.value.name ?? '';
         metaDesc.value = form.value.description ?? '';
+        metaCode.value = form.value.code ?? form.value.id ?? '';
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load form.', life: 4000 });
         router.push({ name: 'FormsList' });
@@ -212,13 +216,17 @@ onMounted(async () => {
                 <FormField label="Name" label-for="fname">
                     <InputText id="fname" v-model="metaName" class="w-full" placeholder="e.g. Customer Intake" />
                 </FormField>
+                <FormField label="Code" label-for="fcode">
+                    <InputText id="fcode" v-model="metaCode" class="w-full" placeholder="e.g. customer-intake" />
+                    <small class="text-surface-400">Used to reference this form from the BPMN modeler.</small>
+                </FormField>
                 <FormField label="Description" label-for="fdesc">
                     <Textarea id="fdesc" v-model="metaDesc" rows="2" class="w-full" placeholder="Optional" auto-resize />
                 </FormField>
             </div>
             <template #footer>
                 <Button label="Cancel" severity="secondary" text @click="metaVisible = false" />
-                <Button label="Save" icon="pi pi-check" :disabled="!metaName.trim()" @click="save" />
+                <Button label="Save" icon="pi pi-check" :disabled="!metaName.trim() || !metaCode.trim()" @click="save" />
             </template>
         </Dialog>
 

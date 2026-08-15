@@ -4,6 +4,8 @@ import type { ListQuery, PageResponse } from "@services/api";
 
 export interface IForm extends APIData {
     id: string;
+    /** Stable, human-assigned reference used to point at this form from the BPMN modeler. */
+    code: string;
     name: string;
     description?: string;
     type: 'default' | 'form' | 'Form' | 'jsonschema' | 'custom';
