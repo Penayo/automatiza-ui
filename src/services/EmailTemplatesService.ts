@@ -1,11 +1,14 @@
 import { ModelApiService } from '@services/ModelAPI';
 import type { ListQuery, PageResponse } from '@services/api';
 
+export type EmailTemplateType = 'template' | 'block';
+
 export interface EmailTemplateDefinition {
     id:           string;
     key:          string;
     name:         string;
     description?: string;
+    type:         EmailTemplateType;
     design:       Record<string, any>;
     html:         string;
     createdAt?:   string;
@@ -16,6 +19,7 @@ export interface SaveEmailTemplateDto {
     key:          string;
     name:         string;
     description?: string;
+    type?:        EmailTemplateType;
     design:       Record<string, any>;
     html:         string;
 }
@@ -23,9 +27,9 @@ export interface SaveEmailTemplateDto {
 export class EmailTemplatesService extends ModelApiService {
     constructor() { super('email-templates'); }
 
-    /** Full list. */
-    getAll(): Promise<EmailTemplateDefinition[]> {
-        return this.get<EmailTemplateDefinition[]>() as Promise<EmailTemplateDefinition[]>;
+    /** Full list, optionally narrowed (e.g. `{ filter: { type: { equalsTo: 'block' } } }`). */
+    getAll(params?: ListQuery): Promise<EmailTemplateDefinition[]> {
+        return this.get<EmailTemplateDefinition[]>('', { params }) as Promise<EmailTemplateDefinition[]>;
     }
 
     /** One page. `page` is what makes the backend return the envelope. */

@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useToast, useConfirm, Button, DataTable, Column, InputText, IconField, InputIcon } from 'primevue';
+import { useToast, useConfirm, Button, DataTable, Column, InputText, IconField, InputIcon, SelectButton } from 'primevue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { $api } from '@services/api';
-import type { EmailTemplateDefinition } from '@services/EmailTemplatesService';
+import type { EmailTemplateDefinition, EmailTemplateType } from '@services/EmailTemplatesService';
 import { onApprove } from '@/utils/common';
 import { useTableQuery, ROWS_PER_PAGE_OPTIONS } from '@/composables/useTableQuery';
 
@@ -14,11 +15,15 @@ const router  = useRouter();
 const toast   = useToast();
 const confirm = useConfirm();
 
+const tabs   = [{ label: 'Templates', value: 'template' as EmailTemplateType }, { label: 'Blocks', value: 'block' as EmailTemplateType }];
+const activeTab = ref<EmailTemplateType>('template');
+
 const {
     items: templates, totalRecords, loading, search, activeSearch,
     firstRow, rowsPerPage, reload, onPage, onSort, clearSearch,
 } = useTableQuery<EmailTemplateDefinition>({
     load: (params) => $api.emailTemplates.getPage(params),
+    filter: () => ({ type: { equalsTo: activeTab.value } }),
 });
 
 function remove(t: EmailTemplateDefinition) {
@@ -41,27 +46,40 @@ function remove(t: EmailTemplateDefinition) {
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h1 class="text-2xl font-semibold" style="color: var(--layout-title-color)">Email Templates</h1>
-                <p class="text-sm text-surface-400 mt-0.5">Drag-and-drop email designs built with Unlayer</p>
+                <p class="text-sm text-surface-400 mt-0.5">
+                    {{ activeTab === 'template'
+                        ? 'Drag-and-drop email designs built with Unlayer'
+                        : 'Reusable header, footer & signature blocks — insert them into any template from the designer\'s block panel' }}
+                </p>
             </div>
             <div class="flex items-center gap-2">
                 <IconField>
                     <InputIcon><i class="pi pi-search" /></InputIcon>
                     <InputText
                         v-model="search"
-                        placeholder="Search templates..."
+                        :placeholder="activeTab === 'template' ? 'Search templates...' : 'Search blocks...'"
                         size="small"
                         style="width: 220px"
                     />
                 </IconField>
                 <Button icon="pi pi-refresh" size="small" text rounded v-tooltip.top="'Refresh'" @click="reload" />
                 <Button
-                    label="New Template"
+                    :label="activeTab === 'template' ? 'New Template' : 'New Block'"
                     icon="pi pi-plus"
                     size="small"
-                    @click="router.push({ name: 'EmailTemplateNew' })"
+                    @click="router.push({ name: 'EmailTemplateNew', query: activeTab === 'block' ? { type: 'block' } : undefined })"
                 />
             </div>
         </div>
+
+        <SelectButton
+            v-model="activeTab"
+            :options="tabs"
+            optionLabel="label"
+            optionValue="value"
+            :allowEmpty="false"
+            class="mb-4"
+        />
 
         <!-- Table -->
         <DataTable
@@ -84,7 +102,8 @@ function remove(t: EmailTemplateDefinition) {
                         <div>No matches for &ldquo;{{ activeSearch }}&rdquo;.</div>
                         <Button label="Clear search" text size="small" @click="clearSearch" />
                     </template>
-                    <template v-else>No email templates yet. Click 'New Template' to create one.</template>
+                    <template v-else-if="activeTab === 'template'">No email templates yet. Click 'New Template' to create one.</template>
+                    <template v-else>No reusable blocks yet. Click 'New Block' to create a header, footer, or signature.</template>
                 </div>
             </template>
 

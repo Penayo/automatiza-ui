@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue';
-import { EmailEditor, createDefaultDocument } from '@lab2view/vue-email-editor';
+import { ref, onMounted, nextTick, computed } from 'vue';
+import { EmailEditor, createDefaultDocument, cloneSubtree } from '@lab2view/vue-email-editor';
+import type { Plugin, EmailNode } from '@lab2view/vue-email-editor';
 import '@lab2view/vue-email-editor/style.css';
+import type { EmailTemplateDefinition } from '@services/EmailTemplatesService';
 
 export interface EmailExport {
     design: Record<string, any>;
@@ -10,6 +12,9 @@ export interface EmailExport {
 
 const props = defineProps<{
     design?: Record<string, any> | null;
+    /** Saved `type: 'block'` templates (header/footer/…) offered as draggable
+     *  blocks in the sidebar, alongside the library's own built-ins. */
+    reusableBlocks?: EmailTemplateDefinition[];
 }>();
 
 // ── Theme ────────────────────────────────────────────────────────────────────
@@ -32,6 +37,43 @@ const currentMjml   = ref<string>('');   // required v-model (MJML source)
 const currentHtml   = ref<string>('');
 const currentDesign = ref<Record<string, any> | null>(null);
 const editorRef     = ref<any>(null);
+
+// ── Reusable blocks as a custom block-panel category ─────────────────────────
+// Each saved "block" template contributes its top-level section nodes as one
+// draggable entry, next to the library's own built-in blocks. Dropping one
+// clones the nodes (cloneSubtree assigns fresh IDs) into the canvas — a real,
+// immediately visible and editable copy, not a merge tag resolved at send
+// time. There is no live link back to the source: editing the saved block
+// later does not retroactively update copies already placed elsewhere.
+const REUSABLE_BLOCK_CATEGORY = 'reusable-blocks';
+
+const reusableBlockPlugin = computed<Plugin>(() => {
+    const blocks = props.reusableBlocks ?? [];
+
+    return (ctx) => {
+        if (!blocks.length) return;
+
+        ctx.registerBlockCategory({
+            id: REUSABLE_BLOCK_CATEGORY,
+            label: 'Saved Blocks',
+            icon: 'Component',
+            order: 5,
+        });
+
+        for (const block of blocks) {
+            const sections: EmailNode[] | undefined = block.design?.document?.body?.children;
+            if (!sections?.length) continue;
+
+            ctx.registerBlock({
+                id: `reusable-${block.id}`,
+                label: block.name,
+                category: REUSABLE_BLOCK_CATEGORY,
+                icon: 'Component',
+                factory: () => sections.map((node) => cloneSubtree(node)),
+            });
+        }
+    };
+});
 
 // ── Normalise a stored document against fresh defaults ───────────────────────
 // The library requires headAttributes.defaultStyles to always be a valid object
@@ -98,17 +140,43 @@ onMounted(async () => {
 // time. This is preview-only cosmetics — it never touches document/content
 // state, so it can't interfere with typing, cursor position, or undo
 // history. The actual outgoing email gets its fix from
-// resetHeadingMargins() above, baked in as an inline style since this
+// resetHeadingMargins() below, baked in as an inline style since this
 // <style> tag never leaves the app.
+// (Ruled out as the cause of a separate responsive-preview regression: that
+// was traced to a <pre> block in one template's content, unrelated to this.)
 function watchCanvasIframe() {
     const rootEl = (editorRef.value as any)?.$el as HTMLElement | undefined;
     if (!rootEl) return;
 
     const RESET_ID = 'ebb-heading-margin-reset';
+
+    // Links inside the canvas are content being designed, not navigation. The
+    // rich-text editor tags every link with target="_blank", so a stray click
+    // on one asks the browser to open a new window from a frame sandboxed
+    // without `allow-popups` — Chrome refuses and logs "Blocked opening '…' in
+    // a new window because the request was made in a sandboxed frame whose
+    // 'allow-popups' permission is not set." Cancelling the default action on
+    // the way down keeps that from ever being attempted. We only
+    // preventDefault (no stopPropagation), so the library's own selection /
+    // inline-edit handlers still see the click untouched. The flag lives on
+    // the document, which is thrown away on each canvas rewrite, so the
+    // listener is re-attached exactly once per generated document.
+    const LINK_GUARD = '__ebbLinkGuard';
+    const guardLinks = (doc: Document) => {
+        if ((doc as any)[LINK_GUARD]) return;
+        (doc as any)[LINK_GUARD] = true;
+        doc.addEventListener('click', (e) => {
+            const el = e.target as Element | null;
+            if (el?.closest?.('a')) e.preventDefault();
+        }, true);
+    };
+
     const inject = (iframe: HTMLIFrameElement) => {
         try {
             const doc = iframe.contentDocument;
-            if (!doc?.head) return;
+            if (!doc) return;
+            guardLinks(doc);
+            if (!doc.head) return;
             let style = doc.getElementById(RESET_ID) as HTMLStyleElement | null;
             if (!style) {
                 style = doc.createElement('style');
@@ -154,7 +222,7 @@ function watchCanvasIframe() {
 // replacement, not DOM re-serialization, to avoid corrupting the MSO
 // conditional comments / VML markup MJML emits for Outlook.
 function resetHeadingMargins(html: string): string {
-    return html.replace(/<(h[1-6])((?:\s+[^>]*)?)>/gi, (match, tag, attrs) => {
+    return html.replace(/<(h[1-6])((?:\s+[^>]*)?)>/gi, (_match, tag, attrs) => {
         const styleMatch = attrs.match(/\sstyle\s*=\s*"([^"]*)"/i);
         if (!styleMatch) return `<${tag}${attrs} style="margin:0">`;
         const mergedStyle = `${styleMatch[1].replace(/;\s*$/, '')};margin:0`;
@@ -177,6 +245,7 @@ defineExpose({ exportDesign });
         ref="editorRef"
         v-model="currentMjml"
         :theme="editorTheme"
+        :plugins="[reusableBlockPlugin]"
         class="email-designer-fill"
         style="height: 100%; width: 100%;"
         @update:compiled-html="currentHtml = $event"
