@@ -1,4 +1,5 @@
 import { BaseService } from '@services/BaseService';
+import type { TenantBranding } from '@/composables/useTenantBranding';
 
 export interface TaskFormData {
     taskId:            string;
@@ -9,6 +10,8 @@ export interface TaskFormData {
     formSchema:        any | null;
     /** Process variables + resolved Form Variables — passed directly to form.importSchema() */
     formData:          Record<string, any>;
+    /** Tenant branding, resolved from the task's tenant — this page has no JWT to resolve it from. */
+    branding:          TenantBranding | null;
 }
 
 export class TaskPublicService extends BaseService {

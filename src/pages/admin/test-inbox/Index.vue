@@ -185,11 +185,28 @@ onMounted(load);
                 </div>
 
                 <!-- HTML preview iframe -->
+                <!-- Sandbox flags, and why each one:
+                     · No `allow-scripts` — this renders template HTML we did not
+                       author; it should never execute anything.
+                     · `allow-popups` — mail HTML links carry target="_blank", and
+                       without this the browser refuses the click and logs
+                       "Blocked opening '<url>' in a new window because the request
+                       was made in a sandboxed frame whose 'allow-popups' permission
+                       is not set." Testing that a link works is the point of this
+                       screen, so the click has to go through.
+                     · `allow-popups-to-escape-sandbox` — a popup otherwise inherits
+                       these flags, so the opened tab would load our own app with no
+                       scripts and render blank.
+                     · No `allow-top-navigation` — a link can open a new tab but can
+                       never navigate the admin UI out from under the user.
+                     `allow-same-origin` is deliberately absent: the src is a data:
+                     URL, which always gets an opaque origin, so the flag bought
+                     nothing here. -->
                 <div class="flex-1 overflow-hidden bg-white">
                     <iframe
                         :src="iframeSrc"
                         class="w-full h-full border-0"
-                        sandbox="allow-same-origin"
+                        sandbox="allow-popups allow-popups-to-escape-sandbox"
                         title="Email preview"
                     />
                 </div>

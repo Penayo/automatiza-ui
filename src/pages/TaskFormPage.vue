@@ -10,6 +10,7 @@ import { useRoute } from 'vue-router';
 import { $taskPublic } from '@services/TaskPublicService';
 import type { TaskFormData } from '@services/TaskPublicService';
 import { useTheme } from '@/composables/useTheme';
+import { applyBrandingPalette, type TenantBranding } from '@/composables/useTenantBranding';
 import { FilesService } from '@services/FilesService';
 import { resolveFormFiles } from '@/form-fields/form-js-submit';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
@@ -25,7 +26,7 @@ const filesService = new FilesService();
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 const { isDark } = useTheme();
-const companyName = import.meta.env.VITE_COMPANY_NAME ?? 'Process Linker';
+const fallbackCompanyName = import.meta.env.VITE_COMPANY_NAME ?? 'Process Linker';
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 const route = useRoute();
@@ -41,6 +42,43 @@ const saved      = ref(false);   // shows brief "Saved" confirmation
 type PageState = 'loading' | 'form' | 'done' | 'used' | 'notfound' | 'error';
 const state     = ref<PageState>('loading');
 const errorMsg  = ref('');
+
+// ── Tenant branding ───────────────────────────────────────────────────────────
+// This page is anonymous, so it cannot call /tenants/branding (that resolves the
+// tenant from the JWT). Branding rides along in the task-form payload instead,
+// resolved from the task's own tenant — same contract as the public start page.
+const pageRef  = ref<HTMLElement | null>(null);
+const branding = ref<TenantBranding | null>(null);
+
+const companyName    = computed(() => branding.value?.companyName || fallbackCompanyName);
+const logoLoadFailed = ref(false);
+const logo           = computed(() => {
+    if (logoLoadFailed.value) return null;
+    return (isDark.value ? branding.value?.logoDarkUrl : branding.value?.logoUrl) ?? branding.value?.logoUrl ?? null;
+});
+function handleLogoError() {
+    logoLoadFailed.value = true;
+}
+watch(() => branding.value, () => {
+    logoLoadFailed.value = false;
+});
+const logoStyle = computed(() => ({
+    height:     `${branding.value?.logoSize ?? 56}px`,
+    padding:    `${branding.value?.logoPadding ?? 0}px`,
+    background: branding.value?.logoBgColor ?? 'transparent',
+}));
+
+/** Company name scale, honouring the tenant's companyNameStyle setting. */
+const companyNameClass = computed(() => {
+    switch (branding.value?.companyNameStyle) {
+        case 'display':  return 'text-2xl font-bold';
+        case 'heading':  return 'text-xl font-semibold';
+        case 'caption':  return 'text-sm font-medium';
+        default:         return 'text-lg font-semibold'; // subheading
+    }
+});
+/** Brand color for buttons/accents, falling back to the PrimeVue primary. */
+const accent = 'var(--fo-brand-500, var(--p-primary-500, #6366f1))';
 
 // bpmn-io form
 const formRef         = ref<HTMLElement | null>(null);
@@ -85,6 +123,9 @@ async function load() {
     state.value = 'loading';
     try {
         data.value = await $taskPublic.getForm(token);
+
+        branding.value = data.value?.branding ?? null;
+        applyBrandingPalette(pageRef.value, branding.value);
 
         const schema = data.value?.formSchema;
         if (schema?.type === 'jsonschema') {
@@ -209,22 +250,33 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="h-screen overflow-hidden flex flex-col bg-surface-50 dark:bg-zinc-950">
+    <div ref="pageRef" class="h-screen overflow-hidden flex flex-col bg-surface-50 dark:bg-zinc-950">
 
         <!-- ── Header ─────────────────────────────────────────────────────── -->
         <header class="bg-white dark:bg-zinc-900 border-b border-surface-200 dark:border-zinc-800 shadow-sm shrink-0">
-            <div class="max-w-5xl mx-auto px-6 py-4 flex items-center gap-3">
-                <!-- Logo / brand mark -->
-                <div class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
-                     style="background: var(--p-primary-500, #6366f1)">
-                    <i class="pi pi-sitemap text-white text-base" />
+            <div class="max-w-5xl mx-auto px-6 py-5 flex items-center gap-4">
+                <img
+                    v-if="logo"
+                    :src="logo"
+                    :alt="companyName"
+                    class="shrink-0 w-auto object-contain rounded-lg"
+                    :style="logoStyle"
+                    @error="handleLogoError"
+                />
+                <div v-else class="flex items-center justify-center w-14 h-14 rounded-xl shrink-0"
+                     :style="{ background: accent }">
+                    <i class="pi pi-sitemap text-white text-2xl" />
                 </div>
 
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-medium text-surface-400 leading-none">
+                    <p
+                        v-if="branding?.showCompanyName !== false"
+                        class="text-surface-800 dark:text-surface-100 leading-tight truncate"
+                        :class="companyNameClass"
+                    >
                         {{ companyName }}
                     </p>
-                    <p v-if="data?.processName" class="text-sm font-semibold text-surface-800 dark:text-surface-100 truncate leading-snug mt-0.5">
+                    <p v-if="data?.processName" class="text-sm text-surface-500 dark:text-surface-400 truncate leading-snug mt-0.5">
                         {{ data.processName }}
                     </p>
                 </div>
@@ -353,7 +405,7 @@ onMounted(load);
                                     </button>
                                     <button
                                         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity"
-                                        style="background: var(--p-primary-500, #6366f1)"
+                                        :style="{ background: accent }"
                                         :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
                                         :disabled="submitting || saving"
                                         @click="submitForm"
@@ -379,14 +431,14 @@ onMounted(load);
                                         type="text"
                                         placeholder="Field name"
                                         class="flex-1 rounded-lg border border-surface-200 dark:border-zinc-700 bg-surface-50 dark:bg-zinc-800 text-sm px-3 py-2 focus:outline-none focus:ring-1 min-w-0 text-surface-900 dark:text-surface-100"
-                                        style="--tw-ring-color: var(--p-primary-500, #6366f1)"
+                                        :style="{ '--tw-ring-color': accent }"
                                     />
                                     <input
                                         v-model="row.value"
                                         type="text"
                                         placeholder="Value"
                                         class="flex-1 rounded-lg border border-surface-200 dark:border-zinc-700 bg-surface-50 dark:bg-zinc-800 text-sm px-3 py-2 focus:outline-none focus:ring-1 min-w-0 text-surface-900 dark:text-surface-100"
-                                        style="--tw-ring-color: var(--p-primary-500, #6366f1)"
+                                        :style="{ '--tw-ring-color': accent }"
                                     />
                                     <button
                                         class="w-7 h-7 flex items-center justify-center rounded-lg text-surface-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
@@ -422,7 +474,7 @@ onMounted(load);
                                     </button>
                                     <button
                                         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity"
-                                        style="background: var(--p-primary-500, #6366f1)"
+                                        :style="{ background: accent }"
                                         :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:opacity-90'"
                                         :disabled="submitting || saving"
                                         @click="submitForm"
