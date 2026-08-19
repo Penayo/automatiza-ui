@@ -7,6 +7,7 @@ import { Button } from 'primevue';
 import JsonEditor from 'vue3-ts-jsoneditor';
 import { ref, computed, watch, onMounted, onErrorCaptured, provide } from 'vue';
 import DocReviewWidget from '@components/widgets/DocReviewWidget.vue';
+import InfoWidget from '@components/widgets/InfoWidget.vue';
 
 const { isDark } = useTheme();
 
@@ -100,14 +101,14 @@ watch(() => props.schema, () => { resetData(); }, { deep: true });
 function onSubmit() { emit('submit', formData.value); }
 
 // ── Custom field resolution ───────────────────────────────────────────────────
-// Replace "ui:field": "ComponentName" strings with actual component objects so
-// lljj never has to call resolveComponent() — avoids all registration issues.
-const CUSTOM_FIELDS: Record<string, object> = { DocReviewWidget };
+// Replace "ui:field"/"ui:widget": "ComponentName" strings with actual component
+// objects so lljj never has to call resolveComponent() — avoids registration issues.
+const CUSTOM_FIELDS: Record<string, object> = { DocReviewWidget, InfoWidget };
 
 function resolveCustomFields(uiSchema: Record<string, any>): Record<string, any> {
     const out: Record<string, any> = {};
     for (const [key, val] of Object.entries(uiSchema)) {
-        if (key === 'ui:field' && typeof val === 'string' && CUSTOM_FIELDS[val]) {
+        if ((key === 'ui:field' || key === 'ui:widget') && typeof val === 'string' && CUSTOM_FIELDS[val]) {
             out[key] = CUSTOM_FIELDS[val];
         } else if (val && typeof val === 'object' && !Array.isArray(val)) {
             out[key] = resolveCustomFields(val);
@@ -118,12 +119,34 @@ function resolveCustomFields(uiSchema: Record<string, any>): Record<string, any>
     return out;
 }
 
-const resolvedUiSchema = computed(() => {
-    const result = resolveCustomFields(props.uiSchema);
-    console.log('[JsonSchemaPreview] raw uiSchema:', JSON.parse(JSON.stringify(props.uiSchema)));
-    console.log('[JsonSchemaPreview] confirmedDocs ui:field value:', result?.confirmedDocs?.['ui:field']);
-    console.log('[JsonSchemaPreview] confirmedDocs ui:field type:', typeof result?.confirmedDocs?.['ui:field']);
-    return result;
+const resolvedUiSchema = computed(() => resolveCustomFields(props.uiSchema));
+
+// ── Unknown widget detection ─────────────────────────────────────────────────
+// An unresolvable "ui:widget"/"ui:field" name renders an unknown element: the
+// field silently disappears and the only trace is a console warning. Surface it.
+const KNOWN_WIDGETS = new Set([
+    ...Object.keys(CUSTOM_FIELDS),
+    'CheckboxesWidget', 'RadioWidget', 'SelectWidget',
+    'DatePickerWidget', 'TimePickerWidget', 'DateTimePickerWidget',
+    'UploadWidget',
+]);
+
+function collectUnknownWidgets(node: any, out: Set<string>) {
+    if (!node || typeof node !== 'object') return;
+    for (const [key, val] of Object.entries(node)) {
+        if ((key === 'ui:widget' || key === 'ui:field') && typeof val === 'string') {
+            // Lowercase names are native/element-plus tags (el-input, textarea…).
+            if (/^[A-Z]/.test(val) && !KNOWN_WIDGETS.has(val)) out.add(val);
+        } else if (val && typeof val === 'object') {
+            collectUnknownWidgets(val, out);
+        }
+    }
+}
+
+const unknownWidgets = computed(() => {
+    const out = new Set<string>();
+    collectUnknownWidgets(props.uiSchema, out);
+    return [...out];
 });
 
 // Provide formData so DocReviewWidget can inject it directly
@@ -226,6 +249,17 @@ onMounted(loadFormVars);
                     </div>
 
                     <div :class="viewport !== 'desktop' ? 'p-4' : ''">
+                        <div
+                            v-if="unknownWidgets.length"
+                            class="flex items-start gap-2 px-3 py-2 mb-4 rounded border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 text-xs text-orange-700 dark:text-orange-300"
+                        >
+                            <i class="pi pi-exclamation-triangle mt-0.5 shrink-0" style="font-size: 0.75rem" />
+                            <span>
+                                Unknown widget{{ unknownWidgets.length > 1 ? 's' : '' }}
+                                <code class="font-mono">{{ unknownWidgets.join(', ') }}</code>
+                                in the UI Schema — those fields render nothing. Check the Schema Catalog for the widgets that exist.
+                            </span>
+                        </div>
                         <ElConfigProvider :locale="en">
                             <VueForm
                                 v-model="formData"

@@ -203,6 +203,28 @@ const CATALOG: CatalogEntry[] = [
 
     // ── Custom widgets ───────────────────────────────────────────────────────
     {
+        id: 'info-widget', label: 'InfoWidget', category: 'Custom Widgets', icon: 'pi-eye',
+        description: 'Read-only display of a value. Renders the bound form data as text instead of an input — use it for context the user should see but not edit (customer details pulled from process variables, computed totals, IDs). The label is shown bold next to the value; set layout to "stacked" to keep it above instead.',
+        schema: { type: 'string', title: 'Full Name' },
+        uiSchema: {
+            'ui:widget': 'InfoWidget',
+            'ui:options': {
+                layout:     'inline',
+                labelWidth: '160px',
+                emptyText:  '\u2014',
+                prefix:     '',
+                suffix:     '',
+                copyable:   false,
+            },
+        },
+        examples: [
+            {
+                label: 'formData — the widget only displays what is already there',
+                code: { fullName: 'Ana Ruiz' },
+            },
+        ],
+    },
+    {
         id: 'doc-review', label: 'DocReviewWidget', category: 'Custom Widgets', icon: 'pi-file-check',
         description: 'Lists uploaded documents as clickable links with a confirmation checkbox per document. Reads from a sibling key in the form data (docsKey). Detects expired signed URLs and shows a refresh button. The field value written back is a per-document-key boolean map.',
         schema: { type: 'object', title: 'Document Review' },

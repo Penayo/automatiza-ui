@@ -35,7 +35,11 @@ const token = route.params.token as string;
 // ── State ─────────────────────────────────────────────────────────────────────
 const data       = ref<TaskFormData | null>(null);
 const loading    = ref(true);
+// `submitting` is latched by `submitForm` for the whole pipeline (validation →
+// file upload → complete), not just the network call, so the blocking overlay
+// covers slow uploads too. `submitPhase` only labels the overlay.
 const submitting = ref(false);
+const submitPhase = ref<'submitting' | 'uploading'>('submitting');
 const saving     = ref(false);
 const saved      = ref(false);   // shows brief "Saved" confirmation
 
@@ -167,19 +171,24 @@ watch(state, (s) => {
         form.on('changed', (event: { data: Record<string, any> }) => {
             currentFormData.value = event.data;
         });
+        // form-js drives this path: `submitForm` already flipped `submitting` on
+        // (the overlay is up before the first upload starts), so every exit here
+        // must either hand off to `submit()` or clear the flag itself.
         form.on('submit', async (event: { data: Record<string, any>; errors: any[] }) => {
             console.log('[TaskFormPage] form submitted, raw event.data:', event.data);
             try {
+                submitPhase.value = 'uploading';
                 const resolvedData = await resolveFormFiles(
                     event.data, filesService, form,
                     data.value?.processInstanceId,
                     data.value?.taskId,
                 );
-                submit(resolvedData);
+                await submit(resolvedData);
             } catch (err: any) {
                 console.error('[TaskFormPage] file upload failed, aborting submit:', err);
                 errorMsg.value = err?.response?.data?.message ?? err?.message ?? 'File upload failed. Please try again.';
                 state.value    = 'error';
+                submitting.value = false;
             }
         });
     }, 0);
@@ -221,7 +230,8 @@ function saveForm() {
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 async function submit(variables: Record<string, any>) {
-    submitting.value = true;
+    submitting.value  = true;
+    submitPhase.value = 'submitting';
     try {
         await $taskPublic.complete(token, variables);
         formViewer.value?.destroy();
@@ -236,13 +246,28 @@ async function submit(variables: Record<string, any>) {
     }
 }
 
-function submitForm() {
+async function submitForm() {
+    // Latch immediately: a second click (or the Save button) is a no-op until the
+    // whole pipeline settles, and the overlay goes up before any slow work runs.
+    if (submitting.value || saving.value) return;
+    submitting.value  = true;
+    submitPhase.value = 'submitting';
+
     // form-js runs its own validation via the `submit` event; custom / JSON-Schema
     // and the key-value fallback submit their collected variables directly.
-    if (!isCustom.value && !isJsonSchema.value && formViewer.value) {
-        formViewer.value.submit();
-    } else {
-        submit(getCurrentVars());
+    try {
+        if (!isCustom.value && !isJsonSchema.value && formViewer.value) {
+            // Returns as soon as the `submit` event is dispatched; the async
+            // handler above owns `submitting` from that point on.
+            formViewer.value.submit();
+        } else {
+            await submit(getCurrentVars());
+        }
+    } catch (err: any) {
+        console.error('[TaskFormPage] submit failed:', err);
+        errorMsg.value = err?.response?.data?.message ?? err?.message ?? 'Submission failed. Please try again.';
+        state.value    = 'error';
+        submitting.value = false;
     }
 }
 
@@ -497,6 +522,35 @@ onMounted(load);
         <footer class="shrink-0 py-4 text-center text-xs text-surface-400 dark:text-zinc-600">
             Powered by {{ companyName }}
         </footer>
+
+        <!-- ── Blocking submit overlay ────────────────────────────────────── -->
+        <!-- Covers the whole page so no field, Save, or a second Submit can be
+             reached once the first submit is under way. -->
+        <Transition
+            enter-active-class="transition-opacity duration-150"
+            leave-active-class="transition-opacity duration-150"
+            enter-from-class="opacity-0"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="submitting"
+                class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm cursor-wait"
+                role="alertdialog"
+                aria-live="assertive"
+                aria-busy="true"
+                @click.stop
+            >
+                <i class="pi pi-spin pi-spinner text-4xl" :style="{ color: accent }" />
+                <div class="text-center">
+                    <p class="text-base font-medium text-surface-800 dark:text-surface-100">
+                        {{ submitPhase === 'uploading' ? 'Uploading files…' : 'Processing your submission…' }}
+                    </p>
+                    <p class="text-sm text-surface-500 dark:text-surface-400 mt-1">
+                        Please don't close this page.
+                    </p>
+                </div>
+            </div>
+        </Transition>
 
     </div>
 </template>

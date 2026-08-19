@@ -1,7 +1,8 @@
 <!--
   DocReviewWidget — JSON-Schema UI field for reviewing uploaded documents.
 
-  Register as:  "ui:field": "DocReviewWidget"
+  Register as:  "ui:field": "DocReviewWidget"   (preferred — lljj draws no label)
+           or:  "ui:widget": "DocReviewWidget"  (also supported)
 
   ui:options
   ──────────
@@ -55,43 +56,49 @@
   in place. Expired documents cannot be checked until their link is refreshed.
 -->
 <script setup lang="ts">
-import { computed, inject, ref, onMounted, watch, type Ref } from 'vue';
+import { computed, inject, ref, type Ref } from 'vue';
 import { ElCheckbox } from 'element-plus';
 import { $api } from '@services/api';
 
+// Works both as "ui:field" (the documented form — lljj hands over curNodePath +
+// rootFormData and skips its own label) and as "ui:widget" (lljj hands over
+// modelValue and flattens ui:options into plain props). Everything below reads
+// through whichever pair is present, so neither form warns or misbehaves.
 const props = defineProps<{
-  curNodePath:  string;
-  rootFormData: Record<string, any>;
-  uiSchema:     Record<string, any>;
-  schema:       Record<string, any>;
-  disabled?:    boolean;
-  readonly?:    boolean;
+  // ui:field mode
+  curNodePath?:  string;
+  rootFormData?: Record<string, any>;
+  uiSchema?:     Record<string, any>;
+  schema?:       Record<string, any>;
+  // ui:widget mode
+  modelValue?:   Record<string, boolean>;
+  docsKey?:      string;
+  urlField?:     string;
+  nameField?:    string;
+  keyField?:     string;
+  checkLabel?:   string;
+  // both
+  disabled?:     boolean;
+  readonly?:     boolean;
 }>();
 
-console.log('[DocReviewWidget] setup — props received:', {
-  curNodePath:  props.curNodePath,
-  rootFormData: JSON.parse(JSON.stringify(props.rootFormData ?? {})),
-  uiSchema:     props.uiSchema,
-  schema:       props.schema,
-});
+const emit = defineEmits<{ 'update:modelValue': [v: Record<string, boolean>] }>();
 
-onMounted(() => {
-  console.log('[DocReviewWidget] mounted ✓');
-  console.log('[DocReviewWidget] jsfFormData at mount:', JSON.parse(JSON.stringify(jsfFormData.value)));
-  console.log('[DocReviewWidget] docs at mount:', docs.value);
-});
+// ui:field mode gets rootFormData; ui:widget mode does not.
+const isFieldMode = computed(() => !!props.rootFormData);
 
 const jsfFormData   = inject<Ref<Record<string, any>>>('jsfFormData', ref({}));
 const formDisabled  = inject<Ref<boolean>>('formDisabled', ref(false));
 
-console.log('[DocReviewWidget] jsfFormData injected (is default ref?):', !inject('jsfFormData'));
-
-const opts = computed(() => (props.uiSchema?.['ui:options'] ?? {}) as {
-  docsKey?:    string;
-  urlField?:   string;
-  nameField?:  string;
-  keyField?:   string;   // R2 object key field (default: "key")
-  checkLabel?: string;
+const opts = computed(() => {
+  const fromUiSchema = (props.uiSchema?.['ui:options'] ?? {}) as Record<string, any>;
+  return {
+    docsKey:    props.docsKey    ?? fromUiSchema.docsKey,
+    urlField:   props.urlField   ?? fromUiSchema.urlField,
+    nameField:  props.nameField  ?? fromUiSchema.nameField,
+    keyField:   props.keyField   ?? fromUiSchema.keyField,   // R2 object key field (default: "key")
+    checkLabel: props.checkLabel ?? fromUiSchema.checkLabel,
+  };
 });
 
 function resolveDotPath(obj: Record<string, any>, path: string): any {
@@ -99,15 +106,9 @@ function resolveDotPath(obj: Record<string, any>, path: string): any {
 }
 
 const docs = computed(() => {
-  const key = opts.value.docsKey ?? 'docs';
-  const raw = resolveDotPath(jsfFormData.value, key) ?? {};
-  console.log('[DocReviewWidget] docs computed — key:', key, '| raw:', raw);
+  const raw = resolveDotPath(jsfFormData.value, opts.value.docsKey ?? 'docs') ?? {};
   return Object.entries(raw) as [string, Record<string, any>][];
 });
-
-watch(jsfFormData, (val) => {
-  console.log('[DocReviewWidget] jsfFormData changed:', JSON.parse(JSON.stringify(val)));
-}, { deep: true });
 
 const urlField   = computed(() => opts.value.urlField   ?? 'url');
 const nameField  = computed(() => opts.value.nameField  ?? 'name');
@@ -163,11 +164,16 @@ async function refreshExpiredLinks() {
 }
 
 const confirmed = computed((): Record<string, boolean> => {
+  if (!isFieldMode.value) return props.modelValue ?? {};
   if (!props.curNodePath) return props.rootFormData as Record<string, boolean>;
-  return resolveDotPath(props.rootFormData, props.curNodePath) ?? {};
+  return resolveDotPath(props.rootFormData!, props.curNodePath) ?? {};
 });
 
 function toggle(docKey: string, checked: boolean | string | number) {
+  if (!isFieldMode.value) {
+    emit('update:modelValue', { ...confirmed.value, [docKey]: Boolean(checked) });
+    return;
+  }
   const parts = props.curNodePath ? props.curNodePath.split('.') : [];
   let obj: any = props.rootFormData;
   for (let i = 0; i < parts.length - 1; i++) {

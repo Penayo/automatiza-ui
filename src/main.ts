@@ -30,6 +30,7 @@ lljjI18n.useLocal(() => {});
 
 // Custom widgets (registered after app.use(ElementPlus) below)
 import DocReviewWidget from '@components/widgets/DocReviewWidget.vue'
+import InfoWidget from '@components/widgets/InfoWidget.vue'
 
 const MyPreset = definePreset(Aura, {
     semantic: {
@@ -81,6 +82,7 @@ useTheme().init();
 const app = createApp(App)
 app.use(ElementPlus, { locale: en })
 app.component('DocReviewWidget', DocReviewWidget)
+app.component('InfoWidget', InfoWidget)
 app.use(PrimeVue, {
 	theme: {
 		preset: MyPreset,
