@@ -75,6 +75,14 @@ async function load() {
     loading.value = true;
     try {
         report.value = await $api.reports.findById(id.value!);
+
+        // Seed the meta refs from the loaded report. save() reads them as
+        // "has this report been named yet?", so leaving them empty makes the
+        // first Save click on an existing report divert to the meta dialog
+        // and persist nothing.
+        metaKey.value  = report.value?.key         ?? '';
+        metaName.value = report.value?.name        ?? '';
+        metaDesc.value = report.value?.description ?? '';
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load report.', life: 4000 });
         router.push({ name: 'ReportsList' });

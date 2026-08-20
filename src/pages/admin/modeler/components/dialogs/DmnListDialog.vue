@@ -3,6 +3,7 @@ import { Column, Button, Tag } from 'primevue';
 import { $api } from '@services/api';
 import { useDirtyNavigation } from '@/composables/useDirtyNavigation';
 import EntityListDialog from './EntityListDialog.vue';
+import CopyableKey from './CopyableKey.vue';
 import type { DecisionDefinition } from '@services/DecisionsService';
 import dayjs from 'dayjs';
 
@@ -20,8 +21,16 @@ const { navigate, openInNewTab } = useDirtyNavigation(visible, () => !!props.dir
         search-placeholder="Search decisions…"
     >
         <template #columns>
-            <Column field="decisionId" header="Decision ID" class="font-mono text-xs" style="width:200px" sortable />
-            <Column field="name" header="Name" sortable />
+            <!-- Name carries the decision id as a subtitle: the dialog is narrow, and a
+                 separate id column starved the name of width without earning its own. -->
+            <Column field="name" header="Name" sortable>
+                <template #body="{ data }: { data: DecisionDefinition }">
+                    <div class="leading-tight">
+                        <div class="truncate">{{ data.name }}</div>
+                        <CopyableKey :value="data.decisionId" />
+                    </div>
+                </template>
+            </Column>
             <Column field="version" header="v" style="width:50px" sortable>
                 <template #body="{ data }">
                     <Tag :value="`v${data.version}`" severity="secondary" class="text-xs" />

@@ -3,6 +3,7 @@ import { Column, Button, Tag } from 'primevue';
 import { $api } from '@services/api';
 import { useDirtyNavigation } from '@/composables/useDirtyNavigation';
 import EntityListDialog from './EntityListDialog.vue';
+import CopyableKey from './CopyableKey.vue';
 import type { IForm } from '@services/FormsService';
 import dayjs from 'dayjs';
 
@@ -31,17 +32,21 @@ function openForm(form: IForm) {
         search-placeholder="Search forms…"
     >
         <template #columns>
-            <Column field="code" header="Code" class="font-mono text-xs" style="width:220px" sortable />
+            <!-- Code rides along under the name rather than claiming its own column;
+                 the dialog is narrow and the name is what people scan for. -->
             <Column field="name" header="Name" sortable>
                 <template #body="{ data }: { data: IForm }">
-                    <div class="flex items-center gap-2">
-                        <span>{{ data.name }}</span>
-                        <Tag
-                            v-if="data.type === 'jsonschema'"
-                            value="JSON Schema"
-                            severity="secondary"
-                            style="font-size: 0.65rem; padding: 1px 6px;"
-                        />
+                    <div class="leading-tight">
+                        <div class="flex items-center gap-2">
+                            <span class="truncate">{{ data.name }}</span>
+                            <Tag
+                                v-if="data.type === 'jsonschema'"
+                                value="JSON Schema"
+                                severity="secondary"
+                                style="font-size: 0.65rem; padding: 1px 6px;"
+                            />
+                        </div>
+                        <CopyableKey :value="data.code" />
                     </div>
                 </template>
             </Column>

@@ -3,6 +3,7 @@ import { Column, Button } from 'primevue';
 import { $api } from '@services/api';
 import { useDirtyNavigation } from '@/composables/useDirtyNavigation';
 import EntityListDialog from './EntityListDialog.vue';
+import CopyableKey from './CopyableKey.vue';
 import type { ReportDefinition } from '@services/ReportsService';
 import dayjs from 'dayjs';
 
@@ -20,9 +21,16 @@ const { navigate, openInNewTab } = useDirtyNavigation(visible, () => !!props.dir
         search-placeholder="Search reports…"
     >
         <template #columns>
-            <Column field="key"  header="Key"  class="font-mono text-xs" sortable />
-            <Column field="name" header="Name" sortable />
-            <Column field="description" header="Description" class="text-surface-400 text-sm" />
+            <!-- Key rides along under the name; description is dropped — it never fit
+                 in this dialog's width and is one click away in the editor. -->
+            <Column field="name" header="Name" sortable>
+                <template #body="{ data }: { data: ReportDefinition }">
+                    <div class="leading-tight">
+                        <div class="truncate">{{ data.name }}</div>
+                        <CopyableKey :value="data.key" />
+                    </div>
+                </template>
+            </Column>
             <Column field="createdAt" header="Created" style="width:120px" sortable>
                 <template #body="{ data }">
                     <span class="text-xs text-surface-400">{{ data.createdAt ? dayjs(data.createdAt).format('MMM D, YYYY') : '—' }}</span>

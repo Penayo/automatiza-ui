@@ -158,9 +158,11 @@ function openEditor(data: IForm) {
                 </template>
             </Column>
 
-            <Column header="ID" field="id" sortable style="width: 220px">
-                <template #body="{ data }">
-                    <span class="text-xs font-mono text-surface-400">{{ data.id }}</span>
+            <Column header="Code" field="code" sortable style="width: 220px">
+                <template #body="{ data }: { data: IForm }">
+                    <!-- Forms created before `code` existed fall back to the raw id,
+                         same as the editors do when they prefill the Code field. -->
+                    <span class="text-xs font-mono text-surface-400">{{ data.code || data.id }}</span>
                 </template>
             </Column>
 
