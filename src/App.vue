@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount } from 'vue';
 import { Toast, ConfirmDialog, useToast } from 'primevue';
+import ReauthDialog from '@components/ReauthDialog.vue';
+import { hasUnsavedWork } from '@services/session';
 
 const toast = useToast();
 
@@ -17,10 +19,25 @@ function onApiError(e: Event) {
   });
 }
 
+// Last-chance prompt for the paths no in-app guard can see: reload, tab close,
+// or a URL typed over ours. Router guards never run for those. Every editor that
+// registers with the unsaved-work registry (the BPMN modeler today) is covered.
+function onBeforeUnload(e: BeforeUnloadEvent) {
+  if (!hasUnsavedWork()) return;
+  e.preventDefault();
+  // Deprecated, but still what older Safari/Firefox check. The browser shows its
+  // own generic wording either way — this string is never displayed.
+  e.returnValue = '';
+}
+
 onMounted(() => {
   window.addEventListener('api-error', onApiError);
+  window.addEventListener('beforeunload', onBeforeUnload);
 });
-onBeforeUnmount(() => window.removeEventListener('api-error', onApiError));
+onBeforeUnmount(() => {
+  window.removeEventListener('api-error', onApiError);
+  window.removeEventListener('beforeunload', onBeforeUnload);
+});
 </script>
 
 <template>
@@ -43,6 +60,8 @@ onBeforeUnmount(() => window.removeEventListener('api-error', onApiError));
       </section>
     </template>
   </Toast>
+
+  <ReauthDialog />
 
   <RouterView />
 </template>

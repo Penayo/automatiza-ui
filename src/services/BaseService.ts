@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { navigateTo } from '@services/routerRef';
+import { requireReauth } from '@services/session';
 
 // Axios 1.x serializes arrays as keys[]=v (bracket notation). NestJS ValidationPipe
 // with forbidNonWhitelisted:true rejects the literal "keys[]" property name.
@@ -51,6 +52,14 @@ export type ILog = {
   message: string
 }
 
+/**
+ * The two calls that *establish* a session. A 401 from them means "wrong
+ * password", so they must never trigger the re-auth dialog — that would recurse.
+ */
+function isCredentialCheck(url: string): boolean {
+  return url.includes('/auth/login') || url.includes('/auth/signup');
+}
+
 export interface APIData {
   _id?: string;
   __v?: string;
@@ -73,18 +82,31 @@ export class BaseService {
     });
   }
 
-  async get<T>(url: string = "", config?: AxiosRequestConfig): Promise<T> {
+  /**
+   * Runs a request and, if it fails on an expired session, replays it **once**
+   * after the user re-authenticates in place (see session.ts / spec §11 D7).
+   * `run` rebuilds its own config on every call so the replay carries the fresh
+   * token rather than the dead one.
+   */
+  private async send<T>(run: () => Promise<{ data: T }>): Promise<T> {
     try {
-      config = config ?? {}
-      config.headers = this.getRequestHeaders()
-      config.paramsSerializer = serializeParams;
-
-      const { data } = await axios.get(this.getUrl(url), config);
-      return data as T;
+      const { data } = await run();
+      return data;
     } catch (err) {
-      this.handleErrors(err);
-      throw err;
+      const recovered = await this.handleErrors(err);
+      if (!recovered) throw err;
+
+      const { data } = await run();
+      return data;
     }
+  }
+
+  async get<T>(url: string = "", config?: AxiosRequestConfig): Promise<T> {
+    return this.send<T>(() => axios.get(this.getUrl(url), {
+      ...(config ?? {}),
+      headers: this.getRequestHeaders(),
+      paramsSerializer: serializeParams,
+    }));
   }
 
   async post<T>(url?: string | Object, postData = {}, config?: AxiosRequestConfig): Promise<T> {
@@ -94,57 +116,35 @@ export class BaseService {
       url = ''
     }
 
-    try {
-      config = config ?? {}
-      config.headers = this.getRequestHeaders()
-
-      const { data } = await axios.post(this.getUrl(url as string), postData, config);
-      console.log({ data })
-      return data;
-    } catch (err) {
-      this.handleErrors(err);
-      throw err;
-    }
+    return this.send<T>(() => axios.post(this.getUrl(url as string), postData, {
+      ...(config ?? {}),
+      headers: this.getRequestHeaders(),
+    }));
   }
 
   async put<T>(id: string, putData = {}, config?: AxiosRequestConfig): Promise<T> {
     if (!id) throw Error("Id was not provided");
 
-    try {
-      config = config ?? {}
-      config.headers = this.getRequestHeaders()
-      const { data } = await axios.put(this.getUrl(id), putData, config);
-      return data as T;
-    } catch (err) {
-      this.handleErrors(err);
-      throw err;
-    }
+    return this.send<T>(() => axios.put(this.getUrl(id), putData, {
+      ...(config ?? {}),
+      headers: this.getRequestHeaders(),
+    }));
   }
 
   async patch<T>(id: string, patchData = {}, config?: AxiosRequestConfig): Promise<T> {
     if (!id) throw Error("Id was not provided");
 
-    try {
-      config = config ?? {}
-      config.headers = this.getRequestHeaders()
-      const { data } = await axios.patch(this.getUrl(id), patchData, config);
-      return data as T;
-    } catch (err) {
-      this.handleErrors(err);
-      throw err;
-    }
+    return this.send<T>(() => axios.patch(this.getUrl(id), patchData, {
+      ...(config ?? {}),
+      headers: this.getRequestHeaders(),
+    }));
   }
 
   async delete(id: string): Promise<boolean> {
     if (!id) throw Error("Id was not provided");
 
-    try {
-      await axios.delete(this.getUrl(id), { headers: this.getRequestHeaders() });
-      return true;
-    } catch (err) {
-      this.handleErrors(err);
-      throw err;
-    }
+    await this.send(() => axios.delete(this.getUrl(id), { headers: this.getRequestHeaders() }));
+    return true;
   }
 
   getUrl(url = "") {
@@ -154,7 +154,12 @@ export class BaseService {
     return `${this.baseUrl}/${this.resource}/${url}`;
   }
 
-  handleErrors(err: any) {
+  /**
+   * Cross-cutting error handling. Returns `true` when the caller should replay
+   * the request (the user re-authenticated in place), `false` otherwise — it no
+   * longer throws, because the replay path in `send()` needs to run first.
+   */
+  async handleErrors(err: any): Promise<boolean> {
     console.log('API Error:', err);
 
     // Axios errors contain circular references — store only serializable fields.
@@ -172,11 +177,34 @@ export class BaseService {
 
     const status = err?.response?.status ?? err?.status;
 
-    // Handle 401 Unauthorized error
+    // Handle 401 Unauthorized.
+    //
+    // This used to clear the token and redirect to /login unconditionally, which
+    // discarded any unsaved editor state on screen — triggered by nothing more
+    // than a 60s sidebar poll. Instead we re-authenticate in place and let the
+    // caller replay: the page never unmounts, so nothing is lost.
+    // See docs/specs/authentication-and-sessions.spec.md §11 (D7).
     if (status === 401) {
-      localStorage.removeItem('token');
-      navigateTo('/login');
+      // The login/signup calls are how we recover from a 401 — a 401 from them
+      // is a wrong password, not an expired session. Never recurse into re-auth.
+      const url = err?.config?.url ?? '';
+      if (isCredentialCheck(url)) return false;
+
+      // No stored identity means there is nobody to re-authenticate as.
+      if (!localStorage.getItem('accessInfo')) {
+        localStorage.removeItem('token');
+        navigateTo('/login');
+        window.dispatchEvent(new CustomEvent('api-unauthorized'));
+        return false;
+      }
+
+      // Deliberately do NOT clear the token here: the dialog may be cancelled,
+      // and a half-cleared session would break the retry the user makes next.
+      const reauthenticated = await requireReauth();
+      if (reauthenticated) return true;
+
       window.dispatchEvent(new CustomEvent('api-unauthorized'));
+      return false;
     }
 
     // Surface cross-cutting failures that components typically don't handle, so
@@ -194,7 +222,7 @@ export class BaseService {
       }));
     }
 
-    throw err;
+    return false;
   }
 
   getAuthorizationHeader () {

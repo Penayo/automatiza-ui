@@ -21,6 +21,7 @@ import { CreateAppendAnythingModule, CreateAppendElementTemplatesModule } from '
 import { BpmnPropertiesPanelModule, BpmnPropertiesProviderModule, ZeebePropertiesProviderModule } from 'bpmn-js-properties-panel';
 import { type ProcessDefinition } from '@services/ProcessesService';
 import { useTheme } from '@/composables/useTheme';
+import { registerUnsavedWork } from '@services/session';
 
 const { isDark } = useTheme();
 const toast = useToast();
@@ -58,12 +59,21 @@ const hasUnsavedChanges = computed(() =>
 	dirty.value || (activeTab.value === 'xml' && xmlText.value !== currentXml.value)
 );
 
+/**
+ * Tells the session guard this diagram is holding unsaved work, so an expired
+ * token re-authenticates in place instead of navigating away from it
+ * (docs/specs/authentication-and-sessions.spec.md §11 D7).
+ */
+let unregisterUnsavedWork: (() => void) | null = null;
+onMounted(() => { unregisterUnsavedWork = registerUnsavedWork(() => hasUnsavedChanges.value); });
+onUnmounted(() => { unregisterUnsavedWork?.(); });
+
 /** Called by the parent once the diagram has actually been persisted. */
 function markSaved() {
 	dirty.value = false;
 }
 
-defineExpose({ markSaved });
+defineExpose({ markSaved, hasUnsavedChanges, getSaveXml });
 
 async function getXml(): Promise<string> {
 	if (!modeler.value) return '';
@@ -140,12 +150,21 @@ const aiContext = computed(() => ({
 }));
 
 // ── Save ──────────────────────────────────────────────────────────────────────
+/**
+ * The XML as the Save button would send it — on the XML tab the typed text wins,
+ * even if it was never applied to the designer. Exposed so the parent can persist
+ * the diagram on its own (e.g. "Save & leave" from a navigation guard).
+ */
+async function getSaveXml(): Promise<string> {
+	const xml = activeTab.value === 'xml' ? xmlText.value : await getXml();
+	currentXml.value = xml;
+	return xml;
+}
+
 async function save() {
 	saving.value = true;
 	try {
-		const xml = activeTab.value === 'xml' ? xmlText.value : await getXml();
-		currentXml.value = xml;
-		emit('save', xml);
+		emit('save', await getSaveXml());
 	} finally {
 		saving.value = false;
 	}

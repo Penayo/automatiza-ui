@@ -81,6 +81,36 @@ export type ProcessInstanceQuery = PageRequest & {
     to?: string;
 };
 
+
+// ── Process spec (docs/specs/process-spec.spec.md) ────────────────────────────
+
+/** One free-text line in a spec list section. `id` is stable across saves. */
+export interface SpecItem {
+    id: string;
+    text: string;
+}
+
+/** The six editable sections — what the Spec tab sends on save. */
+export interface ProcessSpecSections {
+    motivation: string;
+    goalImpact: string;
+    description: SpecItem[];
+    acceptanceCriteria: SpecItem[];
+    actionsConditions: SpecItem[];
+    tasksActivities: SpecItem[];
+}
+
+export interface ProcessSpec extends ProcessSpecSections {
+    processName: string;
+    processId?: string;
+    /** null when no spec has been saved yet. */
+    updatedAt: string | null;
+    updatedBy?: string;
+    canGenerate: boolean;
+    generationBlockedReason?: string;
+    generatedAt?: string;
+}
+
 export class ProcessesService extends ModelApiService {
     constructor() {
         super("bpmn/processes");
@@ -143,6 +173,26 @@ export class ProcessesService extends ModelApiService {
         const response = await this.get(url, { params });
 
         return response as PageResponse<ProcessException>;
+    }
+
+    /** Reads the spec of the process this definition belongs to — empty, never 404, when unwritten. */
+    async getSpec(processDefinitionId: string): Promise<ProcessSpec> {
+        try {
+            return await this.get<ProcessSpec>(`${processDefinitionId}/spec`);
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
+    }
+
+    /** Full replace of all six sections; the backend upserts on first save. */
+    async saveSpec(processDefinitionId: string, sections: ProcessSpecSections): Promise<ProcessSpec> {
+        try {
+            return await this.put<ProcessSpec>(`${processDefinitionId}/spec`, sections);
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
     }
 
     async saveProcess(process: ProcessDefinition | DeployProcessDto) {

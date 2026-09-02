@@ -21,7 +21,7 @@ export class ReadOnlyAPI extends BaseService {
 
       return data;
     } catch (err) {
-      this.handleErrors(err);
+      await this.handleErrors(err);
       throw err;
     }
   }
@@ -41,7 +41,7 @@ export class ReadOnlyAPI extends BaseService {
 
       return data;
     } catch (err) {
-      this.handleErrors(err);
+      await this.handleErrors(err);
       throw err;
     }
   }

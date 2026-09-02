@@ -50,12 +50,17 @@ export class AuthService extends ModelApiService {
         const data = await this.post<IAccess>('login', loginUser);
         localStorage.removeItem('errors');
         localStorage.setItem('token', data.access_token);
+        // Login is tenant-scoped, but the slug is not carried in the JWT or the
+        // user payload. Keep it so the in-place re-auth dialog can log the same
+        // user back in without asking which organization they belong to.
+        localStorage.setItem('tenantSlug', loginUser.tenantSlug);
         return data;
     }
 
     async signup(payload: ISignup): Promise<IAccess> {
         const data = await this.post<IAccess>('signup', payload);
         localStorage.setItem('token', data.access_token);
+        localStorage.setItem('tenantSlug', payload.tenantSlug);
         return data;
     }
 
@@ -79,6 +84,7 @@ export class AuthService extends ModelApiService {
         localStorage.removeItem('token');
         localStorage.removeItem('accessInfo');
         localStorage.removeItem('selectedTenantId');
+        localStorage.removeItem('tenantSlug');
     }
 
     getAccessInfo(): IAccess | null {
@@ -92,6 +98,7 @@ export class AuthService extends ModelApiService {
             // Stale or encrypted-with-different-key data — clear it and force re-login
             localStorage.removeItem('accessInfo');
             localStorage.removeItem('token');
+            localStorage.removeItem('tenantSlug');
             return null;
         }
     }

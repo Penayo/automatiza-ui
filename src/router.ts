@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocationGeneric } from 'vue-router'
 import { AuthService } from '@services/AuthService';
 import { $api, type IPermission, type IRole, type PageResponse } from '@services/api';
 
@@ -56,11 +56,24 @@ const routes = [
         ],
       },
       {
+        // Tabs are routes: /admin/processes/:id/{spec,info,instances,diagram,stats}, spec by default.
+        // Each tab component is code-split and only loads when its tab is opened.
         path: 'processes/:id',
-        name: 'ProcessEdit',
         component: () => import('./pages/admin/processes/EditProcess.vue'),
         children: [
-          { path: 'instances/:instanceId', name: 'ProcessEditInstanceDetail', component: () => import('./pages/admin/process-instances/Detail.vue') },
+          { path: '', name: 'ProcessEdit', redirect: (to: RouteLocationGeneric) => ({ name: 'ProcessEditSpec', params: to.params }) },
+          { path: 'spec', name: 'ProcessEditSpec', component: () => import('./pages/admin/processes/tabs/SpecTab.vue') },
+          { path: 'info', name: 'ProcessEditInfo', component: () => import('./pages/admin/processes/tabs/InfoTab.vue') },
+          {
+            path: 'instances',
+            name: 'ProcessEditInstances',
+            component: () => import('./pages/admin/processes/tabs/InstancesTab.vue'),
+            children: [
+              { path: ':instanceId', name: 'ProcessEditInstanceDetail', component: () => import('./pages/admin/process-instances/Detail.vue') },
+            ],
+          },
+          { path: 'diagram', name: 'ProcessEditDiagram', component: () => import('./pages/admin/processes/tabs/DiagramTab.vue') },
+          { path: 'stats', name: 'ProcessEditStats', component: () => import('./pages/admin/processes/tabs/StatsTab.vue') },
         ],
       },
 
