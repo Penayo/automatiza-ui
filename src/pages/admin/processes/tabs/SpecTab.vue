@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
-import { Button, InputText, Textarea, useToast } from 'primevue';
+import { useRouter } from 'vue-router';
+import { Button, InputText, Textarea, useConfirm, useToast } from 'primevue';
+import { onApprove } from '@/utils/common';
 import { v4 as uuidv4 } from 'uuid';
 import { $api } from '@services/api';
 import type { ProcessSpec, ProcessSpecSections, SpecItem } from '@services/ProcessesService';
@@ -8,14 +10,22 @@ import UnsavedChangesDialog from '@components/UnsavedChangesDialog.vue';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { processEditKey } from '../processEditContext';
 
-const { process } = inject(processEditKey)!;
+const { process, setProcess } = inject(processEditKey)!;
 
-const toast = useToast();
+const toast   = useToast();
+const confirm = useConfirm();
+const router  = useRouter();
 
-type ListSection = 'description' | 'acceptanceCriteria' | 'actionsConditions' | 'tasksActivities';
+type TextSection = 'motivation' | 'goalImpact' | 'description';
+type ListSection = 'acceptanceCriteria' | 'actionsConditions' | 'tasksActivities';
+
+const TEXT_SECTIONS: { key: TextSection; label: string; hint: string }[] = [
+    { key: 'motivation',  label: 'Motivation',   hint: 'Why this process exists — the problem it solves.' },
+    { key: 'goalImpact',  label: 'Goal / Impact', hint: 'What changes once it works.' },
+    { key: 'description', label: 'Description',   hint: 'What the process does.' },
+];
 
 const LIST_SECTIONS: { key: ListSection; label: string; hint: string }[] = [
-    { key: 'description',        label: 'Description',        hint: 'What the process does, one point per line.' },
     { key: 'acceptanceCriteria', label: 'Acceptance Criteria', hint: 'How you know it works. One criterion per line.' },
     { key: 'actionsConditions',  label: 'Actions / Conditions', hint: 'Decisions, rules and branches the process has to honour.' },
     { key: 'tasksActivities',    label: 'Tasks / Activities',  hint: 'The steps, in the order they happen.' },
@@ -24,7 +34,7 @@ const LIST_SECTIONS: { key: ListSection; label: string; hint: string }[] = [
 const empty = (): ProcessSpecSections => ({
     motivation: '',
     goalImpact: '',
-    description: [],
+    description: '',
     acceptanceCriteria: [],
     actionsConditions: [],
     tasksActivities: [],
@@ -55,7 +65,7 @@ function startEdit(item: SpecItem) {
 }
 
 /** Free-text sections share the one-editor-at-a-time state, keyed by field name. */
-function startEditText(field: 'motivation' | 'goalImpact') {
+function startEditText(field: TextSection) {
     editingId.value = field;
 }
 
@@ -92,7 +102,7 @@ async function fetchSpec(definitionId: string) {
         form.value = {
             motivation:         spec.motivation,
             goalImpact:         spec.goalImpact,
-            description:        [...spec.description],
+            description:        spec.description,
             acceptanceCriteria: [...spec.acceptanceCriteria],
             actionsConditions:  [...spec.actionsConditions],
             tasksActivities:    [...spec.tasksActivities],
@@ -122,7 +132,7 @@ async function save(): Promise<boolean> {
         form.value = {
             motivation:         spec.motivation,
             goalImpact:         spec.goalImpact,
-            description:        [...spec.description],
+            description:        spec.description,
             acceptanceCriteria: [...spec.acceptanceCriteria],
             actionsConditions:  [...spec.actionsConditions],
             tasksActivities:    [...spec.tasksActivities],
@@ -135,6 +145,132 @@ async function save(): Promise<boolean> {
         return false;
     } finally {
         saving.value = false;
+    }
+}
+
+// ── Reordering ────────────────────────────────────────────────────────────────
+// Native drag & drop rather than a library: one list, one handle, no dependency.
+// Order is content here — the audit diff reports a reorder as a change of its own.
+
+const dragFrom = ref<{ section: ListSection; index: number } | null>(null);
+const dragOver = ref<{ section: ListSection; index: number } | null>(null);
+
+function onDragStart(section: ListSection, index: number, e: DragEvent) {
+    dragFrom.value = { section, index };
+    e.dataTransfer!.effectAllowed = 'move';
+    // Firefox refuses to start a drag without payload.
+    e.dataTransfer!.setData('text/plain', String(index));
+}
+
+/** Dragging is confined to one section — moving a task into criteria makes no sense. */
+function onDragOver(section: ListSection, index: number) {
+    if (dragFrom.value?.section === section) dragOver.value = { section, index };
+}
+
+function onDrop(section: ListSection, index: number) {
+    const from = dragFrom.value;
+    dragFrom.value = null;
+    dragOver.value = null;
+    if (!from || from.section !== section || from.index === index) return;
+
+    const list = form.value[section];
+    const [moved] = list.splice(from.index, 1);
+    list.splice(index, 0, moved);
+}
+
+function onDragEnd() {
+    dragFrom.value = null;
+    dragOver.value = null;
+}
+
+const isDropTarget = (section: ListSection, index: number) =>
+    dragOver.value?.section === section && dragOver.value.index === index;
+
+// ── Suggest Tasks / Activities ────────────────────────────────────────────────
+// Works off the on-screen draft, not the stored spec, so it helps while writing.
+
+const suggesting = ref(false);
+
+async function suggestTasks() {
+    const id = process.value?.id;
+    if (!id) return;
+
+    suggesting.value = true;
+    try {
+        const items = await $api.processes.suggestSpecTasks(id, form.value);
+        if (!items.length) {
+            toast.add({ severity: 'info', summary: 'Nothing to add', detail: 'No new steps were suggested.', life: 4000 });
+            return;
+        }
+        form.value.tasksActivities.push(...items.map(text => ({ id: uuidv4(), text })));
+        toast.add({
+            severity: 'success',
+            summary: `${items.length} step${items.length > 1 ? 's' : ''} added`,
+            detail: 'Edit what does not fit, then Save.',
+            life: 4000,
+        });
+    } catch (err: any) {
+        console.error('Task suggestion failed', err);
+        toast.add({
+            severity: 'error',
+            summary: 'Could not suggest steps',
+            detail: err?.response?.data?.message ?? 'Try again in a moment.',
+            life: 6000,
+        });
+    } finally {
+        suggesting.value = false;
+    }
+}
+
+// ── Generate the diagram ──────────────────────────────────────────────────────
+// One shot, on v1 only (spec §2a.1): the backend enforces both gates and tells us
+// which one closed, so the button just reflects what it was told.
+
+const generating = ref(false);
+
+/** Reads as "Regenerate" once a diagram has been generated — it replaces that one. */
+const hasGenerated  = computed(() => Boolean(meta.value?.generatedAt));
+const generateLabel = computed(() => (hasGenerated.value ? 'Regenerate diagram' : 'Generate diagram'));
+
+function confirmGenerate() {
+    onApprove(
+        confirm,
+        hasGenerated.value
+            ? 'This replaces the current diagram with a new one written from the spec.\nAnything changed on the Diagram tab since the last generation is lost.\nYou can keep regenerating until you save the diagram by hand.'
+            : 'This writes a BPMN diagram from the spec.\nYou can regenerate as often as you like until you save the diagram by hand — after that the diagram is yours.',
+        generateDiagram,
+        { acceptPropsLabel: generateLabel.value, acceptPropsSeverity: 'primary' },
+    );
+}
+
+async function generateDiagram() {
+    const id = process.value?.id;
+    if (!id) return;
+
+    // Generate from what is actually stored, not from an unsaved screen.
+    if (isDirty.value && !(await save())) return;
+
+    generating.value = true;
+    try {
+        const { definitionId } = await $api.processes.generateDiagramFromSpec(id);
+
+        // v1 is rewritten in place, so the id does not change — the parent would keep
+        // serving the pre-generation XML to the modeler. Refresh it before navigating.
+        setProcess(await $api.processes.findById(definitionId));
+        meta.value = await $api.processes.getSpec(definitionId);
+
+        toast.add({ severity: 'success', summary: 'Diagram generated', detail: 'Review it on the Diagram tab.', life: 4000 });
+        router.push({ name: 'ProcessEditDiagram', params: { id: definitionId } });
+    } catch (err: any) {
+        console.error('Diagram generation failed', err);
+        toast.add({
+            severity: 'error',
+            summary: 'Could not generate the diagram',
+            detail: err?.response?.data?.message ?? 'Try again in a moment.',
+            life: 6000,
+        });
+    } finally {
+        generating.value = false;
     }
 }
 
@@ -161,14 +297,14 @@ const savedLabel = computed(() => {
 
         <template v-else>
             <!-- ── Free-text sections ───────────────────────────────────── -->
-            <div class="space-y-1.5">
+            <div v-for="section in TEXT_SECTIONS" :key="section.key" class="space-y-1.5">
                 <h2 class="text-base font-semibold text-(--layout-accent-color) border-b-2 border-(--layout-accent-color) pb-1.5">
-                    Motivation
+                    {{ section.label }}
                 </h2>
-                <p class="text-xs text-surface-400">Why this process exists — the problem it solves.</p>
+                <p class="text-xs text-surface-400">{{ section.hint }}</p>
                 <Textarea
-                    v-if="editingId === 'motivation'"
-                    v-model="form.motivation"
+                    v-if="editingId === section.key"
+                    v-model="form[section.key]"
                     rows="4"
                     class="w-full"
                     autoResize
@@ -181,53 +317,52 @@ const savedLabel = computed(() => {
                     type="button"
                     class="w-full text-left text-sm whitespace-pre-wrap px-3 py-2 rounded-lg border border-transparent hover:border-surface-200 dark:hover:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
                     v-tooltip.top="'Click to edit'"
-                    @click="startEditText('motivation')"
+                    @click="startEditText(section.key)"
                 >
-                    <span v-if="form.motivation">{{ form.motivation }}</span>
-                    <span v-else class="text-surface-400 italic">Nothing yet.</span>
-                </button>
-            </div>
-
-            <div class="space-y-1.5">
-                <h2 class="text-base font-semibold text-(--layout-accent-color) border-b-2 border-(--layout-accent-color) pb-1.5">
-                    Goal / Impact
-                </h2>
-                <p class="text-xs text-surface-400">What changes once it works.</p>
-                <Textarea
-                    v-if="editingId === 'goalImpact'"
-                    v-model="form.goalImpact"
-                    rows="4"
-                    class="w-full"
-                    autoResize
-                    @vue:mounted="focusOnMount"
-                    @keyup.esc="editingId = null"
-                    @blur="editingId = null"
-                />
-                <button
-                    v-else
-                    type="button"
-                    class="w-full text-left text-sm whitespace-pre-wrap px-3 py-2 rounded-lg border border-transparent hover:border-surface-200 dark:hover:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
-                    v-tooltip.top="'Click to edit'"
-                    @click="startEditText('goalImpact')"
-                >
-                    <span v-if="form.goalImpact">{{ form.goalImpact }}</span>
+                    <span v-if="form[section.key]">{{ form[section.key] }}</span>
                     <span v-else class="text-surface-400 italic">Nothing yet.</span>
                 </button>
             </div>
 
             <!-- ── Item list sections ───────────────────────────────────── -->
             <div v-for="section in LIST_SECTIONS" :key="section.key" class="space-y-1.5">
-                <h2 class="text-base font-semibold text-(--layout-accent-color) border-b-2 border-(--layout-accent-color) pb-1.5">
-                    {{ section.label }}
-                </h2>
+                <div class="flex items-end justify-between gap-3 border-b-2 border-(--layout-accent-color) pb-1.5">
+                    <h2 class="text-base font-semibold text-(--layout-accent-color)">
+                        {{ section.label }}
+                    </h2>
+                    <Button
+                        v-if="section.key === 'tasksActivities'"
+                        label="Suggest with AI"
+                        icon="pi pi-sparkles"
+                        size="small"
+                        severity="secondary"
+                        text
+                        :loading="suggesting"
+                        v-tooltip.top="'Draft the steps from the rest of the spec'"
+                        @click="suggestTasks"
+                    />
+                </div>
                 <p class="text-xs text-surface-400">{{ section.hint }}</p>
 
                 <div class="space-y-2 mt-2">
                     <div
                         v-for="(item, i) in form[section.key]"
                         :key="item.id"
-                        class="flex items-center gap-2 group"
+                        class="flex items-center gap-2 group rounded-lg transition-[border-color]"
+                        :class="[
+                            isDropTarget(section.key, i) ? 'border-t-2 border-(--layout-accent-color)' : 'border-t-2 border-transparent',
+                            dragFrom?.section === section.key && dragFrom.index === i ? 'opacity-40' : '',
+                        ]"
+                        :draggable="editingId !== item.id"
+                        @dragstart="onDragStart(section.key, i, $event)"
+                        @dragover.prevent="onDragOver(section.key, i)"
+                        @drop.prevent="onDrop(section.key, i)"
+                        @dragend="onDragEnd"
                     >
+                        <i
+                            class="pi pi-bars text-xs text-surface-300 dark:text-surface-600 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+                            v-tooltip.top="'Drag to reorder'"
+                        />
                         <InputText
                             v-if="editingId === item.id"
                             v-model="item.text"
@@ -276,9 +411,26 @@ const savedLabel = computed(() => {
             <!-- ── Save bar ─────────────────────────────────────────────── -->
             <div class="flex items-center gap-3 border-t border-surface-200 dark:border-surface-700 pt-4">
                 <Button label="Save" icon="pi pi-save" :loading="saving" :disabled="!isDirty" @click="save" />
+
+                <Button
+                    v-if="meta?.canGenerate"
+                    :label="generateLabel"
+                    icon="pi pi-sitemap"
+                    severity="secondary"
+                    outlined
+                    :loading="generating"
+                    v-tooltip.top="hasGenerated ? 'Replace the diagram with a new draft from this spec' : 'Draft the BPMN diagram from this spec'"
+                    @click="confirmGenerate"
+                />
+
                 <span class="text-xs text-surface-400">{{ savedLabel }}</span>
                 <span v-if="isDirty" class="text-xs text-amber-600 dark:text-amber-400">Unsaved changes</span>
             </div>
+
+            <p v-if="meta && !meta.canGenerate" class="text-xs text-surface-400 -mt-6">
+                <i class="pi pi-info-circle text-xs mr-1" />
+                {{ meta.generationBlockedReason }}
+            </p>
         </template>
     </div>
 

@@ -94,7 +94,7 @@ export interface SpecItem {
 export interface ProcessSpecSections {
     motivation: string;
     goalImpact: string;
-    description: SpecItem[];
+    description: string;
     acceptanceCriteria: SpecItem[];
     actionsConditions: SpecItem[];
     tasksActivities: SpecItem[];
@@ -189,6 +189,33 @@ export class ProcessesService extends ModelApiService {
     async saveSpec(processDefinitionId: string, sections: ProcessSpecSections): Promise<ProcessSpec> {
         try {
             return await this.put<ProcessSpec>(`${processDefinitionId}/spec`, sections);
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
+    }
+
+    /**
+     * Drafts Tasks/Activities lines from the rest of the spec. Sends the working copy,
+     * so it reflects what is on screen rather than what was last saved. Persists nothing.
+     */
+    async suggestSpecTasks(processDefinitionId: string, sections: ProcessSpecSections): Promise<string[]> {
+        try {
+            const res = await this.post<{ items: string[] }>(`${processDefinitionId}/spec/suggest-tasks`, sections);
+            return res.items ?? [];
+        } catch (err) {
+            this.handleErrors(err);
+            throw err;
+        }
+    }
+
+    /**
+     * Generates the BPMN diagram from the spec and saves it as a new version.
+     * Allowed once, on v1 only — the backend rejects it with 409 otherwise.
+     */
+    async generateDiagramFromSpec(processDefinitionId: string): Promise<{ definitionId: string; version?: number }> {
+        try {
+            return await this.post<{ definitionId: string; version?: number }>(`${processDefinitionId}/spec/generate`, {});
         } catch (err) {
             this.handleErrors(err);
             throw err;
