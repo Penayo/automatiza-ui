@@ -4,6 +4,8 @@ import type { SaveDatasourceDto } from '@services/DatasourcesService';
 
 defineProps<{
   parsedOperationKeys: string[];
+  /** Groups already in use — offered as suggestions; a new one is typed in directly. */
+  groupOptions: string[];
 }>();
 
 const form = defineModel<SaveDatasourceDto>('form', { required: true });
@@ -24,6 +26,19 @@ const AUTH_TYPES = ['none', 'basic', 'bearer', 'apiKey'];
       <div>
         <label class="text-xs font-medium">Name</label>
         <InputText v-model="form.name" class="w-full" size="small" placeholder="Vehicles" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-xs font-medium">Group</label>
+        <Select v-model="form.group" :options="groupOptions" editable class="w-full" size="small"
+                showClear placeholder="car-shop" />
+        <small class="text-surface-400">Groups this datasource in the Data menu. Leave empty for ungrouped.</small>
+      </div>
+      <div>
+        <label class="text-xs font-medium">Description</label>
+        <InputText v-model="form.description" class="w-full" size="small" placeholder="Vehicles registered in the shop" />
       </div>
     </div>
 

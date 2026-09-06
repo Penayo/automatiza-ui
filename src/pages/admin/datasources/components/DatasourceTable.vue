@@ -56,6 +56,12 @@ const healthSeverity = (s?: string) =>
       </template>
     </Column>
     <Column field="name" header="Name" sortable />
+    <Column field="group" header="Group" sortable style="width: 10rem">
+      <template #body="{ data }">
+        <Tag v-if="data.group" :value="data.group" severity="secondary" class="text-xs" />
+        <span v-else class="text-xs text-surface-400">—</span>
+      </template>
+    </Column>
     <Column field="baseUrl" header="Base URL">
       <template #body="{ data }">
         <span class="text-xs text-surface-500">{{ data.baseUrl }}</span>

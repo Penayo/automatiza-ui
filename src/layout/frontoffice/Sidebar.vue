@@ -32,11 +32,11 @@
 				</span>
 			</button>
 
-			<!-- Data — browsable datasources -->
-			<template v-if="dataSources.length">
-				<p class="px-4 pt-4 pb-1 text-xs uppercase tracking-wide text-zinc-400">Data</p>
+			<!-- Data — browsable datasources, one section per group (§3) -->
+			<template v-for="section in dataSections" :key="section.label">
+				<p class="px-4 pt-4 pb-1 text-xs uppercase tracking-wide text-zinc-400">{{ section.label }}</p>
 				<button
-					v-for="ds in dataSources"
+					v-for="ds in section.items"
 					:key="ds.key"
 					class="cursor-pointer rounded-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex flex-row items-center gap-4 px-4 py-2 transition-colors"
 					:class="{ 'sidebar-active font-semibold': route.path.startsWith('/data/' + ds.key) }"
@@ -77,6 +77,32 @@
 		{ label: 'Processes', icon: 'pi pi-sitemap',     path: '/processes'  },
 		{ label: 'Documents', icon: 'pi pi-folder-open', path: '/documents'  },
 	];
+
+	/**
+	 * The Data menu, split into one section per `group` (§3). Ungrouped datasources
+	 * keep the plain "Data" heading and lead, so a tenant that never sets a group
+	 * sees exactly the menu it saw before. `browsable` already returns them ordered
+	 * by group then name, so insertion order is the display order.
+	 */
+	const dataSections = computed(() => {
+		const sections: { label: string; items: BrowsableDatasource[] }[] = [];
+		const byLabel = new Map<string, { label: string; items: BrowsableDatasource[] }>();
+
+		for (const ds of dataSources.value) {
+			const label = ds.group?.trim() || 'Data';
+			let section = byLabel.get(label);
+			if (!section) {
+				section = { label, items: [] };
+				byLabel.set(label, section);
+				// "Data" first regardless of where the first ungrouped datasource lands.
+				if (label === 'Data') sections.unshift(section);
+				else sections.push(section);
+			}
+			section.items.push(ds);
+		}
+
+		return sections;
+	});
 
 	// Highlight the item whose path matches or is a prefix of the current route
 	const currentMenu = computed(() =>

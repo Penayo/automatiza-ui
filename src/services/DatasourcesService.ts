@@ -205,6 +205,8 @@ export interface Datasource {
     key: string;
     name: string;
     description?: string;
+    /** What the Data menu groups by, e.g. "accounting" / "car-shop". Absent ⇒ ungrouped. */
+    group?: string;
     baseUrl: string;
     auth: DatasourceAuth;
     defaultHeaders?: Record<string, string>;
@@ -283,6 +285,8 @@ export interface BrowsableDatasource {
     key: string;
     name: string;
     description?: string;
+    /** §3 — the Data menu's section for this datasource. Absent ⇒ ungrouped. */
+    group?: string;
     operations: BrowsableOperation[];
     /** Key of a `single` op the details page can re-fetch by key on deep-link (if any). */
     detailOperation?: string;

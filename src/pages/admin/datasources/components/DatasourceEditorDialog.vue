@@ -27,7 +27,7 @@ const editingId     = ref<string | null>(null);
 
 function emptyForm(): SaveDatasourceDto {
     return {
-        key: '', name: '', description: '', baseUrl: '',
+        key: '', name: '', description: '', group: '', baseUrl: '',
         auth: { type: 'none' },
         timeoutMs: 10000,
         filterStyle: { mode: 'params' },
@@ -47,10 +47,22 @@ const form = ref<SaveDatasourceDto>(emptyForm());
 // ── Roles (§10.6) — for the read/create/update role MultiSelects ────────────
 const roleOptions = ref<IRole[]>([]);
 
+/** Groups already in use (§3) — suggestions only; the Select stays editable so a new one can be typed. */
+const groupOptions = ref<string[]>([]);
+
 onMounted(async () => {
     const result = await $api.roles.fetchRoles({ keys: [] });
     roleOptions.value = Array.isArray(result) ? result : (result.rows ?? []);
 });
+
+async function loadGroupOptions() {
+    try {
+        const all = await $api.datasources.getAll();
+        groupOptions.value = [...new Set(all.map(d => d.group).filter((g): g is string => !!g))].sort();
+    } catch {
+        // suggestions only — the field still accepts a freely typed group
+    }
+}
 
 /** Operations a `createOperation`/`updateOperation` Select may point at — writes only. */
 const writeOperationKeys = computed(() => {
@@ -147,6 +159,7 @@ function openNew() {
     defaultHeadersJson.value = '{}';
     jsonError.value = wireError.value = headersError.value = '';
     testTabRef.value?.reset();
+    loadGroupOptions();
     dialogVisible.value = true;
 }
 
@@ -154,7 +167,7 @@ function openEdit(ds: Datasource) {
     editingId.value = ds.id;
     selectedPreset.value = null;
     form.value = {
-        key: ds.key, name: ds.name, description: ds.description ?? '',
+        key: ds.key, name: ds.name, description: ds.description ?? '', group: ds.group ?? '',
         baseUrl: ds.baseUrl,
         auth: { ...ds.auth },
         defaultHeaders: ds.defaultHeaders,
@@ -182,6 +195,7 @@ function openEdit(ds: Datasource) {
     defaultHeadersJson.value = JSON.stringify(ds.defaultHeaders ?? {}, null, 2);
     jsonError.value = wireError.value = headersError.value = '';
     testTabRef.value?.reset();
+    loadGroupOptions();
     dialogVisible.value = true;
 }
 
@@ -279,7 +293,7 @@ async function save() {
                 </TabList>
                 <TabPanels>
                     <TabPanel value="general">
-                        <GeneralTab v-model:form="form" :parsed-operation-keys="parsedOperationKeys" />
+                        <GeneralTab v-model:form="form" :parsed-operation-keys="parsedOperationKeys" :group-options="groupOptions" />
                     </TabPanel>
 
                     <TabPanel value="query">
