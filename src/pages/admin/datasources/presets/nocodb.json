@@ -4,6 +4,7 @@
   "description": "Hosted spreadsheet-database with a REST API. A good fit for a customer who has no system at all.",
   "docsUrl": "https://docs.nocodb.com/0.109.7/developer-resources/rest-apis",
   "verified": null,
+  "resourceSegment": null,
   "notes": [
     "NOT YET VERIFIED against a live instance — written from documentation. The PostgREST preset was too, and the live run corrected three assumptions, so treat this as a starting point and use the Test panel before trusting it.",
     "Filters merge into ONE `where` param joined by ~and, unlike PostgREST's independent params. This is the only preset exercising filterStyle mode `composed`.",

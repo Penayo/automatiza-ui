@@ -4,6 +4,7 @@
   "description": "Blank declaration. Use this for an API that matches none of the presets — an ERP, an internal service, a vendor API.",
   "docsUrl": null,
   "verified": null,
+  "resourceSegment": "resource",
   "notes": [
     "Start from the closest preset instead if one is even roughly similar — the Test panel makes correcting it faster than writing from scratch.",
     "Decide filterStyle first: does the API take one query param per filter (mode `params`), or merge them into a single expression param (mode `composed`)?",

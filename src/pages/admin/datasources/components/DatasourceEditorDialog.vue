@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useToast, Button, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue';
 import { useTheme } from '@/composables/useTheme';
 import { $api } from '@services/api';
@@ -83,6 +83,49 @@ const operationsJson = ref('[]');
 const jsonError      = ref('');
 
 /**
+ * The path segment currently standing in for this datasource's resource —
+ * `vehicles` in a freshly applied preset, or whatever the key was when an
+ * existing row was opened.
+ *
+ * The key is how the rest of the product names a datasource, so an author who
+ * renames it expects `/vehicles` to become `/customers` rather than to be left
+ * pointing at the preset's example table. Only a segment that still matches is
+ * rewritten, so a hand-edited path simply stops tracking instead of being
+ * clobbered.
+ */
+const resourceSegment = ref<string | null>(null);
+
+/** Rewrite whole path segments equal to `from` — never a substring of one. */
+function renameResourceSegment(from: string | null, to: string) {
+    if (!from || !to || from === to) return;
+
+    let ops: any[];
+    try {
+        const parsed = JSON.parse(operationsJson.value);
+        if (!Array.isArray(parsed)) return;
+        ops = parsed;
+    } catch {
+        return; // mid-edit and unparseable — leave the author's text alone
+    }
+
+    let changed = false;
+    for (const op of ops) {
+        if (typeof op?.path !== 'string') continue;
+        const next = op.path.split('/').map((s: string) => (s === from ? to : s)).join('/');
+        if (next !== op.path) { op.path = next; changed = true; }
+    }
+    if (changed) operationsJson.value = JSON.stringify(ops, null, 2);
+}
+
+// An emptied key is someone retyping, not a rename to nothing: hold the segment
+// until a real one arrives.
+watch(() => form.value.key, (next) => {
+    if (!next) return;
+    renameResourceSegment(resourceSegment.value, next);
+    resourceSegment.value = next;
+});
+
+/**
  * The pagination *wire* maps and default headers. Structured selects cover
  * `style` and `total`; these three are free-form key→template maps whose names
  * are whatever the remote API happens to call them, so they are edited as JSON.
@@ -140,6 +183,14 @@ function applyPreset(id: string | null) {
     defaultHeadersJson.value = JSON.stringify(t.defaultHeaders ?? {}, null, 2);
     operationsJson.value     = JSON.stringify(t.operations ?? [], null, 2);
 
+    // The key survives a preset, so paths adopt it immediately rather than
+    // waiting for the next keystroke in it.
+    resourceSegment.value = preset.resourceSegment;
+    if (form.value.key) {
+        renameResourceSegment(resourceSegment.value, form.value.key);
+        resourceSegment.value = form.value.key;
+    }
+
     jsonError.value = wireError.value = headersError.value = '';
     toast.add({
         severity: 'info', summary: `${preset.name} applied`,
@@ -154,6 +205,7 @@ function openNew() {
     editingId.value = null;
     selectedPreset.value = null;
     form.value = emptyForm();
+    resourceSegment.value = null;
     operationsJson.value = '[]';
     paginationWireJson.value = '{}';
     defaultHeadersJson.value = '{}';
@@ -187,6 +239,7 @@ function openEdit(ds: Datasource) {
         enabled: ds.enabled,
     };
     operationsJson.value = JSON.stringify(ds.operations ?? [], null, 2);
+    resourceSegment.value = ds.key || null;
     paginationWireJson.value = JSON.stringify({
         params:         ds.pagination?.params,
         headers:        ds.pagination?.headers,
@@ -311,6 +364,7 @@ async function save() {
                         <OperationsTab
                             v-model:operations-json="operationsJson"
                             v-model:json-error="jsonError"
+                            :datasource-key="form.key"
                             :is-dark="isDark"
                         />
                     </TabPanel>

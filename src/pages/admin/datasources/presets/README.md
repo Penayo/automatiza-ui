@@ -21,10 +21,22 @@ Contract these fill in: [`docs/specs/datasources.spec.md`](../../../../../../doc
   "description": "One line, shown in the picker.",
   "docsUrl": "https://…",          // or null
   "verified": null,                 // see below
+  "resourceSegment": "vehicles",    // see below; null if the API fixes its own segments
   "notes": ["Gotchas an author needs before trusting this."],
   "template": { /* baseUrl, auth, filterStyle, pagination, operations, healthCheck */ }
 }
 ```
+
+## `resourceSegment` keeps the paths honest
+
+The path segment the template's operations use for the resource — `vehicles` in `/vehicles/{{key}}`.
+The editor rewrites it to the datasource key, so declaring a `customers` datasource from the
+PostgREST preset yields `/customers`, not the example table. It keeps tracking afterwards: renaming
+the key on the General tab rewrites matching segments in Operations. A hand-edited path no longer
+matching the key is left alone.
+
+Use `null` when the segments are fixed by the API rather than naming a resource — NocoDB's
+`/records` is literal, and the table is chosen in `baseUrl`.
 
 ## `verified` is the important field
 

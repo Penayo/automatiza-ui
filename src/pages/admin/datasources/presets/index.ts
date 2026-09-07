@@ -30,6 +30,13 @@ export interface DatasourcePreset {
      * three documented assumptions, so the distinction is not cosmetic.
      */
     verified: string | null;
+    /**
+     * The path segment this preset's operations use to stand in for the resource
+     * — `vehicles` in `/vehicles/{{key}}`. The editor rewrites it to the
+     * datasource key so the paths read as the thing being declared. `null` for a
+     * preset whose segments are fixed by the API (NocoDB's `/records`).
+     */
+    resourceSegment: string | null;
     notes: string[];
     template: Partial<SaveDatasourceDto>;
 }

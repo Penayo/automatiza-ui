@@ -281,10 +281,17 @@ onMounted(loadFormVars);
 <style>
 .jsf-preview-root {
     font-family: inherit;
+
+    /* Element Plus defaults these to --el-font-weight-primary (500), which makes
+       radio/checkbox option text read as a label. Options are content: keep them
+       regular so only the field label carries weight. */
+    --el-radio-font-weight:    400;
+    --el-checkbox-font-weight: 400;
 }
 
 .jsf-preview-root .el-form-item__label {
-    font-size: 0.875rem;
+    font-size:   0.875rem;
+    font-weight: 600;
 }
 
 .jsf-preview-root .el-button--primary {

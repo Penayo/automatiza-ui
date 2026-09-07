@@ -4,6 +4,7 @@
   "description": "A hand-written Python API. Unlike the others this is a convention, not a specification — FastAPI imposes no shape, so adjust the paths and param names to the actual service.",
   "docsUrl": "https://uriyyo-fastapi-pagination.netlify.app/",
   "verified": null,
+  "resourceSegment": "vehicles",
   "notes": [
     "NOT YET VERIFIED — and cannot be in general: FastAPI is a framework, so every service differs. This encodes the most common convention: fastapi-pagination's Page[T] response, plain query-param filters, and /resource/{id} detail routes.",
     "Assumes the response envelope { items, total, page, size, pages }. A service returning a bare list needs itemsPath removed and total.from set to none.",

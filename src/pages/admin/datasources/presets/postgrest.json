@@ -4,6 +4,7 @@
   "description": "Auto-generated REST API over PostgreSQL. Supabase's REST layer is PostgREST, so this preset fits both.",
   "docsUrl": "https://docs.postgrest.org/en/v14/references/api/tables_views.html",
   "verified": "2026-07-30 against PostgREST 12.2.12 — see datasources.spec.md §14.1",
+  "resourceSegment": "vehicles",
   "notes": [
     "Filters put the operator inside the value: ?plate=ilike.*ABC*",
     "A paged read returns HTTP 206, not 200.",
