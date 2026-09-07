@@ -254,8 +254,22 @@ function handleSubmit() {
     font-family: inherit;
 }
 
+/* Element Plus defaults these to --el-font-weight-primary (500), which makes
+   radio/checkbox option text read as a label. Options are content: keep them
+   regular so only the field label carries weight.
+   The vars must be set ON .el-radio / .el-checkbox — those rules declare their
+   own copy, so a definition on an ancestor is shadowed and has no effect. */
+.jsf-preview-root .el-radio {
+    --el-radio-font-weight: 400;
+}
+
+.jsf-preview-root .el-checkbox {
+    --el-checkbox-font-weight: 400;
+}
+
 .jsf-preview-root .el-form-item__label {
-    font-size: 0.875rem;
+    font-size:   0.875rem;
+    font-weight: 600;
 }
 
 .jsf-preview-root .el-button--primary {
