@@ -5,7 +5,7 @@ import { LinkModule } from '@/form-fields/LinkField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { ref, watch, computed, onMounted, onErrorCaptured, provide, watchEffect, markRaw, type Component } from 'vue';
+import { ref, watch, computed, onUnmounted, onErrorCaptured, provide, watchEffect, markRaw, type Component } from 'vue';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
 
 onErrorCaptured((err) => {
@@ -24,6 +24,7 @@ import { onApprove } from "@/utils/common";
 import { parseApiError } from "@/utils/error";
 import type { IAccess } from "@services/AuthService.ts";
 import { resolveFormFiles } from '@/form-fields/form-js-submit';
+import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
 
 // JSON Schema form renderer
 import VueForm from '@lljj/vue3-form-element';
@@ -37,6 +38,20 @@ const confirm  = useConfirm();
 
 const props = defineProps<{ task: Task | null }>();
 const emit  = defineEmits(['refresh']);
+
+// ── Multi-step form chain (docs/specs/multi-step-forms.spec.md §12) ───────────
+// A chained next step is NOT in the parent's fetched task list, so `props.task`
+// can never point at it. Everything below therefore reads `activeTask` — the
+// chained step when a wizard is running, the prop otherwise. Missing one of
+// these (especially isTaskAssignedToUser) renders the next step permanently
+// read-only with both buttons disabled.
+const chainedTask = ref<Task | null>(null);
+const activeTask  = computed<Task | null>(() => chainedTask.value ?? props.task);
+
+const isWizard   = ref(false);
+const step       = ref(1);
+const waiting    = ref(false);
+const chainAbort = ref<AbortController | null>(null);
 
 const formSchema      = ref<IForm | null>(null);
 const formData        = ref<Record<string, any>>({});
@@ -72,8 +87,19 @@ const customViewRef = ref<{ getVariables: () => Record<string, any> } | null>(nu
 async function completeTask(variables: any) {
     try {
         loading.value = true;
-        await $api.tasks.completeTask(props.task?.id as string, { variables });
+        const response = await $api.tasks.completeTask(activeTask.value?.id as string, {
+            variables,
+            // Only opt in for a marked step: otherwise the response and the server's
+            // behaviour (including auto-claim) stay exactly as they are today.
+            chainForms: isWizard.value,
+        });
         formSchema.value = null;
+
+        if (isWizard.value && response?.chain) {
+            await followChain(response.chain);
+            return;
+        }
+
         completed.value  = true;
         emit('refresh');
     } catch (error) {
@@ -84,6 +110,58 @@ async function completeTask(variables: any) {
     }
 }
 
+/**
+ * Acts on a `chain` payload (§4/§9).
+ *
+ * `nextForm` renders the next step in place of today's `emit('refresh')`.
+ * `pending` waits on the stream. Every terminal reason falls back to today's
+ * behaviour: the completion panel plus a list refresh.
+ *
+ * The next task is synthesised rather than fetched: the server auto-claimed it
+ * for this user as part of returning `nextForm` (§5), so `assignee` is known, and
+ * everything else the component needs comes from the same process instance.
+ */
+async function followChain(chain: FormChain) {
+    const openNext = async (next: NonNullable<FormChain['nextTask']>) => {
+        chainedTask.value = {
+            ...(activeTask.value as Task),
+            id:         next.taskId,
+            name:       next.taskName ?? '',
+            assignment: { assignee: userInfo.value?.user.username },
+        } as Task;
+        step.value += 1;
+        waiting.value = false;
+        currentFormData.value = {};
+        jsonFormData.value    = {};
+        await getTaskForm();
+    };
+
+    if (hasNextForm(chain)) {
+        await openNext(chain.nextTask);
+        return;
+    }
+
+    if (isPending(chain) && chain.resume?.streamUrl) {
+        waiting.value = true;
+        chainAbort.value?.abort();
+        chainAbort.value = new AbortController();
+
+        const resolved = await awaitChain(chain.resume.streamUrl, chainAbort.value.signal);
+        if (!waiting.value) return;   // the user selected another task meanwhile
+
+        if (hasNextForm(resolved)) {
+            await openNext(resolved.nextTask);
+            return;
+        }
+    }
+
+    // Wizard over — the list behind this panel is stale (the steps just completed
+    // are gone, and any auto-claimed task is new), so refresh it.
+    waiting.value   = false;
+    completed.value = true;
+    emit('refresh');
+}
+
 function getCurrentVars(): Record<string, any> {
     if (isCustom.value)     return customViewRef.value?.getVariables() ?? { ...formData.value };
     if (isJsonSchema.value) return { ...formData.value, ...jsonFormData.value };
@@ -91,7 +169,7 @@ function getCurrentVars(): Record<string, any> {
 }
 
 async function saveTask() {
-    if (!props.task?.id) return;
+    if (!activeTask.value?.id) return;
     saving.value = true;
     saved.value  = false;
     try {
@@ -100,12 +178,12 @@ async function saveTask() {
         if (!isJsonSchema.value && !isCustom.value) {
             const resolvedVars = await resolveFormFiles(
                 vars, $api.files, formViewer.value,
-                props.task.processInstanceId,
-                props.task.id,
+                activeTask.value.processInstanceId,
+                activeTask.value.id,
             );
-            await $api.tasks.updateVariables(props.task.id, resolvedVars);
+            await $api.tasks.updateVariables(activeTask.value.id, resolvedVars);
         } else {
-            await $api.tasks.updateVariables(props.task.id, vars);
+            await $api.tasks.updateVariables(activeTask.value.id, vars);
         }
 
         saved.value = true;
@@ -142,9 +220,10 @@ async function getTaskForm() {
     try {
         loading.value  = true;
         customView.value = null;
-        const { formSchema: schema, formData: data } = await $api.tasks.getTaskForm(props.task?.id as string);
+        const { formSchema: schema, formData: data, multiStep } = await $api.tasks.getTaskForm(activeTask.value?.id as string);
         formSchema.value = schema;
         formData.value   = data ?? {};
+        isWizard.value   = multiStep === true;
 
         if (schema?.type === 'jsonschema') {
             jsonFormData.value = { ...(data ?? {}) };
@@ -167,11 +246,17 @@ async function getTaskForm() {
     }
 }
 
-const isTaskAssignedToUser = () => props.task?.assignment?.assignee === userInfo.value?.user.username;
+const isTaskAssignedToUser = () => activeTask.value?.assignment?.assignee === userInfo.value?.user.username;
 const canEditForm = computed(() => isTaskAssignedToUser());
 
 watch(() => props.task, () => {
-    completed.value = false;
+    // A new selection from the list ends any wizard in progress: drop the shadow
+    // task and cancel a subscription that would otherwise resolve into it.
+    chainAbort.value?.abort();
+    chainedTask.value = null;
+    waiting.value     = false;
+    step.value        = 1;
+    completed.value   = false;
     getTaskForm();
     userInfo.value  = $api.authService.getAccessInfo();
 }, { immediate: true });
@@ -189,7 +274,7 @@ watch(formSchema, () => {
         formViewer.value = undefined;
     }
 
-    if (!formSchema.value || !props.task) return;
+    if (!formSchema.value || !activeTask.value) return;
 
     const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule, LinkModule] });
     formViewer.value = form;
@@ -210,8 +295,8 @@ watch(formSchema, () => {
                 event.data as Record<string, any>,
                 $api.files,
                 form,
-                props.task?.processInstanceId,
-                props.task?.id,
+                activeTask.value?.processInstanceId,
+                activeTask.value?.id,
             );
             completeTask(resolvedData);
         } catch (err: any) {
@@ -225,7 +310,7 @@ watch(formSchema, () => {
     });
 });
 
-onMounted(() => {});
+onUnmounted(() => chainAbort.value?.abort());
 </script>
 
 <template>
@@ -239,7 +324,7 @@ onMounted(() => {});
         </div>
         <h2 class="text-2xl font-semibold text-(--layout-accent-color)">Task completed!</h2>
         <p class="text-zinc-500 dark:text-zinc-400 max-w-sm">
-            The task <strong>{{ props.task?.name }}</strong> was submitted successfully and is now progressing to the next stage.
+            The task <strong>{{ activeTask?.name }}</strong> was submitted successfully and is now progressing to the next stage.
         </p>
         <Button
             label="Back to task list"
@@ -249,12 +334,34 @@ onMounted(() => {});
         />
     </div>
 
+    <!-- ── Waiting for the next wizard step (chain `pending`) ─────────────── -->
+    <div
+        v-else-if="waiting"
+        class="flex flex-col items-center justify-center gap-4 py-16 px-8 text-center"
+    >
+        <div class="w-16 h-16 rounded-full bg-surface-100 dark:bg-zinc-800 flex items-center justify-center">
+            <i class="pi pi-spin pi-spinner text-surface-400" style="font-size: 2rem" />
+        </div>
+        <h2 class="text-xl font-semibold text-(--layout-accent-color)">Processing your answers…</h2>
+        <p class="text-zinc-500 dark:text-zinc-400 max-w-sm">
+            We're preparing the next step of this form. This usually takes a few seconds.
+        </p>
+    </div>
+
     <!-- ── Form panel ─────────────────────────────────────────────────────── -->
     <div v-else>
 
+        <!-- Wizard step indicator -->
+        <div
+            v-if="isWizard"
+            class="px-4 pt-3 text-xs font-medium uppercase tracking-wide text-surface-400"
+        >
+            Step {{ step }}
+        </div>
+
         <!-- Test mode banner -->
         <div
-            v-if="props.task?.testMode"
+            v-if="activeTask?.testMode"
             class="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-sm"
         >
             <i class="pi pi-flask text-base shrink-0" />

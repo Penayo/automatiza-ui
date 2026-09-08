@@ -5,7 +5,7 @@ import { LinkModule } from '@/form-fields/LinkField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { ref, watch, computed, onMounted, markRaw, provide, type Component } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted, markRaw, provide, type Component } from 'vue';
 import { useRoute } from 'vue-router';
 import { $taskPublic } from '@services/TaskPublicService';
 import type { TaskFormData } from '@services/TaskPublicService';
@@ -14,6 +14,7 @@ import { applyBrandingPalette, type TenantBranding } from '@/composables/useTena
 import { FilesService } from '@services/FilesService';
 import { resolveFormFiles } from '@/form-fields/form-js-submit';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
+import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
 
 // JSON Schema form renderer
 import VueForm from '@lljj/vue3-form-element';
@@ -30,7 +31,10 @@ const fallbackCompanyName = import.meta.env.VITE_COMPANY_NAME ?? 'Process Linker
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 const route = useRoute();
-const token = route.params.token as string;
+// The wizard advances by swapping this token, never by navigating: each chained
+// step has its own share link, and the page URL stays put.
+// See docs/specs/multi-step-forms.spec.md §12.
+const token = ref(route.params.token as string);
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const data       = ref<TaskFormData | null>(null);
@@ -43,9 +47,19 @@ const submitPhase = ref<'submitting' | 'uploading'>('submitting');
 const saving     = ref(false);
 const saved      = ref(false);   // shows brief "Saved" confirmation
 
-type PageState = 'loading' | 'form' | 'done' | 'used' | 'notfound' | 'error';
+type PageState = 'loading' | 'form' | 'waiting' | 'done' | 'used' | 'notfound' | 'error';
 const state     = ref<PageState>('loading');
 const errorMsg  = ref('');
+
+// ── Multi-step form chain (docs/specs/multi-step-forms.spec.md §12) ───────────
+// `isWizard` comes from the task itself, so a share link that opens mid-wizard
+// still renders as one. `step` counts as it goes — the platform deliberately does
+// not promise a total (gateways make it unknowable).
+const isWizard = computed(() => data.value?.multiStep === true);
+// A wizard that began at the start form hands the running count over in the URL,
+// so the numbering continues instead of restarting at 1.
+const step     = ref(Number(route.query.step) || 1);
+const chainAbort = ref<AbortController | null>(null);
 
 // ── Tenant branding ───────────────────────────────────────────────────────────
 // This page is anonymous, so it cannot call /tenants/branding (that resolves the
@@ -125,8 +139,14 @@ function buildVariables(): Record<string, any> {
 // ── Load ──────────────────────────────────────────────────────────────────────
 async function load() {
     state.value = 'loading';
+    // A chained step reuses this component: tear the previous viewer down so the
+    // `state` watcher below builds a fresh one against the new schema.
+    formViewer.value?.destroy();
+    formViewer.value      = undefined;
+    currentFormData.value = {};
+    customView.value      = null;
     try {
-        data.value = await $taskPublic.getForm(token);
+        data.value = await $taskPublic.getForm(token.value);
 
         branding.value = data.value?.branding ?? null;
         applyBrandingPalette(pageRef.value, branding.value);
@@ -204,7 +224,7 @@ async function saveProgress(variables: Record<string, any>) {
             data.value?.processInstanceId,
             data.value?.taskId,
         );
-        await $taskPublic.save(token, resolvedData);
+        await $taskPublic.save(token.value, resolvedData);
         saved.value = true;
         setTimeout(() => { saved.value = false; }, 3000);
     } catch (err: any) {
@@ -233,8 +253,17 @@ async function submit(variables: Record<string, any>) {
     submitting.value  = true;
     submitPhase.value = 'submitting';
     try {
-        await $taskPublic.complete(token, variables);
+        // Only ask for a chain when this step is actually part of a wizard —
+        // otherwise the response (and the server's behaviour) stays exactly as it
+        // is today, including no auto-claim of whatever comes next.
+        const { chain } = await $taskPublic.complete(token.value, variables, isWizard.value);
         formViewer.value?.destroy();
+
+        if (isWizard.value && chain) {
+            await followChain(chain);
+            return;
+        }
+
         state.value = 'done';
     } catch (err: any) {
         const status = err?.response?.status;
@@ -244,6 +273,47 @@ async function submit(variables: Record<string, any>) {
     } finally {
         submitting.value = false;
     }
+}
+
+/**
+ * Acts on a `chain` payload (§4/§9).
+ *
+ * `nextForm` swaps the token and re-renders in place. `pending` means the next
+ * step is behind a queued service task: show the waiting state and subscribe
+ * until the server resolves it or gives up. Every terminal reason — `chainEnd`,
+ * `endEvent`, `failed`, `branched`, `unauthorized` — falls back to today's static
+ * success screen, which is the correct end of the road for an anonymous
+ * submitter in all five cases.
+ */
+async function followChain(chain: FormChain) {
+    if (hasNextForm(chain) && chain.nextTask.shareLinkToken) {
+        token.value = chain.nextTask.shareLinkToken;
+        step.value += 1;
+        submitting.value = false;
+        await load();
+        return;
+    }
+
+    if (isPending(chain) && chain.resume?.streamUrl) {
+        state.value      = 'waiting';
+        submitting.value = false;
+
+        chainAbort.value?.abort();
+        chainAbort.value = new AbortController();
+
+        const resolved = await awaitChain(chain.resume.streamUrl, chainAbort.value.signal);
+        // Guard against a resolution landing after the user moved on.
+        if (state.value !== 'waiting') return;
+
+        if (hasNextForm(resolved) && resolved.nextTask.shareLinkToken) {
+            token.value = resolved.nextTask.shareLinkToken;
+            step.value += 1;
+            await load();
+            return;
+        }
+    }
+
+    state.value = 'done';
 }
 
 async function submitForm() {
@@ -272,6 +342,7 @@ async function submitForm() {
 }
 
 onMounted(load);
+onUnmounted(() => chainAbort.value?.abort());
 </script>
 
 <template>
@@ -361,11 +432,29 @@ onMounted(load);
                     </div>
                 </div>
 
+                <!-- Waiting for the next wizard step (chain `pending`) -->
+                <div v-else-if="state === 'waiting'" class="flex flex-col items-center gap-5 py-16 text-center">
+                    <div class="w-20 h-20 rounded-full bg-surface-100 dark:bg-zinc-800 flex items-center justify-center">
+                        <i class="pi pi-spin pi-spinner text-surface-400" style="font-size: 2.5rem" />
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">
+                            Processing your answers…
+                        </h2>
+                        <p class="text-sm text-surface-500 mt-1 max-w-xs">
+                            We're preparing the next step. This usually takes a few seconds.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Form -->
                 <div v-else-if="state === 'form' && data">
 
                     <!-- Task title + description -->
                     <div class="mb-6">
+                        <p v-if="isWizard" class="text-xs font-medium uppercase tracking-wide text-surface-400 mb-1">
+                            Step {{ step }}
+                        </p>
                         <h1 class="text-xl font-semibold text-surface-900 dark:text-surface-50">
                             {{ data.taskName }} Form
                         </h1>

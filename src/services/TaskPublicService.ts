@@ -1,5 +1,6 @@
 import { BaseService } from '@services/BaseService';
 import type { TenantBranding } from '@/composables/useTenantBranding';
+import type { FormChain } from '@services/FormChainService';
 
 export interface TaskFormData {
     taskId:            string;
@@ -12,6 +13,8 @@ export interface TaskFormData {
     formData:          Record<string, any>;
     /** Tenant branding, resolved from the task's tenant — this page has no JWT to resolve it from. */
     branding:          TenantBranding | null;
+    /** True when this task is a step of a multi-step form (wizard). */
+    multiStep?:        boolean;
 }
 
 export class TaskPublicService extends BaseService {
@@ -27,8 +30,20 @@ export class TaskPublicService extends BaseService {
         return this.put<{ success: boolean }>(`${token}/save`, { variables });
     }
 
-    async complete(token: string, variables: Record<string, any>): Promise<{ success: boolean }> {
-        return this.post<{ success: boolean }>(`${token}/complete`, { variables }) as Promise<{ success: boolean }>;
+    /**
+     * `chainForms` tells the server this client can render a chained next step —
+     * without it the response is unchanged and no next task is auto-claimed.
+     * See docs/specs/multi-step-forms.spec.md §3.2.
+     */
+    async complete(
+        token: string,
+        variables: Record<string, any>,
+        chainForms = false,
+    ): Promise<{ success: boolean; chain?: FormChain }> {
+        return this.post<{ success: boolean; chain?: FormChain }>(
+            `${token}/complete`,
+            { variables, chainForms },
+        ) as Promise<{ success: boolean; chain?: FormChain }>;
     }
 }
 

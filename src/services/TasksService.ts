@@ -1,10 +1,13 @@
 import type { APIData } from "@services/BaseService";
 import type { IForm } from "@services/FormsService";
 import { ModelApiService } from "@services/ModelAPI";
+import type { FormChain } from "@services/FormChainService";
 
 export interface TaskFormResponse {
     formSchema: IForm | null;
     formData:   Record<string, any>;
+    /** True when this task is a step of a multi-step form (wizard). */
+    multiStep?: boolean;
 }
 
 export interface TaskVariable {
@@ -56,6 +59,12 @@ export interface Task extends APIData {
 
 export interface CompleteTaskDto {
     variables?: Record<string, any>;
+    /**
+     * Opt in to multi-step form chaining — means "this client can render a chained
+     * next form". Without it the response is unchanged and the next task is not
+     * auto-claimed. See docs/specs/multi-step-forms.spec.md §3.2.
+     */
+    chainForms?: boolean;
 }
 
 export interface UpdateTaskDto {
@@ -84,7 +93,7 @@ export class TasksService extends ModelApiService {
 
     async completeTask(taskId: string, data: CompleteTaskDto) {
         try {
-            return await this.post<Task[]>(`${taskId}/complete`, data);
+            return await this.post<{ chain?: FormChain }>(`${taskId}/complete`, data);
         } catch (err) {
             this.handleErrors(err);
             throw err;

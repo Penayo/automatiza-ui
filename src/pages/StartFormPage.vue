@@ -5,12 +5,13 @@ import { LinkModule } from '@/form-fields/LinkField';
 import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
 import '@/forms.scss';
 
-import { computed, ref, watch, onMounted, markRaw, type Component } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted, markRaw, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useTheme } from '@/composables/useTheme';
 import { applyBrandingPalette, type TenantBranding } from '@/composables/useTenantBranding';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
+import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
 
 // JSON Schema form renderer
 import VueForm from '@lljj/vue3-form-element';
@@ -31,9 +32,18 @@ const processId    = route.params.processId as string;
 const startToken = route.query.token as string | undefined;
 
 // ── State ─────────────────────────────────────────────────────────────────────
-type PageState = 'loading' | 'form' | 'login-required' | 'forbidden' | 'done' | 'error';
+type PageState = 'loading' | 'form' | 'waiting' | 'login-required' | 'forbidden' | 'done' | 'error';
 const state        = ref<PageState>('loading');
 const errorMsg     = ref('');
+
+// ── Multi-step form chain (docs/specs/multi-step-forms.spec.md §12) ───────────
+// `multiStep` on the Start Event tells this page it is the first step of a
+// wizard, before anything has been submitted. `totalSteps` is whatever the author
+// declared — the platform never computes it (gateways make it unknowable).
+const isWizard   = ref(false);
+const totalSteps = ref<number | null>(null);
+const step       = ref(1);
+const chainAbort = ref<AbortController | null>(null);
 const processName  = ref('');
 const description  = ref('');
 const formSchema   = ref<any>(null);
@@ -121,6 +131,8 @@ async function load() {
         description.value = data.description ?? '';
         formSchema.value  = data.formSchema ?? null;
         branding.value    = data.branding ?? null;
+        isWizard.value    = data.multiStep === true;
+        totalSteps.value  = Number.isFinite(data.totalSteps) ? data.totalSteps : null;
         applyBrandingPalette(pageRef.value, branding.value);
 
         const schema = formSchema.value;
@@ -168,12 +180,20 @@ watch(state, (s) => {
 async function submit(variables: Record<string, any>) {
     submitting.value = true;
     try {
-        await axios.post(
+        // Only ask for a chain when the Start Event is actually marked — otherwise
+        // the response and the server's behaviour stay exactly as they are today.
+        const { data } = await axios.post(
             `${BASE}/bpmn/processes/${processId}/public-start${tokenParam()}`,
-            { variables },
+            { variables, chainForms: isWizard.value },
             { headers: authHeaders() },
         );
         formViewer.value?.destroy();
+
+        if (isWizard.value && data?.chain) {
+            await followChain(data.chain as FormChain);
+            return;
+        }
+
         state.value = 'done';
     } catch (err: any) {
         const status = err?.response?.status;
@@ -184,6 +204,47 @@ async function submit(variables: Record<string, any>) {
     } finally {
         submitting.value = false;
     }
+}
+
+/**
+ * Acts on a `chain` payload after the start form is submitted (§4/§9).
+ *
+ * Steps 2+ of a wizard are ordinary share-link task forms, so this hands off to
+ * /task-form/:token rather than re-implementing the task renderer here — that
+ * page already handles form-js, JSON-Schema and custom views, file uploads and
+ * save-progress. `replace` (not `push`) so Back cannot return to a start form
+ * that has already been submitted.
+ *
+ * Every terminal reason — `chainEnd`, `endEvent`, `failed`, `branched`,
+ * `unauthorized` — falls back to today's static success screen.
+ */
+async function followChain(chain: FormChain) {
+    const handOff = (token: string) => {
+        router.replace({ path: `/task-form/${token}`, query: { step: String(step.value + 1) } });
+    };
+
+    if (hasNextForm(chain) && chain.nextTask.shareLinkToken) {
+        handOff(chain.nextTask.shareLinkToken);
+        return;
+    }
+
+    if (isPending(chain) && chain.resume?.streamUrl) {
+        state.value      = 'waiting';
+        submitting.value = false;
+
+        chainAbort.value?.abort();
+        chainAbort.value = new AbortController();
+
+        const resolved = await awaitChain(chain.resume.streamUrl, chainAbort.value.signal);
+        if (state.value !== 'waiting') return;   // the user moved on
+
+        if (hasNextForm(resolved) && resolved.nextTask.shareLinkToken) {
+            handOff(resolved.nextTask.shareLinkToken);
+            return;
+        }
+    }
+
+    state.value = 'done';
 }
 
 function getCurrentVars(): Record<string, any> {
@@ -209,6 +270,7 @@ function goLogin() {
 }
 
 onMounted(load);
+onUnmounted(() => chainAbort.value?.abort());
 </script>
 
 <template>
@@ -308,9 +370,25 @@ onMounted(load);
                     </div>
                 </div>
 
+                <!-- Waiting for the next wizard step (chain `pending`) -->
+                <div v-else-if="state === 'waiting'" class="flex flex-col items-center gap-5 py-16 text-center">
+                    <div class="w-20 h-20 rounded-full bg-surface-100 dark:bg-zinc-800 flex items-center justify-center">
+                        <i class="pi pi-spin pi-spinner text-surface-400" style="font-size: 2.5rem" />
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">Processing your answers…</h2>
+                        <p class="text-sm text-surface-500 mt-1 max-w-xs">
+                            We're preparing the next step. This usually takes a few seconds.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Form -->
                 <div v-else-if="state === 'form'">
                     <div class="mb-6">
+                        <p v-if="isWizard" class="text-xs font-medium uppercase tracking-wide text-surface-400 mb-1">
+                            Step {{ step }}<span v-if="totalSteps"> of {{ totalSteps }}</span>
+                        </p>
                         <h1 class="text-xl font-semibold text-surface-900 dark:text-surface-50">{{ processName }}</h1>
                         <p v-if="description" class="text-sm text-surface-500 mt-1 leading-relaxed">{{ description }}</p>
                     </div>
