@@ -44,6 +44,7 @@
 
 <script setup lang="ts">
 	import { Badge, PanelMenu } from 'primevue';
+	import type { MenuItem } from 'primevue/menuitem';
 	import { onMounted, onUnmounted, ref, computed } from 'vue';
 	import { useRouter } from 'vue-router';
 	import { DashboardService } from '@services/DashboardService';
@@ -97,6 +98,43 @@
 
 	const nav = (path: string) => { currentMenu.value = path; router.push(path); };
 
+	/**
+	 * The Data menu, split by `group` (§3) exactly as the frontoffice sidebar does.
+	 * Ungrouped datasources sit directly under "Data" and lead; each distinct group
+	 * becomes a labelled submenu beneath them. `browsable` already returns them
+	 * ordered by group then name, so insertion order is the display order.
+	 */
+	const dataMenu = computed<MenuItem[]>(() => {
+		if (!dataSources.value.length) return [];
+
+		const ungrouped: MenuItem[] = [];
+		const groups = new Map<string, MenuItem[]>();
+
+		for (const ds of dataSources.value) {
+			const item: MenuItem = {
+				label: ds.name,
+				icon: ds.icon?.trim() || 'pi pi-table',
+				command: () => nav('/admin/data/' + ds.key),
+			};
+
+			const group = ds.group?.trim();
+			if (!group) { ungrouped.push(item); continue; }
+
+			const bucket = groups.get(group);
+			if (bucket) bucket.push(item);
+			else groups.set(group, [item]);
+		}
+
+		return [{
+			label: 'Data',
+			icon: 'pi pi-database',
+			items: [
+				...ungrouped,
+				...[...groups].map(([label, items]) => ({ label, icon: 'pi pi-folder', items })),
+			],
+		}];
+	});
+
 	const menuItems = computed(() => [
 		{
 			label: 'Dashboards',
@@ -128,15 +166,7 @@
 				{ label: 'All Documents', icon: 'pi pi-file', command: () => nav('/admin/documents') },
 			]
 		},
-		...(dataSources.value.length ? [{
-			label: 'Data',
-			icon: 'pi pi-database',
-			items: dataSources.value.map(ds => ({
-				label: ds.name,
-				icon: 'pi pi-table',
-				command: () => nav('/admin/data/' + ds.key),
-			})),
-		}] : []),
+		...dataMenu.value,
 		{
 			label: 'Design',
 			icon: 'pi pi-palette',

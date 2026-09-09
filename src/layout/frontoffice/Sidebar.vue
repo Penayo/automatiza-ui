@@ -42,7 +42,7 @@
 					:class="{ 'sidebar-active font-semibold': route.path.startsWith('/data/' + ds.key) }"
 					@click="go('/data/' + ds.key)"
 				>
-					<span class="pi pi-table" style="font-size: 1.2rem" />
+					<span :class="ds.icon?.trim() || 'pi pi-table'" style="font-size: 1.2rem" />
 					<span class="flex-1 text-left">{{ ds.name }}</span>
 				</button>
 			</template>

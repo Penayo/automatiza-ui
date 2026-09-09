@@ -29,12 +29,20 @@ const AUTH_TYPES = ['none', 'basic', 'bearer', 'apiKey'];
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-3 gap-3">
       <div>
         <label class="text-xs font-medium">Group</label>
         <Select v-model="form.group" :options="groupOptions" editable class="w-full" size="small"
                 showClear placeholder="car-shop" />
         <small class="text-surface-400">Groups this datasource in the Data menu. Leave empty for ungrouped.</small>
+      </div>
+      <div>
+        <label class="text-xs font-medium">Icon</label>
+        <InputText v-model="form.icon" class="w-full" size="small" placeholder="pi pi-car" />
+        <small class="text-surface-400 flex items-center gap-1">
+          <span :class="form.icon?.trim() || 'pi pi-table'" />
+          PrimeIcons class shown in the Data menu. Empty ⇒ <code>pi pi-table</code>.
+        </small>
       </div>
       <div>
         <label class="text-xs font-medium">Description</label>

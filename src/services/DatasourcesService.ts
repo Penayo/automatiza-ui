@@ -207,6 +207,8 @@ export interface Datasource {
     description?: string;
     /** What the Data menu groups by, e.g. "accounting" / "car-shop". Absent ⇒ ungrouped. */
     group?: string;
+    /** PrimeIcons class the Data menu renders beside this datasource, e.g. "pi pi-car". */
+    icon?: string;
     baseUrl: string;
     auth: DatasourceAuth;
     defaultHeaders?: Record<string, string>;
@@ -287,6 +289,8 @@ export interface BrowsableDatasource {
     description?: string;
     /** §3 — the Data menu's section for this datasource. Absent ⇒ ungrouped. */
     group?: string;
+    /** §3 — PrimeIcons class for the menu entry. Absent ⇒ the generic table icon. */
+    icon?: string;
     operations: BrowsableOperation[];
     /** Key of a `single` op the details page can re-fetch by key on deep-link (if any). */
     detailOperation?: string;
