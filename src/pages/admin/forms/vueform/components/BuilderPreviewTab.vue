@@ -12,9 +12,9 @@ import { Button, Select, SelectButton, Splitter, SplitterPanel } from 'primevue'
 import JsonEditor from 'vue3-ts-jsoneditor';
 import { useFormLocale } from '@/composables/useFormLocale';
 import { resolveFormVariables } from '@/formbuilder/formVariables';
-import type { VueformSchema } from '@/formbuilder/types';
+import type { VueformSchema, VueformSteps } from '@/formbuilder/types';
 
-const props = defineProps<{ schema: VueformSchema }>();
+const props = defineProps<{ schema: VueformSchema; steps?: VueformSteps }>();
 
 const { locale, locales } = useFormLocale();
 
@@ -54,7 +54,13 @@ const resolvedSchema = computed(() => resolveFormVariables(props.schema, preview
  * Remount only when the set of field names changes. Keying on the whole schema would
  * rebuild the form on every property tweak and throw away entered test data.
  */
-const formKey = computed(() => `${Object.keys(props.schema).join(',')}|${JSON.stringify(Object.keys(previewVars.value))}`);
+const formKey = computed(() => [
+    Object.keys(props.schema).join(','),
+    JSON.stringify(Object.keys(previewVars.value)),
+    // Steps are registered at construction time, so switching pagination on or off —
+    // or reordering pages — needs a fresh instance, not a prop update.
+    JSON.stringify(props.steps ?? null),
+].join('|'));
 
 watch([form$, locale], () => form$.value?.setLanguage?.(locale.value));
 
@@ -208,6 +214,7 @@ watch(form$, readOutput);
                         ref="form$"
                         :key="formKey"
                         :schema="resolvedSchema"
+                        :steps="props.steps && Object.keys(props.steps).length ? props.steps : undefined"
                         :endpoint="false"
                         sync
                         @change="readOutput"

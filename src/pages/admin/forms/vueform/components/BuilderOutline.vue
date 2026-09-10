@@ -34,6 +34,56 @@ const rows = computed<Row[]>(() => {
 });
 
 /**
+ * Grouped view for a paginated form.
+ *
+ * The outline is the keyboard-accessible path — HTML5 drag-and-drop is not operable
+ * without a mouse, so step assignment must be reachable here with buttons, not only by
+ * dragging between canvas sections.
+ */
+interface Group { id: string | null; label: string; rows: Row[] }
+
+const groups = computed<Group[]>(() => {
+    if (!props.builder.hasSteps.value) return [];
+
+    const stepOf = (row: Row): string | null => {
+        if (row.parentId === null) return row.node.stepId ?? null;
+        // A nested row inherits its top-level ancestor's step.
+        const top = rows.value.find((r) => r.parentId === null && contains(r.node, row.node.id));
+        return top?.node.stepId ?? null;
+    };
+
+    const out: Group[] = props.builder.steps.value.map((step) => ({
+        id: step.id, label: step.label, rows: [],
+    }));
+    const loose: Group = { id: null, label: 'Shown on every step', rows: [] };
+
+    for (const row of rows.value) {
+        const id = stepOf(row);
+        (out.find((g) => g.id === id) ?? loose).rows.push(row);
+    }
+
+    return loose.rows.length ? [...out, loose] : out;
+});
+
+function contains(node: BuilderNode, id: string): boolean {
+    if (node.id === id) return true;
+    return (node.children ?? []).some((c) => contains(c, id));
+}
+
+/** Step index of a top-level node, or -1 when it is in none. */
+function stepIndexOf(node: BuilderNode): number {
+    return props.builder.steps.value.findIndex((s) => s.id === node.stepId);
+}
+
+/** Move a top-level node to the neighbouring step. -1 past the first unassigns it. */
+function shiftStep(node: BuilderNode, direction: -1 | 1) {
+    const steps = props.builder.steps.value;
+    const target = stepIndexOf(node) + direction;
+    if (target >= steps.length) return;
+    props.builder.assignToStep(node.id, target < 0 ? null : steps[target].id);
+}
+
+/**
  * moveNode() removes before inserting and compensates for the shift when the source and
  * destination lists are the same. So moving *down* one place means asking for index + 2:
  * the removal pulls it back to index + 1.
@@ -78,8 +128,63 @@ function outdent(row: Row) {
 
         <p v-if="!rows.length" class="px-3 text-[11px] opacity-50">No elements yet.</p>
 
+        <!-- Paginated: step headings, with keyboard-reachable move-between-steps. -->
+        <template v-if="props.builder.hasSteps.value">
+            <template v-for="group in groups" :key="group.id ?? 'loose'">
+                <div
+                    class="mt-1 flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
+                    :class="group.id ? 'opacity-50' : 'text-amber-600 dark:text-amber-500'"
+                >
+                    <i :class="group.id ? 'pi pi-clone' : 'pi pi-eye'" style="font-size: 0.6rem" />
+                    <span class="truncate">{{ group.label }}</span>
+                </div>
+
+                <div
+                    v-for="row in group.rows"
+                    :key="row.node.id"
+                    class="group flex items-center gap-1.5 py-0.5 pr-1 text-xs"
+                    :class="props.builder.selectedId.value === row.node.id
+                        ? 'bg-surface-200 dark:bg-surface-700'
+                        : 'hover:bg-surface-100 dark:hover:bg-surface-800'"
+                    :style="{ paddingLeft: `${8 + row.depth * 14}px` }"
+                >
+                    <button
+                        type="button"
+                        class="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                        @click="props.builder.select(row.node.id)"
+                    >
+                        <i :class="['pi', getElementDef(row.node.type)?.icon ?? 'pi-question', 'text-[10px] opacity-50']" />
+                        <span class="truncate font-mono">{{ row.node.name }}</span>
+                    </button>
+
+                    <div class="flex shrink-0 items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                        <button type="button" class="px-0.5 disabled:opacity-25" title="Move up"
+                                :disabled="row.index === 0" @click="move(row, 'up')">
+                            <i class="pi pi-chevron-up text-[10px]" />
+                        </button>
+                        <button type="button" class="px-0.5 disabled:opacity-25" title="Move down"
+                                :disabled="row.index >= row.siblings.length - 1" @click="move(row, 'down')">
+                            <i class="pi pi-chevron-down text-[10px]" />
+                        </button>
+                        <!-- Only a top-level node has its own step; nested ones follow their container. -->
+                        <button type="button" class="px-0.5 disabled:opacity-25" title="Move to the previous step"
+                                :disabled="row.parentId !== null || stepIndexOf(row.node) < 0"
+                                @click="shiftStep(row.node, -1)">
+                            <i class="pi pi-angle-double-left text-[10px]" />
+                        </button>
+                        <button type="button" class="px-0.5 disabled:opacity-25" title="Move to the next step"
+                                :disabled="row.parentId !== null
+                                    || stepIndexOf(row.node) >= props.builder.steps.value.length - 1"
+                                @click="shiftStep(row.node, 1)">
+                            <i class="pi pi-angle-double-right text-[10px]" />
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </template>
+
         <div
-            v-for="row in rows"
+            v-for="row in (props.builder.hasSteps.value ? [] : rows)"
             :key="row.node.id"
             class="group flex items-center gap-1.5 py-0.5 pr-1 text-xs"
             :class="props.builder.selectedId.value === row.node.id

@@ -2,12 +2,23 @@
  * Persistence boundary for the builder: BuilderDoc <-> IForm.vueform.
  */
 import { compile, hashSchema } from './compile';
+import { compileSteps, hashSteps } from './steps';
 import { decompile } from './decompile';
 import { BUILDER_VERSION, emptyDoc, type BuilderDoc, type VueformPayload } from './types';
 
 export function buildPayload(doc: BuilderDoc): VueformPayload {
     const schema = compile(doc);
-    return { builderVersion: BUILDER_VERSION, doc, schema, schemaHash: hashSchema(schema) };
+    const steps = compileSteps(doc);
+
+    return {
+        builderVersion: BUILDER_VERSION,
+        doc,
+        schema,
+        schemaHash: hashSchema(schema),
+        // Omitted entirely for an unpaginated form, so a step-less payload stays
+        // byte-identical to what earlier versions of the builder stored.
+        ...(Object.keys(steps).length ? { steps } : {}),
+    };
 }
 
 export interface LoadResult {
@@ -35,11 +46,14 @@ export interface LoadResult {
 export function loadPayload(payload: VueformPayload | null | undefined): LoadResult {
     if (!payload) return { doc: emptyDoc(), rebuilt: false };
 
-    const { doc, schema } = payload;
+    const { doc, schema, steps } = payload;
 
-    if (doc && Array.isArray(doc.nodes) && hashSchema(compile(doc)) === hashSchema(schema ?? {})) {
+    const schemaMatches = hashSchema(compile(doc ?? emptyDoc())) === hashSchema(schema ?? {});
+    const stepsMatch = hashSteps(compileSteps(doc ?? emptyDoc())) === hashSteps(steps ?? {});
+
+    if (doc && Array.isArray(doc.nodes) && schemaMatches && stepsMatch) {
         return { doc, rebuilt: false };
     }
 
-    return { doc: decompile(schema ?? {}, doc?.formProps ?? {}), rebuilt: true };
+    return { doc: decompile(schema ?? {}, doc?.formProps ?? {}, steps), rebuilt: true };
 }

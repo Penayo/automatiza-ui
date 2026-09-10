@@ -177,18 +177,23 @@ a[href] {
  *
  * `.vf-label` ships with no font-weight or color of its own — it only sets font-size,
  * letter-spacing and line-height, so labels inherit body text and read as plain black.
- * Give them weight and step the colour back from pure black/white in both themes.
+ * These set an explicit light weight and step the colour back in both themes.
  */
 :root {
-    --vf-label-color: rgba(0, 0, 0, 0.85);
-    --vf-label-weight: 600;
+    --vf-label-color: #555;
+    --vf-label-weight: 300;
 }
 .dark {
-    --vf-label-color: rgba(255, 255, 255, 0.85);
+    --vf-label-color: #bfbfbf;
 }
 .vf-label,
 .vf-vertical-label,
 .vf-horizontal-label {
     font-weight: var(--vf-label-weight);
     color: var(--vf-label-color);
+}
+
+/* Aligns the radio row with the label above it. */
+.vf-radiogroup-wrapper .vf-radio-container {
+    padding-top: 5px;
 }

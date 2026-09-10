@@ -50,7 +50,7 @@ const props = withDefaults(defineProps<{
     readOnly: false,
 });
 
-const emit = defineEmits<{ change: [data: Record<string, any>] }>();
+const emit = defineEmits<{ change: [data: Record<string, any>]; finish: [] }>();
 
 const { isDark } = useTheme();
 const { locale } = useFormLocale();
@@ -114,6 +114,50 @@ const vueformSchema = computed(() =>
 );
 
 watch([vueform$, locale], () => vueform$.value?.setLanguage?.(locale.value));
+
+/**
+ * A paginated form. Vueform renders its own step bar and Previous/Next/Finish
+ * controls, with Next auto-disabled while the current page has validation errors.
+ */
+const vueformSteps = computed(() => props.schema?.vueform?.steps ?? null);
+const hasSteps = computed(() =>
+    engine.value === 'vueform'
+    && !!vueformSteps.value
+    && Object.keys(vueformSteps.value).length > 0,
+);
+
+/**
+ * Vueform's Finish button reaches us as the form's own `submit` event.
+ *
+ * Two things make the guard mandatory. Vueform renders a real `<form @submit.prevent>`,
+ * so **Enter in any text input fires this** — without the last-step check, Enter on
+ * page 1 would complete the task. And the event's payload is a `FormData`, not a plain
+ * object, so the host page must still collect through `submit()` rather than read it.
+ */
+function onVueformSubmit() {
+    if (hasSteps.value && vueform$.value?.steps$?.isAtLastStep) emit('finish');
+}
+
+/**
+ * Where the user is in a paginated form, for a page that wants to show its own
+ * progress chrome. Null when the form is not paginated.
+ *
+ * Read off Vueform's own step instance rather than tracked separately, so a
+ * conditionally skipped page can never put the two counts out of step.
+ */
+const stepsState = computed<{ index: number; total: number; label: string } | null>(() => {
+    if (!hasSteps.value) return null;
+    const instance = vueform$.value?.steps$;
+    const visible = instance?.visible$ ?? [];
+    const current = instance?.current$;
+    if (!current) return null;
+
+    return {
+        index: visible.indexOf(current) + 1,
+        total: visible.length,
+        label: current.label ?? '',
+    };
+});
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 watch(
@@ -196,6 +240,8 @@ async function resolveFiles(
 defineExpose({
     engine,
     problem,
+    hasSteps,
+    stepsState,
     submit,
     getData,
     resolveFiles,
@@ -231,11 +277,14 @@ defineExpose({
     <div v-else-if="engine === 'vueform'" class="p-1">
         <Vueform
             ref="vueform$"
+            :key="hasSteps ? 'stepped' : 'flat'"
             v-model="vueformData"
             :schema="vueformSchema"
+            :steps="vueformSteps || undefined"
             :endpoint="false"
             :disabled="props.readOnly"
             sync
+            @submit="onVueformSubmit"
         />
     </div>
 </template>

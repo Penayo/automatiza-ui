@@ -14,8 +14,10 @@ import {
     isSingleChildContainer,
     type BuilderDoc,
     type BuilderNode,
+    type BuilderStep,
     type CompiledElement,
     type VueformSchema,
+    type VueformSteps,
 } from './types';
 
 let idCounter = 0;
@@ -72,10 +74,37 @@ function decompileNodes(schema: VueformSchema): BuilderNode[] {
 export function decompile(
     schema: VueformSchema,
     formProps: Record<string, unknown> = {},
+    steps?: VueformSteps,
 ): BuilderDoc {
-    return {
-        builderVersion: BUILDER_VERSION,
-        nodes: isPlainObject(schema) ? decompileNodes(schema) : [],
-        formProps,
-    };
+    const nodes = isPlainObject(schema) ? decompileNodes(schema) : [];
+    const doc: BuilderDoc = { builderVersion: BUILDER_VERSION, nodes, formProps };
+
+    if (!isPlainObject(steps) || !Object.keys(steps!).length) return doc;
+
+    // Step ids are session-local, so they are minted fresh; membership is recovered by
+    // element name, which is how Vueform itself expresses it.
+    const byName = new Map(nodes.map((n) => [n.name, n]));
+    const builderSteps: BuilderStep[] = [];
+
+    for (const [name, entry] of Object.entries(steps!)) {
+        const step: BuilderStep = {
+            id: newNodeId(),
+            name,
+            label: typeof entry?.label === 'string' ? entry.label : name,
+            ...(Array.isArray(entry?.conditions) ? { conditions: entry.conditions } : {}),
+            ...(isPlainObject(entry?.labels) ? { labels: entry!.labels } : {}),
+            ...(isPlainObject(entry?.buttons) ? { buttons: entry!.buttons } : {}),
+        };
+        builderSteps.push(step);
+
+        for (const elementName of Array.isArray(entry?.elements) ? entry.elements : []) {
+            // A name listed but absent from the schema is simply dropped — exactly what
+            // Vueform's own orderedSchema does at render time.
+            const node = byName.get(elementName);
+            if (node) node.stepId = step.id;
+        }
+    }
+
+    doc.steps = builderSteps;
+    return doc;
 }

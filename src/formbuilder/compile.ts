@@ -68,11 +68,36 @@ function stableStringify(value: unknown): string {
 }
 
 /**
- * FNV-1a over the stable serialisation. Not cryptographic — this only has to detect
- * that `doc` and `schema` drifted apart (JSON tab edited, AI rewrite, server migration).
+ * Order-sensitive trace of the *schema map* keys — the field names, at every nesting
+ * level — and nothing else.
+ *
+ * `stableStringify` sorts keys, which is right for an element's own props ({type,label}
+ * and {label,type} are the same element) but wrong for the schema map itself: a
+ * Vueform schema's key order IS its render order. Without this, reordering two fields
+ * would be invisible to the drift guard, and the doc's stale order would silently win
+ * on the next save.
+ */
+function keyOrderTrace(schema: unknown): string {
+    if (schema === null || typeof schema !== 'object' || Array.isArray(schema)) return '';
+
+    const entries = Object.entries(schema as Record<string, unknown>);
+    const parts = entries.map(([name, entry]) => {
+        if (entry === null || typeof entry !== 'object') return name;
+        const el = entry as Record<string, unknown>;
+        // Containers nest a schema map under `schema`; a list nests one element.
+        const nested = keyOrderTrace(el.schema) + keyOrderTrace(el.element);
+        return nested ? `${name}(${nested})` : name;
+    });
+    return parts.join(',');
+}
+
+/**
+ * FNV-1a over the stable serialisation plus the key-order trace. Not cryptographic —
+ * this only has to detect that `doc` and `schema` drifted apart (JSON tab edited, AI
+ * rewrite, server migration).
  */
 export function hashSchema(schema: VueformSchema): string {
-    const input = stableStringify(schema);
+    const input = `${stableStringify(schema)}|${keyOrderTrace(schema)}`;
     let hash = 0x811c9dc5;
     for (let i = 0; i < input.length; i++) {
         hash ^= input.charCodeAt(i);

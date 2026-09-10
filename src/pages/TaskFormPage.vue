@@ -404,7 +404,7 @@ onUnmounted(() => chainAbort.value?.abort());
                     <!-- Task title + description -->
                     <div class="mb-6">
                         <p v-if="isWizard" class="text-xs font-medium uppercase tracking-wide text-surface-400 mb-1">
-                            Step {{ step }}
+                            Stage {{ step }}
                         </p>
                         <h1 class="text-xl font-semibold text-surface-900 dark:text-surface-50">
                             {{ data.taskName }} Form
@@ -443,6 +443,7 @@ onUnmounted(() => chainAbort.value?.abort());
                                 ref="renderer"
                                 :schema="data.formSchema"
                                 :data="data.formData ?? {}"
+                                @finish="submitForm"
                             />
                             <div class="flex items-center justify-between mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800">
                                 <!-- Save confirmation -->

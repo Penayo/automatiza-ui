@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Button, InputText, Textarea, Dialog, Message, Splitter, SplitterPanel, useToast } from 'primevue';
+import { Button, InputText, Textarea, Dialog, Message, Splitter, SplitterPanel, useConfirm, useToast } from 'primevue';
 import { $api } from '@services/api';
 import type { IForm } from '@services/FormsService';
 import FormField from '@components/form/FormField.vue';
@@ -11,6 +11,7 @@ import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { provideFormBuilder } from '@/formbuilder/useFormBuilder';
 import { useBuilderDnd, type DragPayload } from '@/formbuilder/useBuilderDnd';
 import { buildPayload, loadPayload } from '@/formbuilder/payload';
+import { compileSteps } from '@/formbuilder/steps';
 import { decompile } from '@/formbuilder/decompile';
 import { emptyDoc } from '@/formbuilder/types';
 import BuilderPalette from './components/BuilderPalette.vue';
@@ -22,6 +23,7 @@ import BuilderPreviewTab from './components/BuilderPreviewTab.vue';
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const confirm = useConfirm();
 
 const id = computed(() => route.params.id as string | undefined);
 const isNew = computed(() => !id.value);
@@ -44,6 +46,60 @@ const dnd = useBuilderDnd({
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 type Tab = 'designer' | 'json' | 'preview';
 const activeTab = ref<Tab>('designer');
+
+// ── Steps ─────────────────────────────────────────────────────────────────────
+
+/** Top-level fields in no step. They render on EVERY page — see BuilderStepSections. */
+const unassigned = computed(() => (builder.hasSteps.value ? builder.nodesInStep(null) : []));
+
+/**
+ * Shown once after an import that left fields unassigned. Not permanent: the
+ * always-visible bucket is a legitimate state, so a standing warning would nag.
+ */
+const coverageNotice = ref(false);
+
+/**
+ * The sharp case, and the reason this warns permanently rather than informing.
+ *
+ * A step's `invalid` only considers its own elements, so a required field in no step
+ * leaves `steps$.invalid` false: Vueform's Finish sails past its "jump to the first
+ * invalid step" branch while the form's own submit has already bailed. The button
+ * appears to do nothing.
+ */
+const unassignedRequired = computed(() => unassigned.value.filter((node) => {
+    const rules = node.props.rules;
+    if (typeof rules === 'string') return rules.split('|').some((r) => r.trim() === 'required');
+    return Array.isArray(rules) && rules.some((r) => (typeof r === 'string' ? r : r?.[0]) === 'required');
+}));
+
+/** A page with no fields renders as an empty screen the user must click past. */
+const emptySteps = computed(() => (builder.hasSteps.value
+    ? builder.steps.value.filter((step) => builder.nodesInStep(step.id).length === 0)
+    : []));
+
+function moveAllToFirstStep() {
+    const first = builder.steps.value[0];
+    if (first) builder.assignAllUnassigned(first.id);
+    coverageNotice.value = false;
+}
+
+function toggleSteps() {
+    if (!builder.hasSteps.value) {
+        builder.enableSteps();
+        return;
+    }
+    // Destructive: keeping orphaned step ids would silently reorder the canvas if
+    // pagination were turned back on. Undo covers a misclick.
+    confirm.require({
+        header: 'Turn off steps?',
+        message: 'The pages are removed and every field goes back into one list. This can be undone.',
+        acceptLabel: 'Turn off',
+        rejectLabel: 'Cancel',
+        acceptProps: { severity: 'danger', size: 'small' },
+        rejectProps: { severity: 'secondary', text: true, size: 'small' },
+        accept: () => builder.disableSteps(),
+    });
+}
 
 // ── JSON tab ──────────────────────────────────────────────────────────────────
 const jsonText = ref('');
@@ -78,6 +134,9 @@ function applyJson() {
 
     builder.replaceNodes(decompile(parsed as any, builder.doc.value.formProps).nodes);
     activeTab.value = 'designer';
+    // The import carries membership across by name, so anything renamed or newly added
+    // lands unassigned — worth surfacing once, with a one-click fix.
+    coverageNotice.value = unassigned.value.length > 0;
     toast.add({ severity: 'success', summary: 'Applied', detail: 'Schema applied to the designer.', life: 2000 });
 }
 
@@ -191,6 +250,7 @@ async function load() {
         const { doc, rebuilt } = loadPayload(loaded.vueform);
         builder.reset(doc);
         rebuiltNotice.value = rebuilt;
+        coverageNotice.value = rebuilt && unassigned.value.length > 0;
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load form.', life: 4000 });
         router.push({ name: 'FormsList' });
@@ -264,6 +324,16 @@ onMounted(load);
             </div>
 
             <Button
+                :icon="builder.hasSteps.value ? 'pi pi-clone' : 'pi pi-window-maximize'"
+                size="small" text rounded
+                :class="builder.hasSteps.value ? 'text-(--layout-accent-color)' : ''"
+                v-tooltip.bottom="builder.hasSteps.value
+                    ? 'Steps on — the form is split into pages'
+                    : 'Split this form into steps'"
+                @click="toggleSteps"
+            />
+
+            <Button
                 icon="pi pi-undo" size="small" text rounded
                 :disabled="!builder.canUndo.value"
                 v-tooltip.bottom="'Undo (Ctrl+Z)'"
@@ -288,7 +358,44 @@ onMounted(load);
             @close="rebuiltNotice = false"
         >
             This form's schema was changed outside the builder, so the layout tree was rebuilt from it.
-            Field order and nesting are intact; builder-only notes were reset.
+            Nesting is intact and builder-only notes were reset. If the form has steps, field order was
+            aligned to the step each field belongs to.
+        </Message>
+
+        <Message
+            v-if="coverageNotice"
+            severity="warn"
+            closable
+            class="mx-4 mt-2 shrink-0"
+            @close="coverageNotice = false"
+        >
+            <div class="flex flex-wrap items-center gap-2">
+                <span>
+                    {{ unassigned.length }} field{{ unassigned.length === 1 ? '' : 's' }}
+                    {{ unassigned.length === 1 ? 'is' : 'are' }} in no step, so
+                    {{ unassigned.length === 1 ? 'it appears' : 'they appear' }} on every page.
+                </span>
+                <Button label="Move all to step 1" size="small" @click="moveAllToFirstStep" />
+            </div>
+        </Message>
+
+        <Message v-if="emptySteps.length" severity="secondary" class="mx-4 mt-2 shrink-0">
+            <span class="text-xs">
+                {{ emptySteps.map(s => s.label).join(', ') }}
+                {{ emptySteps.length === 1 ? 'has' : 'have' }} no fields, so
+                {{ emptySteps.length === 1 ? 'it renders' : 'they render' }} as an empty page.
+            </span>
+        </Message>
+
+        <Message v-if="unassignedRequired.length" severity="error" class="mx-4 mt-2 shrink-0">
+            <div class="flex flex-wrap items-center gap-2">
+                <span>
+                    <strong>{{ unassignedRequired.map(n => n.name).join(', ') }}</strong>
+                    {{ unassignedRequired.length === 1 ? 'is' : 'are' }} required but in no step.
+                    Finish will refuse to submit without showing which page to fix.
+                </span>
+                <Button label="Move to step 1" size="small" severity="danger" @click="moveAllToFirstStep" />
+            </div>
         </Message>
 
         <!-- ── Loading state ─────────────────────────────────────────────── -->
@@ -308,6 +415,7 @@ onMounted(load);
             >
                 <SplitterPanel :size="16" :min-size="10" class="flex flex-col min-w-0">
                     <BuilderPalette
+                        :builder="builder"
                         :dragging="!!dnd.dragging.value"
                         @dragstart="(itemId, ev) => dnd.startPaletteDrag(itemId, ev)"
                     />
@@ -348,6 +456,7 @@ onMounted(load);
             <BuilderPreviewTab
                 v-if="activeTab === 'preview'"
                 :schema="builder.schema.value"
+                :steps="compileSteps(builder.doc.value)"
                 class="flex-1 min-h-0"
             />
         </template>

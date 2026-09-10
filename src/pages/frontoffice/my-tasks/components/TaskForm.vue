@@ -176,6 +176,9 @@ async function saveTask() {
 }
 
 function submitForm() {
+    // Vueform's Finish button knows nothing about an in-flight completion, so a
+    // double-click would otherwise open a second confirm and submit twice.
+    if (loading.value || saving.value) return;
     onApprove(
         confirm,
         'Are you sure you want to submit this form?\nThis will advance the task to the next stage.',
@@ -301,7 +304,7 @@ onUnmounted(() => chainAbort.value?.abort());
             v-if="isWizard"
             class="px-4 pt-3 text-xs font-medium uppercase tracking-wide text-surface-400"
         >
-            Step {{ step }}
+            Stage {{ step }}
         </div>
 
         <!-- Test mode banner -->
@@ -339,6 +342,7 @@ onUnmounted(() => chainAbort.value?.abort());
             :schema="formSchema"
             :data="formData"
             :read-only="!canEditForm"
+            @finish="submitForm"
         />
 
         <!-- Action bar — shared across all form types -->
@@ -357,7 +361,9 @@ onUnmounted(() => chainAbort.value?.abort());
                     :disabled="!isTaskAssignedToUser() || loading"
                     @click="saveTask"
                 />
+                <!-- A paginated form submits from its own Finish button on the last page. -->
                 <Button
+                    v-if="!renderer?.hasSteps"
                     size="small"
                     icon="pi pi-send"
                     label="Submit"

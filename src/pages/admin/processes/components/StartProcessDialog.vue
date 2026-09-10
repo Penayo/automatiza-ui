@@ -93,6 +93,8 @@ async function submitStart(variables: Record<string, any>) {
 }
 
 async function handleSubmit() {
+    // Guards against Vueform's Finish being double-clicked mid-start.
+    if (starting.value) return;
     if (isCustom.value) {
         submitStart(customViewRef.value?.getVariables() ?? {});
         return;
@@ -166,7 +168,7 @@ async function handleSubmit() {
                 </div>
 
                 <!-- form-js / JSON Schema / Vueform -->
-                <FormRenderer v-else ref="renderer" :schema="formSchema" />
+                <FormRenderer v-else ref="renderer" :schema="formSchema" @finish="handleSubmit" />
             </template>
             <div v-else class="flex flex-col gap-2">
                 <p class="text-sm text-surface-500">No start form configured. Provide initial variables as JSON (optional).</p>

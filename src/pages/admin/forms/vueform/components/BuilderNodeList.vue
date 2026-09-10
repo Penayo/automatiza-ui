@@ -21,12 +21,28 @@ import type { BuilderApi } from '@/formbuilder/useFormBuilder';
 import type { BuilderDndApi } from '@/formbuilder/useBuilderDnd';
 import BuilderElementPreview from './BuilderElementPreview.vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     nodes: BuilderNode[];
     parentId: string | null;
     builder: BuilderApi;
     dnd: BuilderDndApi;
-}>();
+    /**
+     * Where `nodes` starts inside its owning array. A step section renders a slice of
+     * the flat root list, so a local index has to be shifted to a global one before it
+     * can be a drop target. Nested children always own their whole array, hence 0.
+     */
+    offset?: number;
+    /** The step this list belongs to; only meaningful at the root. */
+    stepId?: string | null;
+}>(), {
+    offset: 0,
+    stepId: null,
+});
+
+/** Local list position -> position in the array the drop target addresses. */
+function globalIndex(index: number): number {
+    return props.offset + index;
+}
 
 /** A container's own entry minus its children, so the preview never re-renders the tree. */
 function leafEntry(node: BuilderNode): CompiledElement {
@@ -49,8 +65,10 @@ function spanOf(node: BuilderNode): number {
 
 /** 'before' | 'after' | null — which edge of this node the pending drop would land on. */
 function dropEdge(index: number): 'before' | 'after' | null {
-    if (props.dnd.isTarget({ parentId: props.parentId, index })) return 'before';
-    if (props.dnd.isTarget({ parentId: props.parentId, index: index + 1 })) return 'after';
+    const at = globalIndex(index);
+    const scope = { parentId: props.parentId, stepId: props.stepId };
+    if (props.dnd.isTarget({ ...scope, index: at })) return 'before';
+    if (props.dnd.isTarget({ ...scope, index: at + 1 })) return 'after';
     return null;
 }
 
@@ -79,7 +97,7 @@ function edgeClass(node: BuilderNode, index: number): string {
                     edgeClass(node, index),
                 ]"
                 @click.stop="props.builder.select(node.id)"
-                @dragover.stop="props.dnd.overNode(props.parentId, index, $event)"
+                @dragover.stop="props.dnd.overNode(props.parentId, globalIndex(index), $event, props.stepId)"
                 @drop.stop="props.dnd.drop($event)"
             >
                 <!-- Chrome: drag handle, path hint, actions -->
@@ -152,11 +170,19 @@ function edgeClass(node: BuilderNode, index: number): string {
             class="col-span-12 rounded transition-colors"
             :class="[
                 props.nodes.length ? 'h-2' : 'h-3',
-                props.dnd.isTarget({ parentId: props.parentId, index: props.nodes.length })
+                props.dnd.isTarget({
+                    parentId: props.parentId,
+                    index: globalIndex(props.nodes.length),
+                    stepId: props.stepId,
+                })
                     ? 'bg-(--layout-accent-color)'
                     : 'bg-transparent',
             ]"
-            @dragover="props.dnd.overSlot({ parentId: props.parentId, index: props.nodes.length }, $event)"
+            @dragover="props.dnd.overSlot({
+                parentId: props.parentId,
+                index: globalIndex(props.nodes.length),
+                stepId: props.stepId,
+            }, $event)"
             @drop="props.dnd.drop($event)"
         />
     </div>

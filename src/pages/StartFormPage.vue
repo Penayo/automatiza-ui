@@ -355,7 +355,7 @@ onUnmounted(() => chainAbort.value?.abort());
                          which the form cannot know, stays. -->
                     <div v-if="isWizard" class="mb-6">
                         <p class="text-xs font-medium uppercase tracking-wide text-surface-400">
-                            Step {{ step }}<span v-if="totalSteps"> of {{ totalSteps }}</span>
+                            Stage {{ step }}<span v-if="totalSteps"> of {{ totalSteps }}</span>
                         </p>
                     </div>
 
@@ -382,7 +382,7 @@ onUnmounted(() => chainAbort.value?.abort());
                             </div>
 
                             <!-- form-js / JSON Schema / Vueform -->
-                            <FormRenderer v-else ref="renderer" :schema="formSchema" />
+                            <FormRenderer v-else ref="renderer" :schema="formSchema" @finish="submitForm" />
 
                             <div class="flex justify-end mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800">
                                 <button

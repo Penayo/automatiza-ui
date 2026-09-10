@@ -72,6 +72,8 @@ async function startProcess(variables: Record<string, any>) {
 }
 
 async function submitForm() {
+    // Guards against Vueform's Finish being double-clicked mid-start.
+    if (starting.value) return;
     if (!props.formSchema) {
         startProcess(buildVariables());
         return;
@@ -130,10 +132,15 @@ function close() {
                 ref="renderer"
                 :schema="props.formSchema"
                 :data="props.formSchema.metadata ?? {}"
+                @finish="submitForm"
             />
             <div class="flex justify-end mt-4 gap-2">
                 <Button severity="secondary" label="Cancel" @click="close" :disabled="starting" />
-                <Button label="Start" icon="pi pi-play" :loading="starting" @click="submitForm" />
+                <!-- A paginated form starts from its own Finish button on the last page. -->
+                <Button
+                    v-if="!renderer?.hasSteps"
+                    label="Start" icon="pi pi-play" :loading="starting" @click="submitForm"
+                />
             </div>
         </div>
 

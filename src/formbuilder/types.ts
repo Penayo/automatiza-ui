@@ -43,6 +43,38 @@ export interface BuilderNode {
     children?: BuilderNode[];
     /** Builder-only state. Never compiled into the schema. */
     meta?: { collapsed?: boolean; note?: string };
+    /**
+     * Which step this node belongs to, for TOP-LEVEL nodes only — nested children
+     * inherit their top-level ancestor's step. Never compiled into the schema; it is
+     * read by compileSteps() to build the separate `steps` artifact.
+     *
+     * Undefined means "in no step", which at runtime renders on *every* step: Vueform
+     * only ever deactivates elements a step doesn't own.
+     */
+    stepId?: string;
+}
+
+/**
+ * One step of a paginated form.
+ *
+ * `name` is machine-generated and not user-editable: it is the key of the compiled
+ * Vueform steps object, i.e. the step's identity in the stored artifact. `id` is the
+ * builder-side identity that `BuilderNode.stepId` points at, so reordering or
+ * relabelling a step touches nothing else.
+ */
+export interface BuilderStep {
+    id: string;
+    name: string;
+    label: string;
+    /**
+     * Same predicate shape as an element's `conditions` — a whole page can be skipped
+     * when the answers so far make it irrelevant.
+     */
+    conditions?: unknown[];
+    /** Per-step button text: { previous, next, finish }. Overrides the locale default. */
+    labels?: Record<string, string>;
+    /** Per-step button visibility: { previous, next, finish }. */
+    buttons?: Record<string, boolean>;
 }
 
 export interface BuilderDoc {
@@ -50,6 +82,8 @@ export interface BuilderDoc {
     nodes: BuilderNode[];
     /** Form-level Vueform props: size, columns, displayErrors, floatPlaceholders… */
     formProps: Record<string, unknown>;
+    /** Ordered. Absent or empty means the form is not paginated. */
+    steps?: BuilderStep[];
 }
 
 /**
@@ -65,6 +99,19 @@ export interface CompiledElement {
 export type VueformSchema = Record<string, CompiledElement>;
 
 /**
+ * The compiled steps artifact, a sibling of the schema rather than part of it —
+ * Vueform takes `steps` as its own form-level prop and partitions the flat schema by
+ * element name. Key order is step order.
+ */
+export type VueformSteps = Record<string, {
+    label: string;
+    elements: string[];
+    conditions?: unknown[];
+    labels?: Record<string, string>;
+    buttons?: Record<string, boolean>;
+}>;
+
+/**
  * What gets stored on `IForm.vueform`. The server treats this as an opaque object
  * (`@IsOptional() @IsObject()`), exactly as it does `jsonSchema`.
  */
@@ -76,6 +123,11 @@ export interface VueformPayload {
     schema: VueformSchema;
     /** Guards against `doc` and `schema` drifting apart. See loadPayload(). */
     schemaHash: string;
+    /**
+     * Derived from `doc` via compileSteps(). Omitted entirely for an unpaginated form,
+     * so a step-less payload stays byte-identical to what earlier versions stored.
+     */
+    steps?: VueformSteps;
 }
 
 export const BUILDER_VERSION = 1 as const;

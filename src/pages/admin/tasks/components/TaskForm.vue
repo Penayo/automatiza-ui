@@ -52,6 +52,9 @@ async function getTaskForm() {
 }
 
 function submitForm() {
+    // Guards against Vueform's Finish being double-clicked mid-completion.
+    if (loading.value) return;
+
     async function onConfirm() {
         const result = await renderer.value?.submit();
         // ok:false means the renderer refused and is showing its own messages.
@@ -88,10 +91,17 @@ onMounted(() => {
             :schema="formSchema"
             :data="formSchema?.metadata ?? {}"
             :read-only="!isTaskAssignedToUser()"
+            @finish="submitForm"
         />
         <div class="flex flex-row gap-2 justify-end p-3">
             <Button size="small" severity="secondary" :disabled="!isTaskAssignedToUser()">Guardar</Button>
-            <Button size="small" @click="submitForm" :disabled="!isTaskAssignedToUser()">Procesar</Button>
+            <!-- A paginated form submits from its own Finish button on the last page. -->
+            <Button
+                v-if="!renderer?.hasSteps"
+                size="small"
+                :disabled="!isTaskAssignedToUser()"
+                @click="submitForm"
+            >Procesar</Button>
         </div>
     </div>
 </template>

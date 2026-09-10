@@ -25,7 +25,7 @@ export interface BuilderDndApi {
     startNodeDrag: (id: string, ev: DragEvent) => void;
     overSlot: (target: DropTarget, ev: DragEvent) => void;
     /** Before/after is decided by which half of the node the pointer is in. */
-    overNode: (parentId: string | null, index: number, ev: DragEvent) => void;
+    overNode: (parentId: string | null, index: number, ev: DragEvent, stepId?: string | null) => void;
     drop: (ev: DragEvent) => void;
     endDrag: () => void;
     isTarget: (target: DropTarget) => boolean;
@@ -63,7 +63,7 @@ export function useBuilderDnd(options: BuilderDndOptions): BuilderDndApi {
         dropTarget.value = target;
     }
 
-    function overNode(parentId: string | null, index: number, ev: DragEvent) {
+    function overNode(parentId: string | null, index: number, ev: DragEvent, stepId?: string | null) {
         const el = ev.currentTarget as HTMLElement | null;
         if (!el) return;
 
@@ -77,7 +77,7 @@ export function useBuilderDnd(options: BuilderDndOptions): BuilderDndApi {
             ? ev.clientX - rect.left > rect.width / 2
             : ev.clientY - rect.top > rect.height / 2;
 
-        overSlot({ parentId, index: after ? index + 1 : index }, ev);
+        overSlot({ parentId, index: after ? index + 1 : index, stepId }, ev);
     }
 
     function drop(ev: DragEvent) {
@@ -100,7 +100,12 @@ export function useBuilderDnd(options: BuilderDndOptions): BuilderDndApi {
 
     function isTarget(target: DropTarget): boolean {
         const current = dropTarget.value;
-        return !!current && current.parentId === target.parentId && current.index === target.index;
+        if (!current || current.parentId !== target.parentId || current.index !== target.index) {
+            return false;
+        }
+        // Two adjacent step sections meet at the same global index — the end of one and
+        // the start of the next. Without comparing the step, both would light up.
+        return (current.stepId ?? null) === (target.stepId ?? null);
     }
 
     return {

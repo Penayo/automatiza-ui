@@ -6,6 +6,13 @@
  */
 import { computed, inject, provide, ref, type ComputedRef, type InjectionKey, type Ref } from 'vue';
 import { clonePlain } from './clone';
+import {
+    applyStepMembershipByName,
+    hasSteps as docHasSteps,
+    nextStepName,
+    normalizeStepsInPlace,
+    stepMembershipByName,
+} from './steps';
 import { compile } from './compile';
 import { newNodeId } from './decompile';
 import { getElementDef, getPaletteItem } from './registry';
@@ -16,6 +23,7 @@ import {
     isSingleChildContainer,
     type BuilderDoc,
     type BuilderNode,
+    type BuilderStep,
     type VueformSchema,
 } from './types';
 
@@ -23,6 +31,12 @@ export interface DropTarget {
     /** null = the root list. */
     parentId: string | null;
     index: number;
+    /**
+     * Which step the drop lands in. Only meaningful at the root (`parentId === null`),
+     * since nested nodes travel with their container. `null` means the
+     * "shown on every step" area.
+     */
+    stepId?: string | null;
 }
 
 export interface BuilderApi {
@@ -45,6 +59,27 @@ export interface BuilderApi {
     reset: (doc: BuilderDoc) => void;
     /** Swap the whole tree in one undoable step — used by the JSON tab's import. */
     replaceNodes: (nodes: BuilderNode[]) => void;
+    // ── Steps ─────────────────────────────────────────────────────────────────
+    hasSteps: ComputedRef<boolean>;
+    steps: ComputedRef<BuilderStep[]>;
+    /** Turns pagination on and puts every existing top-level node in the first step. */
+    enableSteps: () => void;
+    /** Destructive: drops every step and all membership. Undoable. */
+    disableSteps: () => void;
+    addStep: (label?: string) => void;
+    removeStep: (stepId: string) => void;
+    renameStep: (stepId: string, label: string) => void;
+    /** Merge settings into a step: conditions, per-step button labels and visibility. */
+    patchStep: (stepId: string, patch: Partial<Omit<BuilderStep, 'id' | 'name'>>) => void;
+    moveStep: (stepId: string, direction: -1 | 1) => void;
+    /** Absolute reorder, for dragging a step header. */
+    moveStepTo: (stepId: string, index: number) => void;
+    /** Nodes belonging to a step, in order. `null` gives the unassigned ones. */
+    nodesInStep: (stepId: string | null) => BuilderNode[];
+    /** Move one top-level node to a step, or to the always-visible bucket with null. */
+    assignToStep: (nodeId: string, stepId: string | null) => void;
+    /** Sweep every unassigned top-level node into a step. */
+    assignAllUnassigned: (stepId: string) => void;
     undo: () => void;
     redo: () => void;
     canUndo: ComputedRef<boolean>;
@@ -146,6 +181,10 @@ export function createFormBuilder(initial?: BuilderDoc): BuilderApi {
     function mutate<T>(fn: () => T, coalesceKey?: string): T {
         const before = JSON.stringify(doc.value);
         const result = fn();
+        // Contiguity of doc.nodes is re-established here rather than being an invariant
+        // each operation upholds — see the header of steps.ts. Runs before the `after`
+        // snapshot so a normalisation-only change still registers as an edit.
+        normalizeStepsInPlace(doc.value);
         const after = JSON.stringify(doc.value);
         if (before === after) return result;
 
@@ -233,6 +272,9 @@ export function createFormBuilder(initial?: BuilderDoc): BuilderApi {
             ...(def.container ? { children: [] } : {}),
         };
 
+        // Membership is a root-level notion; nested nodes travel with their container.
+        if (target.parentId === null && target.stepId) node.stepId = target.stepId;
+
         list.splice(Math.min(target.index, list.length), 0, node);
         selectedId.value = node.id;
         return node;
@@ -254,6 +296,14 @@ export function createFormBuilder(initial?: BuilderDoc): BuilderApi {
         if (found.list === destination && found.index < index) index -= 1;
 
         node.name = uniqueName(destination, node.name, node.id);
+
+        if (target.parentId === null) {
+            if (target.stepId) node.stepId = target.stepId;
+            else delete node.stepId;
+        } else {
+            delete node.stepId;
+        }
+
         destination.splice(Math.min(index, destination.length), 0, node);
         return true;
     }
@@ -317,6 +367,111 @@ export function createFormBuilder(initial?: BuilderDoc): BuilderApi {
     const patchProps = (id: string, props: Record<string, unknown>) =>
         mutate(() => patchPropsImpl(id, props), `props:${id}`);
 
+    // ── Steps ─────────────────────────────────────────────────────────────────
+
+    const hasSteps = computed(() => docHasSteps(doc.value));
+    const steps = computed<BuilderStep[]>(() => doc.value.steps ?? []);
+
+    function nodesInStep(stepId: string | null): BuilderNode[] {
+        return doc.value.nodes.filter((n) => (n.stepId ?? null) === stepId);
+    }
+
+    const assignToStep = (nodeId: string, stepId: string | null) => mutate(() => {
+        // Only top-level nodes carry membership; a nested one travels with its container.
+        const node = doc.value.nodes.find((n) => n.id === nodeId);
+        if (!node) return;
+        if (stepId) node.stepId = stepId;
+        else delete node.stepId;
+    });
+
+    const assignAllUnassigned = (stepId: string) => mutate(() => {
+        for (const node of doc.value.nodes) {
+            if (node.stepId === undefined) node.stepId = stepId;
+        }
+    });
+
+    /**
+     * Every existing top-level node joins the first step, so enabling pagination can
+     * never produce a coverage gap — an unassigned element renders on *every* page.
+     */
+    const enableSteps = () => mutate(() => {
+        if (docHasSteps(doc.value)) return;
+        const first: BuilderStep = { id: newNodeId(), name: 'step_1', label: 'Step 1' };
+        doc.value.steps = [first];
+        for (const node of doc.value.nodes) node.stepId = first.id;
+    });
+
+    /** Destructive by design: keeping orphan ids would silently reorder on re-enable. */
+    const disableSteps = () => mutate(() => {
+        delete doc.value.steps;
+        for (const node of doc.value.nodes) delete node.stepId;
+    });
+
+    const addStep = (label?: string) => mutate(() => {
+        const list = doc.value.steps ?? (doc.value.steps = []);
+        const name = nextStepName(list);
+        list.push({ id: newNodeId(), name, label: label ?? `Step ${list.length + 1}` });
+    });
+
+    /**
+     * Never orphans the fields: they join the neighbouring step, so coverage survives.
+     * Deleting the last remaining step turns pagination off entirely.
+     */
+    const removeStep = (stepId: string) => mutate(() => {
+        const list = doc.value.steps ?? [];
+        const index = list.findIndex((s) => s.id === stepId);
+        if (index === -1) return;
+
+        const fallback = list[index - 1] ?? list[index + 1];
+        for (const node of doc.value.nodes) {
+            if (node.stepId === stepId) {
+                if (fallback) node.stepId = fallback.id;
+                else delete node.stepId;
+            }
+        }
+
+        list.splice(index, 1);
+        if (!list.length) delete doc.value.steps;
+    });
+
+    const renameStep = (stepId: string, label: string) => mutate(() => {
+        const step = (doc.value.steps ?? []).find((s) => s.id === stepId);
+        if (step) step.label = label;
+    }, `step:${stepId}`);
+
+    const moveStepTo = (stepId: string, index: number) => mutate(() => {
+        const list = doc.value.steps ?? [];
+        const from = list.findIndex((s) => s.id === stepId);
+        if (from === -1) return;
+        const to = Math.max(0, Math.min(index, list.length - 1));
+        if (from === to) return;
+        // Only doc.steps moves; normalizeStepsInPlace re-partitions the nodes.
+        const [step] = list.splice(from, 1);
+        list.splice(to, 0, step);
+    });
+
+    const patchStep = (stepId: string, patch: Partial<Omit<BuilderStep, 'id' | 'name'>>) =>
+        mutate(() => {
+            const step = (doc.value.steps ?? []).find((s) => s.id === stepId);
+            if (!step) return;
+            Object.assign(step, patch);
+            // Empty settings are deleted rather than stored, so a plain step compiles to
+            // a two-key object and the saved artifact does not churn.
+            if (!step.conditions?.length) delete step.conditions;
+            if (step.labels && !Object.keys(step.labels).length) delete step.labels;
+            if (step.buttons && !Object.keys(step.buttons).length) delete step.buttons;
+        }, `stepcfg:${stepId}`);
+
+    const moveStep = (stepId: string, direction: -1 | 1) => mutate(() => {
+        const list = doc.value.steps ?? [];
+        const from = list.findIndex((s) => s.id === stepId);
+        const to = from + direction;
+        if (from === -1 || to < 0 || to >= list.length) return;
+        // Only doc.steps moves; normalizeStepsInPlace re-partitions the nodes.
+        const [step] = list.splice(from, 1);
+        list.splice(to, 0, step);
+    });
+
     /** The data path a field's value lands on, which is what BPMN expressions read. */
     function pathOf(id: string): string {
         const segments: string[] = [];
@@ -338,7 +493,16 @@ export function createFormBuilder(initial?: BuilderDoc): BuilderApi {
         return segments.join('.');
     }
 
+    /**
+     * Swap the whole tree, carrying step membership across by NAME.
+     *
+     * The JSON tab shows only the compiled schema, so an import has no step
+     * information and decompile mints fresh ids. Remapping by name means the common
+     * edits — retitling a field, adding one — keep their pages; renamed and brand-new
+     * fields land unassigned, where the "shown on every step" section picks them up.
+     */
     const replaceNodes = (nodes: BuilderNode[]) => mutate(() => {
+        applyStepMembershipByName(nodes, stepMembershipByName(doc.value));
         doc.value = { ...doc.value, nodes };
         reconcileSelection();
     });
@@ -388,6 +552,19 @@ export function createFormBuilder(initial?: BuilderDoc): BuilderApi {
         fieldPaths,
         reset,
         replaceNodes,
+        hasSteps,
+        steps,
+        enableSteps,
+        disableSteps,
+        addStep,
+        removeStep,
+        renameStep,
+        patchStep,
+        moveStep,
+        moveStepTo,
+        nodesInStep,
+        assignToStep,
+        assignAllUnassigned,
         undo,
         redo,
         canUndo,
