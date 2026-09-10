@@ -1,38 +1,21 @@
 <script setup lang="ts">
-import { Form } from "@bpmn-io/form-js";
-import { DocumentListModule } from '@/form-fields/DocumentListField';
-import { LinkModule } from '@/form-fields/LinkField';
-import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
-import '@/forms.scss';
-
-import { ref, watch, computed, onUnmounted, onErrorCaptured, provide, watchEffect, markRaw, type Component } from 'vue';
+import { ref, watch, computed, onUnmounted, onErrorCaptured, provide, markRaw, type Component } from 'vue';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
 
 onErrorCaptured((err) => {
     if (err instanceof TypeError && err.message.includes('emitsOptions')) return false;
     return true;
 });
-import { useTheme } from '@/composables/useTheme';
-
-const { isDark } = useTheme();
 import type { Task } from '@services/TasksService';
 import { $api } from '@services/api';
 import type { IForm } from '@services/FormsService';
 import { Button, useConfirm, useToast } from 'primevue';
-import type { ProcessVariables } from "@services/ProcessesService";
 import { onApprove } from "@/utils/common";
 import { parseApiError } from "@/utils/error";
 import type { IAccess } from "@services/AuthService.ts";
-import { resolveFormFiles } from '@/form-fields/form-js-submit';
 import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
 
-// JSON Schema form renderer
-import VueForm from '@lljj/vue3-form-element';
-import 'element-plus/dist/index.css';
-import 'element-plus/theme-chalk/dark/css-vars.css';
-import { ElConfigProvider } from 'element-plus';
-import en from 'element-plus/es/locale/lang/en';
-
+import FormRenderer from '@components/forms/FormRenderer.vue';
 const toast    = useToast();
 const confirm  = useConfirm();
 
@@ -55,17 +38,13 @@ const chainAbort = ref<AbortController | null>(null);
 
 const formSchema      = ref<IForm | null>(null);
 const formData        = ref<Record<string, any>>({});
-const formRef         = ref(null);
-const formViewer      = ref<Form>();
+const renderer        = ref<InstanceType<typeof FormRenderer> | null>(null);
 const loading         = ref<boolean>(false);
 const saving          = ref<boolean>(false);
 const saved           = ref<boolean>(false);
 const userInfo        = ref<IAccess | null>(null);
 const completed       = ref<boolean>(false);
-const currentFormData = ref<Record<string, any>>({});
 
-// JSON Schema form live data (two-way bound to VueForm)
-const jsonFormData = ref<Record<string, any>>({});
 
 // Provide full task formData (process variables) to child widgets such as
 // DocReviewWidget that need to read sibling keys (e.g. uploadedDocuments).
@@ -76,7 +55,8 @@ provide('jsfFormData', formData);
 const formDisabled = computed(() => !isTaskAssignedToUser());
 provide('formDisabled', formDisabled);
 
-const isJsonSchema = computed(() => formSchema.value?.type === 'jsonschema');
+// Custom views are the one form type FormRenderer does not own — they take a
+// task-like object and read the page-level provides above.
 const isCustom     = computed(() => formSchema.value?.type === 'custom');
 
 const customView    = ref<Component | null>(null);
@@ -131,8 +111,6 @@ async function followChain(chain: FormChain) {
         } as Task;
         step.value += 1;
         waiting.value = false;
-        currentFormData.value = {};
-        jsonFormData.value    = {};
         await getTaskForm();
     };
 
@@ -162,10 +140,10 @@ async function followChain(chain: FormChain) {
     emit('refresh');
 }
 
+/** Current values without validating — for draft saves. */
 function getCurrentVars(): Record<string, any> {
-    if (isCustom.value)     return customViewRef.value?.getVariables() ?? { ...formData.value };
-    if (isJsonSchema.value) return { ...formData.value, ...jsonFormData.value };
-    return { ...formData.value, ...currentFormData.value };
+    if (isCustom.value) return customViewRef.value?.getVariables() ?? { ...formData.value };
+    return { ...formData.value, ...(renderer.value?.getData() ?? {}) };
 }
 
 async function saveTask() {
@@ -173,18 +151,15 @@ async function saveTask() {
     saving.value = true;
     saved.value  = false;
     try {
-        const vars = getCurrentVars();
+        let vars = getCurrentVars();
 
-        if (!isJsonSchema.value && !isCustom.value) {
-            const resolvedVars = await resolveFormFiles(
-                vars, $api.files, formViewer.value,
-                activeTask.value.processInstanceId,
-                activeTask.value.id,
-            );
-            await $api.tasks.updateVariables(activeTask.value.id, resolvedVars);
-        } else {
-            await $api.tasks.updateVariables(activeTask.value.id, vars);
-        }
+        vars = await renderer.value!.resolveFiles(
+            vars, $api.files,
+            activeTask.value.processInstanceId,
+            activeTask.value.id,
+        );
+
+        await $api.tasks.updateVariables(activeTask.value.id, vars);
 
         saved.value = true;
         setTimeout(() => { saved.value = false; }, 3000);
@@ -205,11 +180,34 @@ function submitForm() {
         confirm,
         'Are you sure you want to submit this form?\nThis will advance the task to the next stage.',
         async () => {
-            if (isCustom.value || isJsonSchema.value) {
+            if (isCustom.value) {
                 completeTask(getCurrentVars());
-            } else if (formViewer.value) {
-                formViewer.value.submit();
+                return;
             }
+
+            const result = await renderer.value?.submit();
+            // ok:false means the renderer refused and is showing its own messages.
+            if (!result?.ok) return;
+
+            let variables = { ...formData.value, ...result.data };
+
+            try {
+                variables = await renderer.value!.resolveFiles(
+                    variables, $api.files,
+                    activeTask.value?.processInstanceId,
+                    activeTask.value?.id,
+                );
+            } catch (err: any) {
+                toast.add({
+                    severity: 'error',
+                    summary:  'File upload failed',
+                    detail:   err?.response?.data?.message ?? err?.message ?? 'Could not upload file.',
+                    life:     6000,
+                });
+                return;
+            }
+
+            completeTask(variables);
         },
     );
 }
@@ -224,10 +222,6 @@ async function getTaskForm() {
         formSchema.value = schema;
         formData.value   = data ?? {};
         isWizard.value   = multiStep === true;
-
-        if (schema?.type === 'jsonschema') {
-            jsonFormData.value = { ...(data ?? {}) };
-        }
 
         if (schema?.type === 'custom' && schema.key) {
             const loader = CUSTOM_TASK_VIEWS[schema.key];
@@ -260,55 +254,6 @@ watch(() => props.task, () => {
     getTaskForm();
     userInfo.value  = $api.authService.getAccessInfo();
 }, { immediate: true });
-
-watchEffect(() => {
-    formViewer.value?.setProperty('readOnly', !canEditForm.value);
-});
-
-watch(formSchema, () => {
-    // JSON Schema forms don't use the form-js viewer
-    if (formSchema.value?.type === 'jsonschema') return;
-
-    if (formViewer.value) {
-        formViewer.value.destroy();
-        formViewer.value = undefined;
-    }
-
-    if (!formSchema.value || !activeTask.value) return;
-
-    const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule, LinkModule] });
-    formViewer.value = form;
-
-    form.importSchema(formSchema.value, formData.value).then(() => {
-        if (!isTaskAssignedToUser()) {
-            formViewer.value?.setProperty('readOnly', true);
-        }
-    });
-
-    form.on('changed', (event: { data: Record<string, any> }) => {
-        currentFormData.value = event.data;
-    });
-
-    form.on('submit', async (event: { data: ProcessVariables; errors: Error[] }) => {
-        try {
-            const resolvedData = await resolveFormFiles(
-                event.data as Record<string, any>,
-                $api.files,
-                form,
-                activeTask.value?.processInstanceId,
-                activeTask.value?.id,
-            );
-            completeTask(resolvedData);
-        } catch (err: any) {
-            toast.add({
-                severity: 'error',
-                summary:  'File upload failed',
-                detail:   err?.response?.data?.message ?? err?.message ?? 'Could not upload file.',
-                life:     8000,
-            });
-        }
-    });
-});
 
 onUnmounted(() => chainAbort.value?.abort());
 </script>
@@ -386,25 +331,15 @@ onUnmounted(() => chainAbort.value?.abort());
             <span class="text-sm">Custom view not found for key "{{ formSchema?.key }}"</span>
         </div>
 
-        <!-- form-js renderer -->
-        <div
-            v-else-if="!isJsonSchema"
-            ref="formRef"
-            :class="isDark ? 'formjs-dark' : 'formjs-light'"
+        <!-- form-js / JSON Schema / Vueform. PrimeVue actions below drive submission. -->
+        <FormRenderer
+            v-else
+            ref="renderer"
+            class="p-4"
+            :schema="formSchema"
+            :data="formData"
+            :read-only="!canEditForm"
         />
-
-        <!-- JSON Schema renderer — footer hidden, PrimeVue actions below control submission -->
-        <div v-else class="p-4 jsf-preview-root">
-            <ElConfigProvider :locale="en">
-                <VueForm
-                    v-model="jsonFormData"
-                    :schema="formSchema!.jsonSchema ?? {}"
-                    :ui-schema="formSchema!.uiSchema ?? {}"
-                    :form-footer="{ show: false }"
-                    :disabled="!isTaskAssignedToUser()"
-                />
-            </ElConfigProvider>
-        </div>
 
         <!-- Action bar — shared across all form types -->
         <div class="flex flex-row items-center justify-between p-3">

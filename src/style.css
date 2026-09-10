@@ -148,3 +148,26 @@ a[href] {
     border: none;
     box-shadow: none;
 }
+/*
+ * Resizable panel gutters, shared by every form editor's Splitter.
+ * Lifted out of JsonSchemaFormEditor.vue so the four form surfaces don't each
+ * carry their own copy. Widen the hit area past the visual 1px line: a gutter
+ * that is only as thick as it looks is fiddly to grab.
+ */
+.app-splitter > .p-splitter-gutter {
+    background: var(--p-surface-200, #e5e7eb);
+    transition: background 0.15s;
+}
+.dark .app-splitter > .p-splitter-gutter {
+    background: var(--p-zinc-700, #3f3f46);
+}
+.app-splitter > .p-splitter-gutter:hover,
+.app-splitter > .p-splitter-gutter[data-p-gutter-resizing='true'] {
+    background: var(--layout-accent-color, #10b981);
+}
+.app-splitter > .p-splitter-gutter .p-splitter-gutter-handle {
+    background: transparent;
+}
+.app-splitter > .p-splitter-gutter:hover .p-splitter-gutter-handle {
+    background: var(--layout-accent-color, #10b981);
+}

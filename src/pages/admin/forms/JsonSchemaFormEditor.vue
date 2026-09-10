@@ -241,8 +241,10 @@ const aiContext = computed(() => ({
             <!-- ── Tab: Schema — resizable three-panel split ───────────────── -->
             <Splitter
                 v-show="activeTab === 'schema'"
-                class="flex-1 min-h-0 schema-splitter"
+                class="flex-1 min-h-0 app-splitter"
                 :gutter-size="5"
+                state-key="jsonschema-editor"
+                state-storage="local"
             >
                 <!-- Left: JSON Schema -->
                 <SplitterPanel :size="60" :min-size="20" class="flex flex-col min-w-0">
@@ -267,7 +269,13 @@ const aiContext = computed(() => ({
 
                 <!-- Right: UI Schema (top) + Error Schema (bottom) — nested vertical splitter -->
                 <SplitterPanel :size="40" :min-size="20" class="flex flex-col min-w-0">
-                    <Splitter layout="vertical" class="flex-1 min-h-0" :gutter-size="5">
+                    <Splitter
+                        layout="vertical"
+                        class="flex-1 min-h-0 app-splitter"
+                        :gutter-size="5"
+                        state-key="jsonschema-editor-right"
+                        state-storage="local"
+                    >
 
                         <!-- UI Schema -->
                         <SplitterPanel :size="50" :min-size="15" class="flex flex-col min-w-0">
@@ -357,18 +365,3 @@ const aiContext = computed(() => ({
     <!-- ── AI assistant — visible in both Schema and Preview tabs ─────────── -->
     <AiChatPanel context-type="form-designer" :context="aiContext" />
 </template>
-
-<style>
-/* Splitter gutter — matches app border colors and shows a subtle active state */
-.schema-splitter .p-splitter-gutter {
-    background: var(--p-surface-200, #e5e7eb);
-    transition: background 0.15s;
-}
-.dark .schema-splitter .p-splitter-gutter {
-    background: var(--p-zinc-700, #3f3f46);
-}
-.schema-splitter .p-splitter-gutter:hover,
-.schema-splitter .p-splitter-gutter-handle {
-    background: #10b981; /* emerald-500 */
-}
-</style>

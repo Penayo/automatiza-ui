@@ -1,10 +1,4 @@
 <script setup lang="ts">
-import { Form } from '@bpmn-io/form-js';
-import { DocumentListModule } from '@/form-fields/DocumentListField';
-import { LinkModule } from '@/form-fields/LinkField';
-import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
-import '@/forms.scss';
-
 import { computed, ref, watch, onMounted, onUnmounted, markRaw, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
@@ -13,13 +7,7 @@ import { applyBrandingPalette, type TenantBranding } from '@/composables/useTena
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
 import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
 
-// JSON Schema form renderer
-import VueForm from '@lljj/vue3-form-element';
-import 'element-plus/dist/index.css';
-import 'element-plus/theme-chalk/dark/css-vars.css';
-import { ElConfigProvider } from 'element-plus';
-import en from 'element-plus/es/locale/lang/en';
-
+import FormRenderer from '@components/forms/FormRenderer.vue';
 const BASE = import.meta.env.VITE_API_HOST ?? 'http://localhost:3000';
 
 const { isDark } = useTheme();
@@ -50,22 +38,18 @@ const formSchema   = ref<any>(null);
 const submitting   = ref(false);
 
 // bpmn-io form
-const formRef    = ref<HTMLElement | null>(null);
-const formViewer = ref<Form>();
+const renderer   = ref<InstanceType<typeof FormRenderer> | null>(null);
 
 // ── Form-type discrimination ───────────────────────────────────────────────────
 // The backend resolves the start event's form the same way it resolves task forms:
 // a stored form-js schema, a stored JSON-Schema form (type: 'jsonschema'), or a
 // custom-view descriptor (type: 'custom', key) rendered by a registered Vue view.
 const isCustom     = computed(() => formSchema.value?.type === 'custom');
-const isJsonSchema = computed(() => formSchema.value?.type === 'jsonschema');
 
 // Custom Vue view
 const customView    = ref<Component | null>(null);
 const customViewRef = ref<{ getVariables: () => Record<string, any> } | null>(null);
 
-// JSON Schema live data (two-way bound to VueForm)
-const jsonFormData = ref<Record<string, any>>({});
 
 // Minimal process-like object passed to custom views (there is no task on a start form).
 const processLike = computed(() => ({ name: processName.value }));
@@ -161,21 +145,6 @@ async function load() {
     }
 }
 
-// ── Mount BPMN form once data arrives ────────────────────────────────────────
-watch(state, (s) => {
-    // Custom views and JSON-Schema forms are rendered by Vue, not the form-js viewer.
-    if (s !== 'form' || !formSchema.value || isCustom.value || isJsonSchema.value) return;
-    setTimeout(() => {
-        if (!formRef.value) return;
-        const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule, LinkModule] });
-        formViewer.value = form;
-        form.importSchema(formSchema.value, {});
-        form.on('submit', (event: { data: Record<string, any>; errors: any[] }) => {
-            submit(event.data);
-        });
-    }, 0);
-});
-
 // ── Submit ────────────────────────────────────────────────────────────────────
 async function submit(variables: Record<string, any>) {
     submitting.value = true;
@@ -187,7 +156,6 @@ async function submit(variables: Record<string, any>) {
             { variables, chainForms: isWizard.value },
             { headers: authHeaders() },
         );
-        formViewer.value?.destroy();
 
         if (isWizard.value && data?.chain) {
             await followChain(data.chain as FormChain);
@@ -247,20 +215,16 @@ async function followChain(chain: FormChain) {
     state.value = 'done';
 }
 
-function getCurrentVars(): Record<string, any> {
-    if (isCustom.value)     return customViewRef.value?.getVariables() ?? {};
-    if (isJsonSchema.value) return { ...jsonFormData.value };
-    return {};
-}
-
-function submitForm() {
-    // form-js runs its own validation via the `submit` event; custom / JSON-Schema
-    // submit their collected variables directly.
-    if (!isCustom.value && !isJsonSchema.value && formViewer.value) {
-        formViewer.value.submit();
-    } else {
-        submit(getCurrentVars());
+async function submitForm() {
+    // Custom views collect their own variables; every stored form type goes through
+    // the renderer, which validates according to whichever engine drew it.
+    if (isCustom.value) {
+        submit(customViewRef.value?.getVariables() ?? {});
+        return;
     }
+    const result = await renderer.value?.submit();
+    // ok:false means the renderer refused and is showing its own messages.
+    if (result?.ok) submit(result.data);
 }
 
 function goLogin() {
@@ -415,20 +379,8 @@ onUnmounted(() => chainAbort.value?.abort());
                                 <span class="text-sm">Custom view not found for key "{{ formSchema.key }}"</span>
                             </div>
 
-                            <!-- JSON Schema renderer -->
-                            <div v-else-if="isJsonSchema" class="jsf-preview-root">
-                                <ElConfigProvider :locale="en">
-                                    <VueForm
-                                        v-model="jsonFormData"
-                                        :schema="formSchema.jsonSchema ?? {}"
-                                        :ui-schema="formSchema.uiSchema ?? {}"
-                                        :form-footer="{ show: false }"
-                                    />
-                                </ElConfigProvider>
-                            </div>
-
-                            <!-- form-js renderer -->
-                            <div v-else ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
+                            <!-- form-js / JSON Schema / Vueform -->
+                            <FormRenderer v-else ref="renderer" :schema="formSchema" />
 
                             <div class="flex justify-end mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800">
                                 <button

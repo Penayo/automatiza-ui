@@ -8,12 +8,13 @@ import { useTableQuery, ROWS_PER_PAGE_OPTIONS } from '@/composables/useTableQuer
 
 const router = useRouter();
 
-// Type filter: null = all, 'jsonschema' = JSON Schema only, 'formjs' = form-js only
-type TypeFilter = null | 'jsonschema' | 'formjs';
+// Type filter: null = all, or one authoring surface.
+type TypeFilter = null | 'jsonschema' | 'vueform' | 'formjs';
 const typeFilter = ref<TypeFilter>(null);
 
-// "Visual" is every type that is not jsonschema ('default' | 'form' | 'Form' |
-// 'custom'), so it needs notEqualsTo rather than an equality match.
+// "form-js" is every type that is neither jsonschema nor vueform ('default' |
+// 'form' | 'Form' | 'custom'), so it needs an exclusion list rather than an
+// equality match.
 const {
     items: forms, totalRecords, loading, search, activeSearch,
     firstRow, rowsPerPage, reload, onPage, onSort, clearSearch,
@@ -21,7 +22,8 @@ const {
     load: (params) => $api.forms.getPage(params),
     filter: () => {
         if (typeFilter.value === 'jsonschema') return { type: { equalsTo: 'jsonschema' } };
-        if (typeFilter.value === 'formjs')     return { type: { notEqualsTo: 'jsonschema' } };
+        if (typeFilter.value === 'vueform')    return { type: { equalsTo: 'vueform' } };
+        if (typeFilter.value === 'formjs')     return { type: { notIn: 'jsonschema,vueform' } };
         return undefined;
     },
 });
@@ -37,11 +39,18 @@ const newFormItems = [
         icon:  'pi pi-code',
         command: () => router.push({ name: 'JsonSchemaNew' }),
     },
+    {
+        label: 'Vueform builder',
+        icon:  'pi pi-th-large',
+        command: () => router.push({ name: 'VueformNew' }),
+    },
 ];
 
 function openEditor(data: IForm) {
     if (data.type === 'jsonschema') {
         router.push({ name: 'JsonSchemaEdit', params: { id: data.id } });
+    } else if (data.type === 'vueform') {
+        router.push({ name: 'VueformEdit', params: { id: data.id } });
     } else {
         router.push({ name: 'FormsEdit', params: { id: data.id } });
     }
@@ -107,6 +116,16 @@ function openEditor(data: IForm) {
                 <i class="pi pi-code mr-1" style="font-size: 0.7rem" />
                 JSON Schema
             </button>
+            <button
+                @click="typeFilter = 'vueform'"
+                class="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+                :class="typeFilter === 'vueform'
+                    ? 'bg-emerald-600 text-white border-transparent'
+                    : 'border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 hover:border-emerald-400'"
+            >
+                <i class="pi pi-th-large mr-1" style="font-size: 0.7rem" />
+                Vueform
+            </button>
 
             <span class="text-xs text-surface-400 ml-1">
                 {{ totalRecords }} form{{ totalRecords === 1 ? '' : 's' }}
@@ -152,6 +171,12 @@ function openEditor(data: IForm) {
                                 severity="secondary"
                                 style="font-size: 0.65rem; padding: 1px 6px;"
                             />
+                            <Tag
+                                v-else-if="data.type === 'vueform'"
+                                value="Vueform"
+                                severity="success"
+                                style="font-size: 0.65rem; padding: 1px 6px;"
+                            />
                         </div>
                         <span v-if="data.description" class="text-xs text-surface-400">{{ data.description }}</span>
                     </div>
@@ -178,6 +203,9 @@ function openEditor(data: IForm) {
                 <template #body="{ data }: { data: IForm }">
                     <span v-if="data.type === 'jsonschema'" class="text-xs text-surface-400 italic">
                         {{ Object.keys(data.jsonSchema?.properties ?? {}).length }} props
+                    </span>
+                    <span v-else-if="data.type === 'vueform'" class="text-sm text-surface-500">
+                        {{ data.vueform?.doc?.nodes?.length ?? 0 }} fields
                     </span>
                     <span v-else class="text-sm text-surface-500">
                         {{ data.components?.length ?? 0 }} fields

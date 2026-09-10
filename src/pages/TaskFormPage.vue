@@ -1,10 +1,4 @@
 <script setup lang="ts">
-import { Form } from '@bpmn-io/form-js';
-import { DocumentListModule } from '@/form-fields/DocumentListField';
-import { LinkModule } from '@/form-fields/LinkField';
-import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
-import '@/forms.scss';
-
 import { ref, watch, computed, onMounted, onUnmounted, markRaw, provide, type Component } from 'vue';
 import { useRoute } from 'vue-router';
 import { $taskPublic } from '@services/TaskPublicService';
@@ -12,17 +6,10 @@ import type { TaskFormData } from '@services/TaskPublicService';
 import { useTheme } from '@/composables/useTheme';
 import { applyBrandingPalette, type TenantBranding } from '@/composables/useTenantBranding';
 import { FilesService } from '@services/FilesService';
-import { resolveFormFiles } from '@/form-fields/form-js-submit';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
 import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
 
-// JSON Schema form renderer
-import VueForm from '@lljj/vue3-form-element';
-import 'element-plus/dist/index.css';
-import 'element-plus/theme-chalk/dark/css-vars.css';
-import { ElConfigProvider } from 'element-plus';
-import en from 'element-plus/es/locale/lang/en';
-
+import FormRenderer from '@components/forms/FormRenderer.vue';
 const filesService = new FilesService();
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
@@ -99,22 +86,18 @@ const companyNameClass = computed(() => {
 const accent = 'var(--fo-brand-500, var(--p-primary-500, #6366f1))';
 
 // bpmn-io form
-const formRef         = ref<HTMLElement | null>(null);
-const formViewer      = ref<Form>();
-const currentFormData = ref<Record<string, any>>({});
+const renderer        = ref<InstanceType<typeof FormRenderer> | null>(null);
 
 // ── Form-type discrimination ───────────────────────────────────────────────────
 // The backend returns one of: a stored form-js schema, a stored JSON-Schema form
 // (type: 'jsonschema'), or a custom-view descriptor (type: 'custom', key).
 const isCustom     = computed(() => data.value?.formSchema?.type === 'custom');
-const isJsonSchema = computed(() => data.value?.formSchema?.type === 'jsonschema');
 
 // Custom Vue view
 const customView    = ref<Component | null>(null);
 const customViewRef = ref<{ getVariables: () => Record<string, any> } | null>(null);
 
 // JSON Schema live data (two-way bound to VueForm)
-const jsonFormData = ref<Record<string, any>>({});
 
 // Minimal task-like object passed to custom views (public page has no full Task).
 const taskLike = computed(() => ({
@@ -139,11 +122,8 @@ function buildVariables(): Record<string, any> {
 // ── Load ──────────────────────────────────────────────────────────────────────
 async function load() {
     state.value = 'loading';
-    // A chained step reuses this component: tear the previous viewer down so the
-    // `state` watcher below builds a fresh one against the new schema.
-    formViewer.value?.destroy();
-    formViewer.value      = undefined;
-    currentFormData.value = {};
+    // A chained step reuses this component; FormRenderer rebuilds itself when the
+    // schema prop changes, so only the custom-view slot needs clearing here.
     customView.value      = null;
     try {
         data.value = await $taskPublic.getForm(token.value);
@@ -152,9 +132,6 @@ async function load() {
         applyBrandingPalette(pageRef.value, branding.value);
 
         const schema = data.value?.formSchema;
-        if (schema?.type === 'jsonschema') {
-            jsonFormData.value = { ...(data.value?.formData ?? {}) };
-        }
         if (schema?.type === 'custom' && schema.key) {
             const loader = CUSTOM_TASK_VIEWS[schema.key];
             if (loader) {
@@ -179,48 +156,13 @@ async function load() {
     }
 }
 
-// ── Mount BPMN form once data is loaded ───────────────────────────────────────
-watch(state, (s) => {
-    // Custom views and JSON-Schema forms are rendered by Vue, not the form-js viewer.
-    if (s !== 'form' || !data.value?.formSchema || isCustom.value || isJsonSchema.value) return;
-    setTimeout(() => {
-        if (!formRef.value) return;
-        const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule, LinkModule] });
-        formViewer.value = form;
-        form.importSchema(data.value!.formSchema, data.value!.formData ?? {});
-        form.on('changed', (event: { data: Record<string, any> }) => {
-            currentFormData.value = event.data;
-        });
-        // form-js drives this path: `submitForm` already flipped `submitting` on
-        // (the overlay is up before the first upload starts), so every exit here
-        // must either hand off to `submit()` or clear the flag itself.
-        form.on('submit', async (event: { data: Record<string, any>; errors: any[] }) => {
-            console.log('[TaskFormPage] form submitted, raw event.data:', event.data);
-            try {
-                submitPhase.value = 'uploading';
-                const resolvedData = await resolveFormFiles(
-                    event.data, filesService, form,
-                    data.value?.processInstanceId,
-                    data.value?.taskId,
-                );
-                await submit(resolvedData);
-            } catch (err: any) {
-                console.error('[TaskFormPage] file upload failed, aborting submit:', err);
-                errorMsg.value = err?.response?.data?.message ?? err?.message ?? 'File upload failed. Please try again.';
-                state.value    = 'error';
-                submitting.value = false;
-            }
-        });
-    }, 0);
-});
-
 // ── Save progress ─────────────────────────────────────────────────────────────
 async function saveProgress(variables: Record<string, any>) {
     saving.value = true;
     saved.value  = false;
     try {
-        const resolvedData = await resolveFormFiles(
-            variables, filesService, formViewer.value,
+        const resolvedData = await renderer.value!.resolveFiles(
+            variables, filesService,
             data.value?.processInstanceId,
             data.value?.taskId,
         );
@@ -235,12 +177,12 @@ async function saveProgress(variables: Record<string, any>) {
     }
 }
 
-// Collect the current variables for the active form type.
+// Collect the current variables for the active form type, without validating.
 function getCurrentVars(): Record<string, any> {
-    if (isCustom.value)     return customViewRef.value?.getVariables() ?? { ...(data.value?.formData ?? {}) };
-    if (isJsonSchema.value) return { ...(data.value?.formData ?? {}), ...jsonFormData.value };
-    // form-js: currentFormData is tracked via the `changed` event (no validation).
-    if (formViewer.value)   return { ...(data.value?.formData ?? {}), ...currentFormData.value };
+    if (isCustom.value) return customViewRef.value?.getVariables() ?? { ...(data.value?.formData ?? {}) };
+    if (data.value?.formSchema) {
+        return { ...(data.value?.formData ?? {}), ...(renderer.value?.getData() ?? {}) };
+    }
     return buildVariables();
 }
 
@@ -257,7 +199,6 @@ async function submit(variables: Record<string, any>) {
         // otherwise the response (and the server's behaviour) stays exactly as it
         // is today, including no auto-claim of whatever comes next.
         const { chain } = await $taskPublic.complete(token.value, variables, isWizard.value);
-        formViewer.value?.destroy();
 
         if (isWizard.value && chain) {
             await followChain(chain);
@@ -323,16 +264,26 @@ async function submitForm() {
     submitting.value  = true;
     submitPhase.value = 'submitting';
 
-    // form-js runs its own validation via the `submit` event; custom / JSON-Schema
-    // and the key-value fallback submit their collected variables directly.
     try {
-        if (!isCustom.value && !isJsonSchema.value && formViewer.value) {
-            // Returns as soon as the `submit` event is dispatched; the async
-            // handler above owns `submitting` from that point on.
-            formViewer.value.submit();
+        let variables: Record<string, any>;
+
+        if (isCustom.value || !data.value?.formSchema) {
+            variables = getCurrentVars();
         } else {
-            await submit(getCurrentVars());
+            const result = await renderer.value?.submit();
+            // ok:false means the renderer refused and is showing its own messages.
+            if (!result?.ok) { submitting.value = false; return; }
+            variables = { ...(data.value?.formData ?? {}), ...result.data };
         }
+
+        submitPhase.value = 'uploading';
+        variables = await renderer.value!.resolveFiles(
+            variables, filesService,
+            data.value?.processInstanceId,
+            data.value?.taskId,
+        );
+
+        await submit(variables);
     } catch (err: any) {
         console.error('[TaskFormPage] submit failed:', err);
         errorMsg.value = err?.response?.data?.message ?? err?.message ?? 'Submission failed. Please try again.';
@@ -486,20 +437,13 @@ onUnmounted(() => chainAbort.value?.abort());
                                 <span class="text-sm">Custom view not found for key "{{ data.formSchema.key }}"</span>
                             </div>
 
-                            <!-- JSON Schema renderer -->
-                            <div v-else-if="isJsonSchema" class="jsf-preview-root">
-                                <ElConfigProvider :locale="en">
-                                    <VueForm
-                                        v-model="jsonFormData"
-                                        :schema="data.formSchema.jsonSchema ?? {}"
-                                        :ui-schema="data.formSchema.uiSchema ?? {}"
-                                        :form-footer="{ show: false }"
-                                    />
-                                </ElConfigProvider>
-                            </div>
-
-                            <!-- form-js renderer -->
-                            <div v-else ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
+                            <!-- form-js / JSON Schema / Vueform -->
+                            <FormRenderer
+                                v-else
+                                ref="renderer"
+                                :schema="data.formSchema"
+                                :data="data.formData ?? {}"
+                            />
                             <div class="flex items-center justify-between mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800">
                                 <!-- Save confirmation -->
                                 <span v-if="saved" class="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">

@@ -71,3 +71,42 @@ export function extractDocuments(
 
     return out;
 }
+
+/**
+ * Upload every File in a nested data object and replace it with a DocumentReference.
+ *
+ * The form-js resolver (form-js-submit.ts) only walks the top level, which is enough
+ * there because form-js data is flat. Vueform nests — `object` and `group` produce
+ * sub-objects and `list` produces arrays — so a file inside a container needs a
+ * recursive walk or it reaches the engine as an unserialisable File.
+ */
+export async function resolveNestedFiles<T>(
+    value: T,
+    filesService: FilesService,
+    processInstanceId?: string,
+    taskId?: string,
+): Promise<T> {
+    const walk = async (node: any): Promise<any> => {
+        if (node instanceof File) {
+            return uploadFile(node, filesService, processInstanceId, taskId);
+        }
+        if (node instanceof FileList) {
+            return Promise.all(
+                Array.from(node).map((f) => uploadFile(f, filesService, processInstanceId, taskId)),
+            );
+        }
+        if (Array.isArray(node)) return Promise.all(node.map(walk));
+
+        // An already-uploaded reference is a plain object — don't recurse into it and
+        // don't disturb it.
+        if (node !== null && typeof node === 'object' && !isDocumentReference(node)) {
+            const entries = await Promise.all(
+                Object.entries(node).map(async ([k, v]) => [k, await walk(v)] as const),
+            );
+            return Object.fromEntries(entries);
+        }
+        return node;
+    };
+
+    return walk(value) as Promise<T>;
+}

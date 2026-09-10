@@ -3,7 +3,7 @@ import '@/forms.scss';
 import { Form } from '@bpmn-io/form-js';
 import { DocumentListModule } from '@/form-fields/DocumentListField';
 import { LinkModule } from '@/form-fields/LinkField';
-import { Button, SelectButton, Tag } from 'primevue';
+import { Button, SelectButton, Splitter, SplitterPanel, Tag } from 'primevue';
 import JsonEditor from 'vue3-ts-jsoneditor';
 import { useTheme } from '@/composables/useTheme';
 import { $api } from '@services/api';
@@ -108,10 +108,15 @@ onUnmounted(destroyViewer);
 </script>
 
 <template>
-    <div class="flex-1 min-h-0 flex overflow-hidden">
+    <Splitter
+        class="flex-1 min-h-0 app-splitter"
+        :gutter-size="5"
+        state-key="formjs-preview"
+        state-storage="local"
+    >
 
         <!-- Left: controls -->
-        <div class="flex flex-col border-r border-surface-200 dark:border-surface-700 shrink-0 overflow-y-auto" style="width: 300px;">
+        <SplitterPanel :size="26" :min-size="15" class="flex flex-col min-w-0 overflow-y-auto">
 
             <!-- Viewport selector -->
             <div class="flex items-center justify-between px-4 py-2 border-b border-surface-200 dark:border-surface-700 shrink-0">
@@ -119,6 +124,7 @@ onUnmounted(destroyViewer);
                 <SelectButton
                     v-model="viewMode"
                     :options="viewOptions"
+                    option-label="label"
                     option-value="value"
                     :pt="{ pcButton: { root: { style: 'padding: 0.25rem 0.5rem; font-size:0.75rem;' } } }"
                 >
@@ -171,17 +177,19 @@ onUnmounted(destroyViewer);
                     style="flex: 1; min-height: 120px;"
                 />
             </div>
-        </div>
+        </SplitterPanel>
 
         <!-- Right: form canvas -->
-        <div
+        <SplitterPanel
+            :size="74"
+            :min-size="30"
             :class="isDark ? 'formjs-dark' : 'formjs-light'"
-            class="flex-1 min-w-0 overflow-y-auto p-6 flex flex-col items-center bg-surface-50 dark:bg-zinc-900"
+            class="overflow-y-auto p-6 flex flex-col items-center bg-surface-50 dark:bg-zinc-900"
         >
             <div :style="{ width: '100%', maxWidth: canvasMaxWidth[viewMode], transition: 'max-width 0.25s ease' }">
                 <div ref="previewRef" />
             </div>
-        </div>
+        </SplitterPanel>
 
-    </div>
+    </Splitter>
 </template>

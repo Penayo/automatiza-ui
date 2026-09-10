@@ -1,21 +1,14 @@
 <script setup lang="ts">
-import { Form } from "@bpmn-io/form-js";
-import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
-import '@/forms.scss';
-
 import { ref, onMounted, watch } from 'vue';
-import { useTheme } from '@/composables/useTheme';
-
-const { isDark } = useTheme();
 import type { Task } from '@services/TasksService';
 import { $api } from '@services/api';
 import type { IForm } from '@services/FormsService';
 import { Button, useConfirm, useToast } from 'primevue';
-import type { ProcessVariables } from "@services/ProcessesService";
 import { onApprove } from "@/utils/common";
 import { parseApiError } from "@/utils/error";
 import type { IAccess } from "@services/AuthService.ts";
 
+import FormRenderer from '@components/forms/FormRenderer.vue';
 const toast = useToast();
 const confirm = useConfirm();
 
@@ -26,8 +19,7 @@ const props = defineProps<{
 const emit = defineEmits(['refresh']);
 
 const formSchema = ref<IForm | null>(null);
-const formRef = ref(null);
-const formViewer = ref<Form>();
+const renderer = ref<InstanceType<typeof FormRenderer> | null>(null);
 const loading = ref<boolean>(false)
 const userInfo = ref<IAccess | null>(null);
 
@@ -61,9 +53,9 @@ async function getTaskForm() {
 
 function submitForm() {
     async function onConfirm() {
-        if(formViewer.value) {
-            formViewer.value.submit()
-        }
+        const result = await renderer.value?.submit();
+        // ok:false means the renderer refused and is showing its own messages.
+        if (result?.ok) completeTask(result.data);
     }
 
     onApprove(confirm, `Está seguro de procesar el formulario?\nEsto enviará la tarea a la siguiente etapa!`, onConfirm)
@@ -74,43 +66,7 @@ const isTaskAssignedToUser = () => props.task?.assignment?.assignee === userInfo
 watch(() => props.task, () => {
     getTaskForm()
     userInfo.value = $api.authService.getAccessInfo();
-
-    if(isTaskAssignedToUser()) {
-        formViewer.value?.setProperty('readOnly', false);
-    } else {
-        formViewer.value?.setProperty('readOnly', true);
-    }
-
 }, { immediate: true })
-
-watch(formSchema, () => {
-    console.log('FORM SCHEMA CHANGED', formSchema.value);
-
-    if (formViewer.value) {
-        formViewer.value.destroy();
-        formViewer.value = undefined;
-    }
-
-    if (!formSchema.value || !props.task) {
-        return;
-    };
-
-    const form = new Form({ container: formRef.value });
-
-    formViewer.value = form;
-
-    form.importSchema(formSchema.value, formSchema.value.metadata)
-        .then(() => {
-            if (props.task?.assignment?.assignee !== userInfo.value?.user.username) {
-                formViewer.value?.setProperty('readOnly', true);
-            }
-        });
-
-    form.on('submit', (event: { data: ProcessVariables, errors: Error[] }) => {
-        console.log(event.data, event.errors);
-        completeTask(event.data);
-    });
-})
 
 onMounted(() => {
   // Fetch form schema if needed
@@ -127,7 +83,12 @@ onMounted(() => {
             <i class="pi pi-flask text-base shrink-0" />
             <span><strong>Test run</strong> — this task is part of a test process instance.</span>
         </div>
-        <div ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
+        <FormRenderer
+            ref="renderer"
+            :schema="formSchema"
+            :data="formSchema?.metadata ?? {}"
+            :read-only="!isTaskAssignedToUser()"
+        />
         <div class="flex flex-row gap-2 justify-end p-3">
             <Button size="small" severity="secondary" :disabled="!isTaskAssignedToUser()">Guardar</Button>
             <Button size="small" @click="submitForm" :disabled="!isTaskAssignedToUser()">Procesar</Button>

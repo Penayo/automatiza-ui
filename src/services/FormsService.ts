@@ -1,6 +1,7 @@
 import type { APIData } from "@services/BaseService";
 import { ModelApiService } from "@services/ModelAPI";
 import type { ListQuery, PageResponse } from "@services/api";
+import type { VueformPayload } from "@/formbuilder/types";
 
 export interface IForm extends APIData {
     id: string;
@@ -8,7 +9,7 @@ export interface IForm extends APIData {
     code: string;
     name: string;
     description?: string;
-    type: 'default' | 'form' | 'Form' | 'jsonschema' | 'custom';
+    type: 'default' | 'form' | 'Form' | 'jsonschema' | 'vueform' | 'custom';
     /** Only set when type === 'custom'. Maps to a registered key in task-views/index.ts */
     key?: string;
     version: number;
@@ -31,6 +32,8 @@ export interface IForm extends APIData {
     jsonSchema?: Record<string, any>;
     uiSchema?: Record<string, any>;
     errorSchema?: Record<string, any>;
+    /** Only set when type === 'vueform'. See src/formbuilder/types.ts for the payload shape. */
+    vueform?: VueformPayload;
     metadata?: { key: string; value: any }[];
     processDefinitionId?: string;
     taskDefinitionId?: string;

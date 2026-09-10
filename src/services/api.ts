@@ -50,6 +50,8 @@ export type PageResponse<T> = {
 export type StringFilter = {
 	equalsTo?: string;
 	notEqualsTo?: string;
+	/** Comma-separated exclusion list, e.g. 'jsonschema,vueform'. */
+	notIn?: string;
 	like?: string;
 }
 

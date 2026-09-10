@@ -102,6 +102,8 @@ const routes = [
       { path: 'forms/:id/edit',           name: 'FormsEdit',        component: () => import('./pages/admin/forms/Index.vue') },
       { path: 'forms/jsonschema/new',     name: 'JsonSchemaNew',    component: () => import('./pages/admin/forms/JsonSchemaFormEditor.vue') },
       { path: 'forms/jsonschema/:id/edit',name: 'JsonSchemaEdit',   component: () => import('./pages/admin/forms/JsonSchemaFormEditor.vue') },
+      { path: 'forms/vueform/new',        name: 'VueformNew',       component: () => import('./pages/admin/forms/vueform/Index.vue') },
+      { path: 'forms/vueform/:id/edit',   name: 'VueformEdit',      component: () => import('./pages/admin/forms/vueform/Index.vue') },
       { path: 'formbuilder', redirect: { name: 'FormsList' } },
 
       // Decisions (DMN)

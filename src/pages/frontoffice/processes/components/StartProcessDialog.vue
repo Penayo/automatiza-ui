@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { Form } from '@bpmn-io/form-js';
-import { DocumentListModule } from '@/form-fields/DocumentListField';
-import { LinkModule } from '@/form-fields/LinkField';
 import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast, Button, Dialog } from 'primevue';
@@ -9,8 +6,7 @@ import { $api } from '@services/api';
 import type { ProcessDefinition } from '@services/ProcessesService';
 import type { IForm } from '@services/FormsService';
 import { parseApiError } from '@/utils/error';
-import { useTheme } from '@/composables/useTheme';
-
+import FormRenderer from '@components/forms/FormRenderer.vue';
 const props = defineProps<{
     visible:    boolean;
     process:    ProcessDefinition;
@@ -22,12 +18,15 @@ const emit = defineEmits<{
     'started':        [];
 }>();
 
-const { isDark } = useTheme();
 const router     = useRouter();
 const toast      = useToast();
 
-const formRef    = ref<HTMLElement | null>(null);
-const formViewer = ref<Form>();
+const renderer   = ref<InstanceType<typeof FormRenderer> | null>(null);
+/**
+ * Bumped to force a fresh FormRenderer. The schema does not change between runs, so
+ * "Start another" and reopening the dialog need an explicit remount to clear values.
+ */
+const formInstance = ref(0);
 const starting   = ref(false);
 const done       = ref(false);
 
@@ -48,31 +47,13 @@ function buildVariables(): Record<string, string> {
     );
 }
 
-// ── BPMN form lifecycle ──────────────────────────────────────────────────────
-
-function mountForm() {
-    if (!props.formSchema || !formRef.value) return;
-    const form = new Form({ container: formRef.value, additionalModules: [DocumentListModule, LinkModule] });
-    formViewer.value = form;
-    form.importSchema(props.formSchema, props.formSchema.metadata ?? {});
-    form.on('submit', (event: { data: Record<string, any>; errors: any[] }) => {
-        startProcess(event.data);
-    });
-}
-
-function destroyForm() {
-    formViewer.value?.destroy();
-    formViewer.value = undefined;
-}
+// ── Dialog lifecycle ─────────────────────────────────────────────────────────
 
 watch(() => props.visible, (open) => {
-    if (!open) {
-        destroyForm();
-        return;
-    }
+    if (!open) return;
     done.value = false;
     resetKvRows();
-    setTimeout(mountForm, 0);
+    formInstance.value += 1;
 });
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -90,21 +71,20 @@ async function startProcess(variables: Record<string, any>) {
     }
 }
 
-function submitForm() {
-    if (formViewer.value) {
-        formViewer.value.submit();
-    } else {
+async function submitForm() {
+    if (!props.formSchema) {
         startProcess(buildVariables());
+        return;
     }
+    const result = await renderer.value?.submit();
+    // ok:false means the renderer refused and is showing its own messages.
+    if (result?.ok) startProcess(result.data);
 }
 
 function startAnother() {
     done.value = false;
     resetKvRows();
-    if (props.formSchema) {
-        destroyForm();
-        setTimeout(mountForm, 0);
-    }
+    formInstance.value += 1;
 }
 
 function closeAndGoTasks() {
@@ -145,7 +125,12 @@ function close() {
         <!-- ── BPMN start form ── -->
         <div v-else-if="props.formSchema">
             <p class="text-xs text-surface-400 mb-4">Fill in the form below and submit to start this process.</p>
-            <div ref="formRef" :class="isDark ? 'formjs-dark' : 'formjs-light'" />
+            <FormRenderer
+                :key="formInstance"
+                ref="renderer"
+                :schema="props.formSchema"
+                :data="props.formSchema.metadata ?? {}"
+            />
             <div class="flex justify-end mt-4 gap-2">
                 <Button severity="secondary" label="Cancel" @click="close" :disabled="starting" />
                 <Button label="Start" icon="pi pi-play" :loading="starting" @click="submitForm" />
