@@ -37,13 +37,21 @@ export const INPUT_TYPE_PROP = {
     },
 } as const;
 
-/** Vueform lays elements out on a 12-column grid. */
+/**
+ * Vueform lays elements out on a 12-column grid: `columns` becomes
+ * `grid-column: span N` inside the form's `.vf-row`. Two fields sit side by side by
+ * both being 6.
+ *
+ * The values are strings because an object literal's numeric keys are strings, and a
+ * numeric `default` would not match any option — leaving the control looking empty and
+ * unresponsive. Vueform's columns service accepts either (services/columns/index.js:34).
+ */
 export const COLUMNS_PROP = {
     columns: {
         type: 'select',
         label: 'Width',
-        items: { 12: 'Full width', 6: 'Half', 4: 'Third', 3: 'Quarter' },
-        default: 12,
+        items: { '12': 'Full width', '6': 'Half', '4': 'Third', '3': 'Quarter' },
+        default: '12',
     },
 } as const;
 

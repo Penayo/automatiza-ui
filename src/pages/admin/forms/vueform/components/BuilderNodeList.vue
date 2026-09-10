@@ -1,9 +1,18 @@
 <script setup lang="ts">
 /**
- * One level of the builder tree: drop slots interleaved with node chrome.
+ * One level of the builder tree, laid out on the same 12-column grid Vueform uses.
  *
  * Self-recursive — a container renders this component again for its children, so the
- * slot/drop logic exists once regardless of nesting depth.
+ * drop logic exists once regardless of nesting depth.
+ *
+ * The grid matters: Vueform's `.vf-row` is `display:grid; repeat(12, …)` and an
+ * element's `columns` prop becomes `grid-column: span N`. Mirroring that here is what
+ * lets a half-width field sit beside its neighbour on the canvas — each node still
+ * renders in its own single-element form, so the layout could not come from Vueform.
+ *
+ * Drop position is shown as a coloured edge on the node itself rather than as separate
+ * slot elements: a full-width slot between two half-width nodes would force a row break
+ * and make side-by-side layout impossible to see.
  */
 import { compile } from '@/formbuilder/compile';
 import { getElementDef } from '@/formbuilder/registry';
@@ -27,29 +36,47 @@ function leafEntry(node: BuilderNode): CompiledElement {
 function isFull(node: BuilderNode): boolean {
     return isSingleChildContainer(node.type) && (node.children?.length ?? 0) > 0;
 }
+
+/**
+ * How many of the 12 columns this node occupies. Vueform also accepts a per-breakpoint
+ * object; the canvas shows those full width rather than guessing a breakpoint.
+ */
+function spanOf(node: BuilderNode): number {
+    const columns = node.props.columns;
+    const n = typeof columns === 'number' || typeof columns === 'string' ? Number(columns) : NaN;
+    return Number.isFinite(n) ? Math.min(Math.max(Math.round(n), 1), 12) : 12;
+}
+
+/** 'before' | 'after' | null — which edge of this node the pending drop would land on. */
+function dropEdge(index: number): 'before' | 'after' | null {
+    if (props.dnd.isTarget({ parentId: props.parentId, index })) return 'before';
+    if (props.dnd.isTarget({ parentId: props.parentId, index: index + 1 })) return 'after';
+    return null;
+}
+
+/** A node sharing its row takes a left/right marker; a full-width one takes top/bottom. */
+function edgeClass(node: BuilderNode, index: number): string {
+    const edge = dropEdge(index);
+    if (!edge) return '';
+    const horizontal = spanOf(node) < 9;
+    if (horizontal) return edge === 'before' ? 'builder-drop-left' : 'builder-drop-right';
+    return edge === 'before' ? 'builder-drop-top' : 'builder-drop-bottom';
+}
 </script>
 
 <template>
-    <div class="flex flex-col">
+    <div class="grid grid-cols-12 gap-x-2 gap-y-1 items-start">
         <template v-for="(node, index) in props.nodes" :key="node.id">
-            <!-- Drop slot above this node -->
-            <div
-                class="h-1.5 -my-0.5 rounded transition-colors"
-                :class="props.dnd.isTarget({ parentId: props.parentId, index })
-                    ? 'bg-(--layout-accent-color)'
-                    : 'bg-transparent'"
-                @dragover="props.dnd.overSlot({ parentId: props.parentId, index }, $event)"
-                @drop="props.dnd.drop($event)"
-            />
-
             <div
                 class="group relative rounded border transition-colors"
+                :style="{ gridColumn: `span ${spanOf(node)} / span 12` }"
                 :class="[
                     props.builder.selectedId.value === node.id
                         ? 'border-(--layout-accent-color) ring-1 ring-(--layout-accent-color)'
                         : 'border-surface-200 hover:border-surface-400 dark:border-surface-700 dark:hover:border-surface-500',
                     props.dnd.dragging.value?.kind === 'move'
                         && props.dnd.dragging.value.id === node.id ? 'opacity-40' : '',
+                    edgeClass(node, index),
                 ]"
                 @click.stop="props.builder.select(node.id)"
                 @dragover.stop="props.dnd.overNode(props.parentId, index, $event)"
@@ -64,9 +91,10 @@ function isFull(node: BuilderNode): boolean {
                         @dragend="props.dnd.endDrag()"
                     />
                     <i :class="['pi', getElementDef(node.type)?.icon ?? 'pi-question', 'opacity-40']" />
-                    <code class="font-mono opacity-60">{{ props.builder.pathOf(node.id) }}</code>
+                    <code class="truncate font-mono opacity-60">{{ props.builder.pathOf(node.id) }}</code>
+                    <span v-if="spanOf(node) < 12" class="shrink-0 opacity-40">{{ spanOf(node) }}/12</span>
 
-                    <div class="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                    <div class="ml-auto flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100">
                         <button
                             type="button"
                             class="rounded px-1 hover:bg-surface-200 dark:hover:bg-surface-700"
@@ -89,9 +117,7 @@ function isFull(node: BuilderNode): boolean {
                 <!-- Body -->
                 <div class="px-2 pb-2">
                     <template v-if="isContainerType(node.type)">
-                        <div
-                            class="rounded border border-dashed border-surface-300 p-2 dark:border-surface-600"
-                        >
+                        <div class="rounded border border-dashed border-surface-300 p-2 dark:border-surface-600">
                             <div class="mb-1 text-[11px] font-medium opacity-60">
                                 {{ (node.props.label as string) || getElementDef(node.type)?.label }}
                                 <span v-if="node.type === 'object'" class="opacity-60">— nests data</span>
@@ -121,11 +147,11 @@ function isFull(node: BuilderNode): boolean {
             </div>
         </template>
 
-        <!-- Trailing drop slot -->
+        <!-- Trailing drop target, always its own full-width row -->
         <div
-            class="rounded transition-colors"
+            class="col-span-12 rounded transition-colors"
             :class="[
-                props.nodes.length ? 'h-1.5 -mt-0.5' : 'h-2',
+                props.nodes.length ? 'h-2' : 'h-3',
                 props.dnd.isTarget({ parentId: props.parentId, index: props.nodes.length })
                     ? 'bg-(--layout-accent-color)'
                     : 'bg-transparent',
@@ -135,3 +161,11 @@ function isFull(node: BuilderNode): boolean {
         />
     </div>
 </template>
+
+<style>
+/* Drop-position markers. Un-scoped so the recursive instances share one definition. */
+.builder-drop-top    { box-shadow: inset 0  3px 0 0 var(--layout-accent-color); }
+.builder-drop-bottom { box-shadow: inset 0 -3px 0 0 var(--layout-accent-color); }
+.builder-drop-left   { box-shadow: inset  3px 0 0 0 var(--layout-accent-color); }
+.builder-drop-right  { box-shadow: inset -3px 0 0 0 var(--layout-accent-color); }
+</style>

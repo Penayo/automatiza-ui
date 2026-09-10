@@ -171,3 +171,24 @@ a[href] {
 .app-splitter > .p-splitter-gutter:hover .p-splitter-gutter-handle {
     background: var(--layout-accent-color, #10b981);
 }
+
+/*
+ * Vueform field labels.
+ *
+ * `.vf-label` ships with no font-weight or color of its own — it only sets font-size,
+ * letter-spacing and line-height, so labels inherit body text and read as plain black.
+ * Give them weight and step the colour back from pure black/white in both themes.
+ */
+:root {
+    --vf-label-color: rgba(0, 0, 0, 0.85);
+    --vf-label-weight: 600;
+}
+.dark {
+    --vf-label-color: rgba(255, 255, 255, 0.85);
+}
+.vf-label,
+.vf-vertical-label,
+.vf-horizontal-label {
+    font-weight: var(--vf-label-weight);
+    color: var(--vf-label-color);
+}

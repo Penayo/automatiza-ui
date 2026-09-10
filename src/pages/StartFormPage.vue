@@ -349,12 +349,14 @@ onUnmounted(() => chainAbort.value?.abort());
 
                 <!-- Form -->
                 <div v-else-if="state === 'form'">
-                    <div class="mb-6">
-                        <p v-if="isWizard" class="text-xs font-medium uppercase tracking-wide text-surface-400 mb-1">
+                    <!-- The process name and description are deliberately not repeated
+                         here: a form carries its own title as a heading element, and
+                         showing both reads as a duplicate. Only the wizard position,
+                         which the form cannot know, stays. -->
+                    <div v-if="isWizard" class="mb-6">
+                        <p class="text-xs font-medium uppercase tracking-wide text-surface-400">
                             Step {{ step }}<span v-if="totalSteps"> of {{ totalSteps }}</span>
                         </p>
-                        <h1 class="text-xl font-semibold text-surface-900 dark:text-surface-50">{{ processName }}</h1>
-                        <p v-if="description" class="text-sm text-surface-500 mt-1 leading-relaxed">{{ description }}</p>
                     </div>
 
                     <div class="rounded-2xl border border-surface-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">

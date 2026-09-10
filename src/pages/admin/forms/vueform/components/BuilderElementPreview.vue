@@ -30,7 +30,9 @@ const { locale } = useFormLocale();
  */
 const entry = computed(() => {
     const resolved = resolveFormVariables({ [props.name]: props.entry })[props.name];
-    const { expression: _expr, ...rest } = resolved as Record<string, unknown>;
+    const { expression: _expr, columns: _cols, ...rest } = resolved as Record<string, unknown>;
+    // `columns` is applied by the canvas wrapper, which lays siblings out on the same
+    // 12-column grid Vueform uses. Leaving it here too would halve the width twice.
     return { ...rest, ...(rest.expressions !== undefined ? { expressions: false } : {}) } as CompiledElement;
 });
 const form$ = ref<any>(null);

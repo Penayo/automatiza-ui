@@ -24,7 +24,7 @@ export interface BuilderDndApi {
     startPaletteDrag: (itemId: string, ev: DragEvent) => void;
     startNodeDrag: (id: string, ev: DragEvent) => void;
     overSlot: (target: DropTarget, ev: DragEvent) => void;
-    /** Above/below is decided by which half of the node the pointer is in. */
+    /** Before/after is decided by which half of the node the pointer is in. */
     overNode: (parentId: string | null, index: number, ev: DragEvent) => void;
     drop: (ev: DragEvent) => void;
     endDrag: () => void;
@@ -68,7 +68,15 @@ export function useBuilderDnd(options: BuilderDndOptions): BuilderDndApi {
         if (!el) return;
 
         const rect = el.getBoundingClientRect();
-        const after = ev.clientY - rect.top > rect.height / 2;
+        // A narrow element shares its row with siblings, so before/after is a
+        // left/right decision there and a top/bottom one for a full-width element.
+        const rowWidth = el.parentElement?.clientWidth ?? rect.width;
+        const sharesRow = rect.width < rowWidth * 0.75;
+
+        const after = sharesRow
+            ? ev.clientX - rect.left > rect.width / 2
+            : ev.clientY - rect.top > rect.height / 2;
+
         overSlot({ parentId, index: after ? index + 1 : index }, ev);
     }
 
