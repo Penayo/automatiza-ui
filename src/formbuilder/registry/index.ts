@@ -578,6 +578,24 @@ const PALETTE_ITEMS: PaletteItem[] = [
         description: 'Read-only text block. The wrapper tag can be changed to a heading.',
     },
     {
+        id: 'text-info', type: 'static', label: 'Info line', icon: 'pi-info-circle',
+        category: 'Static',
+        description: 'Reads out one value as "Label: value", with the label in bold. For showing data, not collecting it.',
+        namePrefix: 'info',
+        // `expressions` is what makes this more than a paragraph: Vueform replaces
+        // {path} with the live value, resolved against this element's own dataPath —
+        // so inside a repeating list, `list.*.field` reads the current item's field.
+        // `allowHtml` is required for the <b>, and the value goes through Vueform's
+        // sanitizer either way.
+        defaults: {
+            tag: 'p',
+            content: '<b>Label:</b> {field}',
+            allowHtml: true,
+            expressions: true,
+            addClass: 'form-info',
+        },
+    },
+    {
         id: 'heading1', type: 'static', label: 'Heading 1', icon: 'pi-hashtag',
         category: 'Static', description: 'Section heading.',
         namePrefix: 'heading',

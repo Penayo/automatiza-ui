@@ -116,6 +116,51 @@ const vueformSchema = computed(() =>
 watch([vueform$, locale], () => vueform$.value?.setLanguage?.(locale.value));
 
 /**
+ * Push seed values into every `matrix` element after it renders.
+ *
+ * Every other element type derives what it renders from the model, so `v-model` +
+ * `sync` is enough: a `list` renders one item per value, an `object` reads its
+ * children's paths straight out of the model. A matrix does not — its row count is
+ * component state (`rowsCount`, seeded from the schema's `rows` and moved only by
+ * the element's own load()/update()/add()). A data-driven table is declared with
+ * `rows: 0`, so under a plain v-model it renders its column headers over zero rows
+ * and the values are invisible, even though they sit in the model all along.
+ *
+ * The designer's preview tab does not hit this because "Apply" calls `form$.load()`,
+ * which reaches each matrix's own load(). Calling the form-wide load() here instead
+ * would drag in its other semantics — it clears every key the payload omits and
+ * unlocks all steps of a paginated form — so seed just the matrices.
+ */
+function seedMatrices(children: Record<string, any> | undefined) {
+    for (const el$ of Object.values(children ?? {})) {
+        if (!el$ || typeof el$ !== 'object') continue;
+
+        if (el$.isMatrixType) {
+            // `value` reads the element's own slice of the model; update() turns it
+            // into rows. Cells hold no nested elements, so there is nothing below.
+            const value = el$.value;
+            if (value && typeof value === 'object' && Object.keys(value).length) {
+                el$.update(value);
+            }
+            continue;
+        }
+
+        seedMatrices(el$.children$);
+    }
+}
+
+watch(
+    [vueform$, () => props.schema, () => props.data],
+    async () => {
+        if (engine.value !== 'vueform' || !vueform$.value) return;
+        // Let the elements — including the list items the model just created — mount.
+        await nextTick();
+        seedMatrices(vueform$.value?.elements$);
+    },
+    { immediate: true },
+);
+
+/**
  * A paginated form. Vueform renders its own step bar and Previous/Next/Finish
  * controls, with Next auto-disabled while the current page has validation errors.
  */

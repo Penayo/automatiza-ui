@@ -173,6 +173,21 @@ a[href] {
 }
 
 /*
+ * Let a panel that asks to scroll actually scroll.
+ *
+ * PrimeVue's `.p-splitterpanel { overflow: hidden }` is injected into <head> at
+ * runtime, so it lands after the bundled stylesheet; a Tailwind `overflow-y-auto`
+ * on the panel ties with it on specificity (0,1,0) and loses on order. The result
+ * is a panel whose content is clipped with no scrollbar — a form preview taller
+ * than the viewport simply ends. Pairing the two classes wins on specificity
+ * regardless of injection order, and stays opt-in: only panels already marked
+ * `overflow-y-auto` are affected.
+ */
+.app-splitter > .p-splitterpanel.overflow-y-auto {
+    overflow-y: auto;
+}
+
+/*
  * Vueform field labels.
  *
  * `.vf-label` ships with no font-weight or color of its own — it only sets font-size,
@@ -196,4 +211,102 @@ a[href] {
 /* Aligns the radio row with the label above it. */
 .vf-radiogroup-wrapper .vf-radio-container {
     padding-top: 5px;
+}
+
+/*
+ * Vueform text sizes. The base matches the theme's own default and is pinned
+ * here so the pair stays visible together; `small` is stepped down from it.
+ *
+ * `html *`, not `:root`, is deliberate. vueform.css declares its font tokens on
+ * `*,:after,:before,:root`, so every element carries its own copy of
+ * `--vf-font-size` and an override on an ancestor alone is shadowed on each
+ * descendant. `html *` (0,0,1) outranks that bare `*` (0,0,0), which also makes
+ * the rule immune to load order — vueform.css is bundled after this file.
+ *
+ * Line heights are left at the theme's values on purpose: the base 1.5rem line
+ * box is what gives inputs their height, so keeping it changes the text size
+ * without resizing every field.
+ */
+html,
+html * {
+    --vf-font-size: 1rem;           /* inputs, labels, buttons */
+    --vf-font-size-small: .85rem;   /* descriptions and help text */
+}
+
+/*
+ * Group titles.
+ *
+ * A `list` or `object` label heads a section, but Vueform gives it the same
+ * `.vf-label` as a field caption and puts no element-type marker on the layout
+ * container — so there is nothing in the DOM to select on. The schema opts in
+ * instead, with `addClass: "form-section"` on the container element; `addClass`
+ * merges into the element's `container` class, which is what ElementLayout puts
+ * on `.vf-element-layout`.
+ *
+ * The child chain is load-bearing: `.vf-label` matches every label inside the
+ * section too, and `>` keeps the rule on the section's own heading.
+ */
+.form-section > .vf-element-layout-outer-wrapper > .vf-label {
+    margin-top: 1.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--vf-border-color-input);
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+/* A section inside a section is a sub-heading: stepped down, and no rule. */
+.form-section .form-section > .vf-element-layout-outer-wrapper > .vf-label {
+    margin-top: 1rem;
+    border-bottom: 0;
+    font-size: 1rem;
+}
+
+/*
+ * "Label: value" info lines — the `text-info` palette preset, a static element
+ * whose content is `<b>Label:</b> {path}`.
+ *
+ * Tailwind's preflight zeroes the paragraph margin, so consecutive info lines
+ * would otherwise run together with no rhythm at all; the padding here is what
+ * separates them. Weight matches `.form-section` so a group and the lines under
+ * it read as one scale.
+ */
+.form-info p {
+    margin: 0;
+    padding: 0.15rem 0;
+}
+
+.form-info b {
+    font-weight: 600;
+}
+
+/*
+ * Bullet list inside an info line — the markup LIST() emits from an array.
+ *
+ * Tailwind's preflight strips list styling from <ul>, so the markers and indent
+ * have to be restated here or the items render as bare stacked lines.
+ */
+.form-info .form-list {
+    margin: 0.2rem 0 0;
+    padding-left: 1.25rem;
+    list-style: disc outside;
+}
+
+.form-info .form-list li {
+    padding: 0.05rem 0;
+}
+
+/*
+ * Separator between the repetitions of a list.
+ *
+ * Vueform lays list items out as `.vf-rowset > .vf-row`, with only a row-gap
+ * between them — so a match runs straight into the next one with nothing to say
+ * where the boundary is. Opt in per list with `addClass: "form-items"`.
+ *
+ * `+` means the first item gets no rule, which keeps it flush under the section
+ * heading.
+ */
+.form-items .vf-rowset > .vf-row + .vf-row {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--vf-border-color-input);
 }

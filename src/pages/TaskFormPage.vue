@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onUnmounted, markRaw, provide, type Component } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { $taskPublic } from '@services/TaskPublicService';
 import type { TaskFormData } from '@services/TaskPublicService';
 import { useTheme } from '@/composables/useTheme';
@@ -17,9 +17,10 @@ const { isDark } = useTheme();
 const fallbackCompanyName = import.meta.env.VITE_COMPANY_NAME ?? 'Process Linker';
 
 // ── Route ─────────────────────────────────────────────────────────────────────
-const route = useRoute();
+const route  = useRoute();
+const router = useRouter();
 // The wizard advances by swapping this token, never by navigating: each chained
-// step has its own share link, and the page URL stays put.
+// step has its own share link, and the component re-renders in place.
 // See docs/specs/multi-step-forms.spec.md §12.
 const token = ref(route.params.token as string);
 
@@ -217,6 +218,28 @@ async function submit(variables: Record<string, any>) {
 }
 
 /**
+ * Moves the wizard onto the next step's share link.
+ *
+ * The URL is kept in step with the token so a reload resumes the step the user is
+ * actually on. Without it the address bar keeps the *previous* step's token, which
+ * the submit just consumed, and a refresh lands on the "already submitted" screen
+ * while the real task is still waiting.
+ *
+ * `replace`, never `push`: a submitted step can only answer 410, so leaving one in
+ * history would give Back a dead end. Replacing means Back exits the wizard from
+ * any step, exactly as it did when the URL never moved at all.
+ *
+ * The route is unkeyed and nothing watches `route.params`, so this swap re-renders
+ * in place — `load()` below stays the only fetch.
+ */
+async function advanceTo(nextToken: string) {
+    token.value = nextToken;
+    step.value += 1;
+    await router.replace({ path: `/task-form/${nextToken}`, query: { step: String(step.value) } });
+    await load();
+}
+
+/**
  * Acts on a `chain` payload (§4/§9).
  *
  * `nextForm` swaps the token and re-renders in place. `pending` means the next
@@ -228,10 +251,8 @@ async function submit(variables: Record<string, any>) {
  */
 async function followChain(chain: FormChain) {
     if (hasNextForm(chain) && chain.nextTask.shareLinkToken) {
-        token.value = chain.nextTask.shareLinkToken;
-        step.value += 1;
         submitting.value = false;
-        await load();
+        await advanceTo(chain.nextTask.shareLinkToken);
         return;
     }
 
@@ -247,9 +268,7 @@ async function followChain(chain: FormChain) {
         if (state.value !== 'waiting') return;
 
         if (hasNextForm(resolved) && resolved.nextTask.shareLinkToken) {
-            token.value = resolved.nextTask.shareLinkToken;
-            step.value += 1;
-            await load();
+            await advanceTo(resolved.nextTask.shareLinkToken);
             return;
         }
     }

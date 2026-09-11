@@ -4,7 +4,7 @@
 import { compile, hashSchema } from './compile';
 import { compileSteps, hashSteps } from './steps';
 import { decompile } from './decompile';
-import { BUILDER_VERSION, emptyDoc, type BuilderDoc, type VueformPayload } from './types';
+import { BUILDER_VERSION, emptyDoc, type BuilderDoc, type BuilderNode, type VueformPayload } from './types';
 
 export function buildPayload(doc: BuilderDoc): VueformPayload {
     const schema = compile(doc);
@@ -19,6 +19,21 @@ export function buildPayload(doc: BuilderDoc): VueformPayload {
         // byte-identical to what earlier versions of the builder stored.
         ...(Object.keys(steps).length ? { steps } : {}),
     };
+}
+
+/**
+ * A stored doc is not necessarily one this builder wrote — it can be hand-edited, come
+ * from an older version, or be generated. `props` missing is the case that matters:
+ * `compile()` spreads it, so `{type:'text'}` and `{type:'text',props:undefined}` hash
+ * identically and the drift guard below waves such a node through, after which every
+ * `node.props.x` read on the canvas throws.
+ */
+function normalizeNodes(nodes: BuilderNode[]): BuilderNode[] {
+    for (const node of nodes) {
+        if (!node.props || typeof node.props !== 'object') node.props = {};
+        if (node.children) normalizeNodes(node.children);
+    }
+    return nodes;
 }
 
 export interface LoadResult {
@@ -52,7 +67,7 @@ export function loadPayload(payload: VueformPayload | null | undefined): LoadRes
     const stepsMatch = hashSteps(compileSteps(doc ?? emptyDoc())) === hashSteps(steps ?? {});
 
     if (doc && Array.isArray(doc.nodes) && schemaMatches && stepsMatch) {
-        return { doc, rebuilt: false };
+        return { doc: { ...doc, nodes: normalizeNodes(doc.nodes) }, rebuilt: false };
     }
 
     return { doc: decompile(schema ?? {}, doc?.formProps ?? {}, steps), rebuilt: true };

@@ -384,7 +384,11 @@ onUnmounted(() => chainAbort.value?.abort());
                             <!-- form-js / JSON Schema / Vueform -->
                             <FormRenderer v-else ref="renderer" :schema="formSchema" @finish="submitForm" />
 
-                            <div class="flex justify-end mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800">
+                            <!-- A paginated form submits from its own Finish button on the last page. -->
+                            <div
+                                v-if="!renderer?.hasSteps"
+                                class="flex justify-end mt-5 pt-4 border-t border-surface-100 dark:border-zinc-800"
+                            >
                                 <button
                                     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity"
                                     :style="{ background: accent }"

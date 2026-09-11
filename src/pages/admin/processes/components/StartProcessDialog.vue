@@ -186,8 +186,9 @@ async function handleSubmit() {
 
         <template #footer>
             <Button label="Cancel" severity="secondary" text @click="emit('update:visible', false)" />
+            <!-- A paginated form submits from its own Finish button on the last page. -->
             <Button
-                v-if="!loading"
+                v-if="!loading && !renderer?.hasSteps"
                 :label="testMode ? 'Start (Test)' : 'Start'"
                 :icon="testMode ? 'pi pi-flask' : 'pi pi-play'"
                 :severity="testMode ? 'warn' : 'success'"
