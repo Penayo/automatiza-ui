@@ -47,6 +47,26 @@ export interface ProcessException {
     error: any;
 }
 
+/**
+ * The step an instance is waiting on. Derived server-side on single-instance reads only — it is
+ * never present on list rows (docs/specs/instance-current-task-visibility.spec.md §3).
+ */
+export interface CurrentTask {
+    id: string;
+    name: string | null;
+    type: string;
+    status: 'CREATED' | 'SCHEDULED' | 'WAITING' | 'FAILED';
+    assignee: string | null;
+    dueDate: string | null;
+    createdAt: string;
+}
+
+/** What the batch current-task lookup returns per instance. */
+export interface InstanceCurrentTask {
+    currentTask: CurrentTask | null;
+    activeTaskCount: number;
+}
+
 export interface ProcessInstance extends APIData {
     id: string;
     processDefinition: ProcessDefinition,
@@ -61,6 +81,8 @@ export interface ProcessInstance extends APIData {
     subscribedTo?: string[];
     testMode?: boolean;
     testType?: 'auto-stub' | 'pause-and-fill';
+    currentTask?: CurrentTask | null;
+    activeTaskCount?: number;
 }
 
 export interface DeployProcessDto {
@@ -140,6 +162,17 @@ export class ProcessesService extends ModelApiService {
     async getAllInstances(params: ProcessInstanceQuery): Promise<PageResponse<ProcessInstance>> {
         const response = await this.get('instances', { params });
         return response as PageResponse<ProcessInstance>;
+    }
+
+    /**
+     * Current task + assignee for a page of instances — one request for the page, so the instance
+     * list query stays join-free (docs/specs/instance-current-task-visibility.spec.md §3).
+     * POST because 50 uuids do not belong in a URL.
+     */
+    async getInstancesCurrentTasks(instanceIds: string[]): Promise<Record<string, InstanceCurrentTask>> {
+        if (!instanceIds.length) return {};
+        const response = await this.post('instances/current-tasks', { instanceIds });
+        return response as Record<string, InstanceCurrentTask>;
     }
 
     async getInstance(instanceId: string): Promise<ProcessInstance> {

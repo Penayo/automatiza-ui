@@ -44,9 +44,9 @@ async function copyShareLink() {
 
         <div class="flex items-start gap-2">
             <span class="font-semibold text-zinc-600 dark:text-zinc-400 w-36 shrink-0">
-                {{ props.task?.status === 'COMPLETED' ? 'Completed by' : 'Claimed by' }}
+                {{ props.task?.status === 'COMPLETED' ? 'Completed by' : 'Assigned to' }}
             </span>
-            <span>{{ props.task?.assignment?.claimedBy ?? '—' }}</span>
+            <span>{{ props.task?.assignment?.assignee ?? 'Unassigned' }}</span>
         </div>
 
         <div class="flex items-start gap-2">

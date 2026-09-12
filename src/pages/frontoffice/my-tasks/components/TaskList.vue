@@ -168,7 +168,7 @@ defineExpose({ getTasks });
                         class="text-sm font-semibold mt-0.5"
                     >
                         {{ slotProps.data.processInfo.correlationLabel }}:
-                        {{ slotProps.data.variables?.find((v: any) => v.key === slotProps.data.processInfo.correlationKey)?.value }}
+                        {{ slotProps.data.processInfo?.correlationValue }}
                     </div>
 
                     <!-- Process name -->

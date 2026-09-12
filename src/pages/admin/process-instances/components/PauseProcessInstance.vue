@@ -23,7 +23,7 @@ const onPause = async () => {
         toast.add({ severity: 'success', summary: 'Success', detail: 'Instancia pausada', life: 3000 });
         emit('paused')
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al pausar la instancia', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not pause the process instance', life: 3000 });
     } finally {
         visible.value = false;
     }
@@ -46,7 +46,7 @@ const onPause = async () => {
         </div>
 
         <div class="flex justify-end gap-2 mt-8">
-            <Button type="button" label="Cancelar" severity="secondary" @click="visible = false"></Button>
+            <Button type="button" label="Cancel" severity="secondary" @click="visible = false"></Button>
             <Button type="button" label="Pausar" @click="onPause"></Button>
         </div>
     </Dialog>    

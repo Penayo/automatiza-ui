@@ -94,7 +94,7 @@ onMounted(() => {
             @finish="submitForm"
         />
         <div class="flex flex-row gap-2 justify-end p-3">
-            <Button size="small" severity="secondary" :disabled="!isTaskAssignedToUser()">Guardar</Button>
+            <Button size="small" severity="secondary" :disabled="!isTaskAssignedToUser()">Save</Button>
             <!-- A paginated form submits from its own Finish button on the last page. -->
             <Button
                 v-if="!renderer?.hasSteps"

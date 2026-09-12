@@ -11,7 +11,7 @@ import DateAlertsCard from '@pages/admin/dashboard/components/DateAlertsCard.vue
 const toast = useToast();
 
 const period = ref<Period>('week');
-const claimedBy = ref('');
+const assignee = ref('');
 const processName = ref<string | null>(null);
 const loading = ref(false);
 const dashboard = ref<TasksDashboard | null>(null);
@@ -40,7 +40,7 @@ async function fetchData() {
   try {
     dashboard.value = await DashboardService.getTasksDashboard(
       period.value,
-      claimedBy.value || undefined,
+      assignee.value || undefined,
       processName.value ?? undefined,
     );
   } catch {
@@ -62,8 +62,8 @@ onMounted(() => {
   <Page title="Analytics Dashboard">
     <template #actions>
       <InputText
-        v-model="claimedBy"
-        placeholder="Filter by user"
+        v-model="assignee"
+        placeholder="Filter by assignee"
         class="w-36"
         @keydown.enter="fetchData"
       />

@@ -24,6 +24,8 @@ export interface Task extends APIData {
         version: number;
         correlationKey?: string;
         correlationLabel?: string;
+        /** Denormalised on the task so list rows need no variable payload. */
+        correlationValue?: string | null;
     };
     name: string;
     type: string;
@@ -40,8 +42,6 @@ export interface Task extends APIData {
         priority?: number;
         assignee?: string;
         assignedAt?: Date;
-        claimedBy?: string;
-        claimedAt?: Date;
     };
     documentation?: string;
     shareLink?: {

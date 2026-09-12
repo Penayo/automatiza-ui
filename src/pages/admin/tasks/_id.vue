@@ -38,7 +38,7 @@ onMounted(fetchTask);
 
             <div v-else-if="!task" class="flex flex-col items-center justify-center py-20 text-zinc-500">
                 <i class="pi pi-exclamation-circle text-4xl mb-3" />
-                <p>Tarea no encontrada.</p>
+                <p>Task not found.</p>
             </div>
 
             <div v-else>

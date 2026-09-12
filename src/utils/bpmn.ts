@@ -42,3 +42,12 @@ export function skeletonBpmn(name: string): string {
   </bpmndi:BPMNDiagram>
 </bpmn2:definitions>`;
 }
+
+/** Icon for a task's BPMN element type — shared by the instance detail surfaces. */
+export function taskIcon(type?: string): string {
+    if (type === 'bpmn:UserTask')         return 'pi pi-user';
+    if (type === 'bpmn:ServiceTask')      return 'pi pi-cog';
+    if (type === 'bpmn:ScriptTask')       return 'pi pi-code';
+    if (type === 'bpmn:BusinessRuleTask') return 'pi pi-table';
+    return 'pi pi-bolt';
+}

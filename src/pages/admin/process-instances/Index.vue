@@ -5,6 +5,7 @@ import Page from '@components/Page.vue';
 import { $api } from '@services/api';
 import { useRouter } from 'vue-router';
 import type { ProcessDefinition, ProcessInstance, ProcessInstanceQuery } from '@services/ProcessesService';
+import { useInstanceCurrentTasks } from '@/composables/useInstanceCurrentTasks';
 import type { PageResponse } from '@services/api';
 
 const $router = useRouter();
@@ -28,6 +29,9 @@ const filters = ref({
 });
 
 const processOptions = ref<{ label: string; value: string | null }[]>([{ label: 'All processes', value: null }]);
+
+// Who holds each row's current task — fetched separately, never joined into the query above.
+const { loading: assigneesLoading, load: loadCurrentTasks, reset: resetCurrentTasks, assigneeOf } = useInstanceCurrentTasks();
 
 const statusOptions = [
     { label: 'All statuses', value: null },
@@ -70,6 +74,7 @@ const buildQuery = (): ProcessInstanceQuery => {
 
 const fetchData = async () => {
     loading.value = true;
+    resetCurrentTasks();
     try {
         items.value = await $api.processes.getAllInstances(buildQuery());
     } catch {
@@ -77,6 +82,9 @@ const fetchData = async () => {
     } finally {
         loading.value = false;
     }
+
+    // Second round trip, deliberately after the rows are painted: the table must not wait on it.
+    loadCurrentTasks(items.value?.rows);
 };
 
 const applyFilters = () => {
@@ -103,7 +111,7 @@ onMounted(async () => {
 </script>
 
 <template>
-    <Page title="Instancias del Proceso" ref="pageRef">
+    <Page title="Process Instances" ref="pageRef">
         <template #actions>
             <Button variant="text" rounded icon="pi pi-refresh" @click="fetchData()" />
             <Button
@@ -189,6 +197,17 @@ onMounted(async () => {
                         <Tag :value="data.status" :severity="statusSeverity(data.status)" />
                         <Tag v-if="data.testMode" value="TEST" severity="warn" class="text-xs" v-tooltip.top="data.testType ?? 'auto-stub'" />
                     </div>
+                </template>
+            </Column>
+
+            <Column header="Assignee" style="width: 10rem">
+                <template #body="{ data }">
+                    <span
+                        v-if="assigneeOf(data)"
+                        class="text-xs truncate"
+                        :class="assigneeOf(data)!.muted ? 'text-zinc-400 italic' : 'text-zinc-700 dark:text-zinc-200'"
+                    >{{ assigneeOf(data)!.text }}</span>
+                    <i v-else-if="assigneesLoading" class="pi pi-spin pi-spinner text-zinc-300 text-xs" />
                 </template>
             </Column>
 

@@ -24,7 +24,7 @@ const resumeInstance = async () => {
         toast.add({ severity: 'success', summary: 'Success', detail: 'Instancia reanudada', life: 3000 });
         emit('resumed')
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al reanudar la instancia', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not resume the process instance', life: 3000 });
     }
 }
 

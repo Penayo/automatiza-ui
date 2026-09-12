@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue';
 import { Tabs, Tab, TabList, TabPanels, TabPanel, Button, useToast, useConfirm } from 'primevue';
 import TaskData from '@pages/frontoffice/my-tasks/components/TaskData.vue';
 import TaskForm from '@pages/frontoffice/my-tasks/components/TaskForm.vue';
@@ -29,6 +30,27 @@ const confirm = useConfirm();
 
 const props = defineProps<{ currentTask: Task | null }>();
 const emit  = defineEmits(['refresh']);
+
+// Task list rows carry no variable payload — the server strips it so a page of
+// tasks does not ship every task's whole variable set. The Documents tab needs
+// them, so fetch the single task when the selection changes.
+const taskVariables = ref<Task['variables']>([]);
+
+watch(
+    () => props.currentTask?.id,
+    async (taskId) => {
+        taskVariables.value = [];
+        if (!taskId) return;
+        try {
+            const full = await $api.tasks.findById(taskId);
+            taskVariables.value = full?.variables ?? [];
+        } catch {
+            // A failed lookup leaves the Documents tab empty rather than erroring —
+            // the rest of the detail panel is still correct.
+        }
+    },
+    { immediate: true },
+);
 
 async function claimTask() {
     onApprove(confirm, 'Are you sure you want to claim this task?', async () => {
@@ -81,7 +103,7 @@ async function updateTask(key: string, value: string) {
                 class="font-light text-(--layout-accent-color) pt-1"
             >
                 {{ props.currentTask?.processInfo.correlationLabel }}:
-                {{ props.currentTask?.variables?.find(v => v.key === props.currentTask?.processInfo.correlationKey)?.value }}
+                {{ props.currentTask?.processInfo?.correlationValue }}
             </div>
 
             <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -148,7 +170,7 @@ async function updateTask(key: string, value: string) {
                     </div>
                 </TabPanel>
                 <TabPanel value="3">
-                    <DocumentsTab :variables="props.currentTask?.variables" />
+                    <DocumentsTab :variables="taskVariables" />
                 </TabPanel>
             </TabPanels>
         </Tabs>

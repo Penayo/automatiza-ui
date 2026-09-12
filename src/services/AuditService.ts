@@ -16,7 +16,7 @@ export type AuditLogAction =
     | 'SECRET_CREATED' | 'SECRET_UPDATED' | 'SECRET_DELETED'
     | 'MOCK_CREATED' | 'MOCK_UPDATED' | 'MOCK_DELETED' | 'MOCK_TOGGLED' | 'MOCK_SCENARIO_CHANGED'
     | 'TASK_CREATED'    | 'TASK_COMPLETED'    | 'TASK_FAILED'
-    | 'TASK_ASSIGNED'   | 'TASK_UNASSIGNED'   | 'TASK_CLAIMED'
+    | 'TASK_ASSIGNED'   | 'TASK_UNASSIGNED'
     | 'USER_LOGIN'      | 'USER_LOGIN_FAILED';
 
 export interface AuditLog {
@@ -58,8 +58,8 @@ export interface UserActivityRow {
     actorUsername: string;
     total: number;
     TASK_COMPLETED: number;
-    TASK_CLAIMED: number;
     TASK_ASSIGNED: number;
+    TASK_UNASSIGNED: number;
     PROCESS_STARTED: number;
     PROCESS_COMPLETED: number;
     PROCESS_FAILED: number;

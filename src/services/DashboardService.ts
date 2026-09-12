@@ -54,11 +54,11 @@ class DashboardApiService extends BaseService {
 
   async getTasksDashboard(
     period: Period = 'week',
-    claimedBy?: string,
+    assignee?: string,
     processName?: string,
   ): Promise<TasksDashboard> {
     const params: Record<string, string> = { period };
-    if (claimedBy) params.claimedBy = claimedBy;
+    if (assignee) params.assignee = assignee;
     if (processName) params.process = processName;
     return this.get<TasksDashboard>('tasks', { params }) as Promise<TasksDashboard>;
   }

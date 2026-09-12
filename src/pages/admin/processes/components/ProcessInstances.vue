@@ -6,6 +6,7 @@ import { $api } from '@services/api';
 import type { ProcessInstance, ProcessInstanceQuery } from '@services/ProcessesService';
 import type { PageResponse } from '@services/api';
 import StartProcessDialog from './StartProcessDialog.vue';
+import { useInstanceCurrentTasks } from '@/composables/useInstanceCurrentTasks';
 
 const props = defineProps<{
     processId: string;
@@ -37,10 +38,15 @@ const severityMap: Record<string, string> = {
 };
 const statusSeverity = (s: string) => severityMap[s] ?? 'secondary';
 
+// Who holds each row's current task — a second request for the rows on screen, never a join on the
+// instance query (instance-current-task-visibility.spec.md §3).
+const { loading: assigneesLoading, load: loadCurrentTasks, reset: resetCurrentTasks, assigneeOf } = useInstanceCurrentTasks();
+
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
 async function fetch() {
     loading.value = true;
+    resetCurrentTasks();
     try {
         const q: ProcessInstanceQuery = {
             processId:   props.processId,
@@ -54,6 +60,8 @@ async function fetch() {
     } finally {
         loading.value = false;
     }
+
+    loadCurrentTasks(instances.value?.rows);
 }
 
 function onPageChange({ page, rows }: { page: number; rows: number }) {
@@ -144,6 +152,17 @@ onMounted(fetch);
                     <Tag :value="data.status" :severity="statusSeverity(data.status)" />
                 </template>
             </Column>
+            <Column header="Assignee" style="width: 10rem">
+                <template #body="{ data }">
+                    <span
+                        v-if="assigneeOf(data)"
+                        class="text-xs truncate"
+                        :class="assigneeOf(data)!.muted ? 'text-surface-400 italic' : 'text-zinc-700 dark:text-zinc-200'"
+                    >{{ assigneeOf(data)!.text }}</span>
+                    <i v-else-if="assigneesLoading" class="pi pi-spin pi-spinner text-surface-300 text-xs" />
+                </template>
+            </Column>
+
             <Column field="createdAt" header="Started" style="width: 11rem">
                 <template #body="{ data }">
                     <span class="text-xs text-surface-400">{{ new Date(data.createdAt).toLocaleString() }}</span>

@@ -91,9 +91,8 @@ const actionOptions = [
     { label: 'Task created', value: 'TASK_CREATED' },
     { label: 'Task completed', value: 'TASK_COMPLETED' },
     { label: 'Task failed', value: 'TASK_FAILED' },
-    { label: 'Task assigned', value: 'TASK_ASSIGNED' },
-    { label: 'Task unassigned', value: 'TASK_UNASSIGNED' },
-    { label: 'Task claimed', value: 'TASK_CLAIMED' },
+    { label: 'Task claimed (assigned)', value: 'TASK_ASSIGNED' },
+    { label: 'Task released (unassigned)', value: 'TASK_UNASSIGNED' },
     { label: 'User login', value: 'USER_LOGIN' },
     { label: 'User login failed', value: 'USER_LOGIN_FAILED' },
 ];

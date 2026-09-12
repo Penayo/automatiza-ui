@@ -80,7 +80,7 @@ async function updateTask(key: string, value: string) {
                 class="font-light text-(--layout-accent-color) pt-1"
             >
                 {{ props.currentTask?.processInfo.correlationLabel }}:
-                {{ props.currentTask?.variables?.find(v => v.key === props.currentTask?.processInfo.correlationKey)?.value }}
+                {{ props.currentTask?.processInfo?.correlationValue }}
             </div>
 
             <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">

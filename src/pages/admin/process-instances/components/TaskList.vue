@@ -10,6 +10,7 @@ import { ref, watch } from 'vue';
 import EditVariablesDialog from '@pages/admin/tasks/components/EditVariablesDialog.vue';
 import EditServiceConfigDialog from '@pages/admin/tasks/components/EditServiceConfigDialog.vue';
 import ReplayFromTaskDialog from '@pages/admin/tasks/components/ReplayFromTaskDialog.vue';
+import { taskIcon } from '@/utils/bpmn';
 
 const props = defineProps<{ processInstanceId?: string }>();
 
@@ -119,14 +120,6 @@ function serviceTypeLabel(type?: string): string {
     return type;
 }
 
-function taskIcon(type: string) {
-    if (type === 'bpmn:UserTask')         return 'pi pi-user';
-    if (type === 'bpmn:ServiceTask')      return 'pi pi-cog';
-    if (type === 'bpmn:ScriptTask')       return 'pi pi-code';
-    if (type === 'bpmn:BusinessRuleTask') return 'pi pi-table';
-    return 'pi pi-bolt';
-}
-
 async function loadTasks(append = false) {
     if (!props.processInstanceId) return;
     loading.value = true;
@@ -172,6 +165,16 @@ defineExpose({ reload });
                     />
                     <span v-if="task.createdAt" class="text-xs text-surface-400 font-mono shrink-0">{{ dayjs(task.createdAt).format('YYYY/MM/DD HH:mm') }}</span>
                     <span class="font-bold truncate">{{ task.name ?? task.taskDefinitionId }}</span>
+                    <!-- Who holds it — user tasks only; nobody is expected to hold an automated one. -->
+                    <span
+                        v-if="task.type === 'bpmn:UserTask' && task.status !== 'COMPLETED'"
+                        class="text-xs shrink-0"
+                        :class="task.assignment?.assignee
+                            ? 'text-zinc-500 dark:text-zinc-400'
+                            : 'text-amber-600 dark:text-amber-400 italic'"
+                    >
+                        <i class="pi pi-user text-[10px] mr-1" />{{ task.assignment?.assignee ?? 'Unassigned' }}
+                    </span>
                     <Tag v-if="task.testMode" icon="pi pi-flask" value="TEST" severity="warn" class="text-xs py-0 shrink-0" />
                     <div class="ml-auto flex items-center gap-2 shrink-0">
                         <!-- Quick retry — FAILED automated tasks only -->

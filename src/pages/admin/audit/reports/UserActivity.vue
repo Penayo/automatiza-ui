@@ -102,18 +102,18 @@ onMounted(fetchReport);
                 </template>
             </Column>
 
-            <Column field="TASK_CLAIMED" header="Claimed" style="width: 7rem">
+            <Column field="TASK_ASSIGNED" header="Claimed" style="width: 7rem">
                 <template #body="{ data }">
-                    <span class="font-mono text-sm" :class="data.TASK_CLAIMED > 0 ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400'">
-                        {{ data.TASK_CLAIMED }}
+                    <span class="font-mono text-sm" :class="data.TASK_ASSIGNED > 0 ? 'text-violet-600 dark:text-violet-400' : 'text-zinc-400'">
+                        {{ data.TASK_ASSIGNED }}
                     </span>
                 </template>
             </Column>
 
-            <Column field="TASK_ASSIGNED" header="Assigned" style="width: 7rem">
+            <Column field="TASK_UNASSIGNED" header="Released" style="width: 7rem">
                 <template #body="{ data }">
-                    <span class="font-mono text-sm" :class="data.TASK_ASSIGNED > 0 ? 'text-violet-600 dark:text-violet-400' : 'text-zinc-400'">
-                        {{ data.TASK_ASSIGNED }}
+                    <span class="font-mono text-sm" :class="data.TASK_UNASSIGNED > 0 ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400'">
+                        {{ data.TASK_UNASSIGNED }}
                     </span>
                 </template>
             </Column>
