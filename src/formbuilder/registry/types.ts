@@ -49,6 +49,17 @@ export interface ElementDef {
     tabs: PropTab[];
     /** 'proxy' renders a placeholder instead of the real element (grid/matrix). */
     canvas?: 'live' | 'proxy';
+    /**
+     * Shows information rather than collecting it — a heading, a paragraph, a button,
+     * a read-only table.
+     *
+     * Vueform still needs a key for one (its schema is an object keyed by element name,
+     * and `steps` refers to elements by that key), but the author has no reason to
+     * choose it: these elements contribute nothing to the submitted data, so the
+     * properties panel hides the name and the data path and lets the generated one
+     * (`heading_1`) stay plumbing.
+     */
+    display?: boolean;
     /** Escape hatch for element types whose schema entry is not a plain prop spread. */
     compile?: (node: BuilderNode) => Record<string, unknown>;
 }

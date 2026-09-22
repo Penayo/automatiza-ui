@@ -3,15 +3,15 @@
  * The honest render: the whole compiled schema in one real Vueform instance, with
  * conditions and validation left on — unlike the canvas, which suppresses both.
  *
- * Mirrors the controls of the form-js preview tab (FormPreviewTab.vue): a viewport
- * selector, a task-variables editor to check that fields populate from process
- * variables, and a live view of what the form would submit.
+ * Three controls: a viewport selector, a task-variables editor to check that fields
+ * populate from process variables, and a live view of what the form would submit.
  */
 import { computed, ref, watch, nextTick } from 'vue';
 import { Button, Select, SelectButton, Splitter, SplitterPanel } from 'primevue';
 import JsonEditor from 'vue3-ts-jsoneditor';
 import { useFormLocale } from '@/composables/useFormLocale';
 import { resolveFormVariables } from '@/formbuilder/formVariables';
+import { resolveSeededSources } from '@/formbuilder/seededSources';
 import type { VueformSchema, VueformSteps } from '@/formbuilder/types';
 
 const props = defineProps<{ schema: VueformSchema; steps?: VueformSteps }>();
@@ -48,7 +48,20 @@ const previewVars = computed<Record<string, any>>(() => {
     }
 });
 
-const resolvedSchema = computed(() => resolveFormVariables(props.schema, previewVars.value));
+/**
+ * The same two passes FormRenderer runs, in the same order, so the preview and a real
+ * task form disagree about nothing.
+ *
+ * resolveSeededSources is the one that cannot be skipped here: a dataTable's `rowsFrom`
+ * and a documentList's `documentsFrom` name a *process variable*, and `form$.load()`
+ * only ever assigns to keys that have an element — so a variable the form does not also
+ * ask for never lands in `form$.data` and the element has nothing to read. Both have to
+ * be folded into the schema before Vueform sees it.
+ */
+const resolvedSchema = computed(() => resolveSeededSources(
+    resolveFormVariables(props.schema, previewVars.value),
+    previewVars.value,
+));
 
 /**
  * Remount only when the set of field names changes. Keying on the whole schema would

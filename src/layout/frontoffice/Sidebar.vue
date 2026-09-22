@@ -2,48 +2,68 @@
 	<aside
 		class="border-r shadow-md
 		z-20 fixed inset-y-0 left-0
-		transform transition-transform duration-200 ease-in-out
-		md:relative md:translate-x-0
-		min-w-72
+		transform transition-all duration-200 ease-in-out
+		md:relative
+		w-72
 		overflow-y-auto
 		"
 		style="
 			background-color: var(--layout-sidebar-bg);
 			border-color: var(--layout-sidebar-border);
 		"
-		:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+		:class="sidebarOpen
+			? 'translate-x-0 md:w-72'
+			: '-translate-x-full md:translate-x-0 md:w-16 overflow-x-hidden'"
 	>
-		<nav class="flex flex-col mt-4 text-base px-2 gap-2">
+		<nav class="flex flex-col mt-4 text-base gap-2" :class="collapsed ? 'px-2 items-center' : 'px-2'">
 			<button
 				v-for="menu in menuItems"
 				:key="menu.path"
-				class="cursor-pointer rounded-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex flex-row items-center gap-4 px-4 py-2 transition-colors"
-				:class="{ 'sidebar-active font-semibold': currentMenu === menu.path }"
+				v-tooltip.right="collapsed ? menu.label : undefined"
+				class="cursor-pointer rounded-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex flex-row items-center transition-colors relative"
+				:class="[
+					{ 'sidebar-active font-semibold': currentMenu === menu.path },
+					collapsed ? 'w-10 h-10 justify-center' : 'gap-4 px-4 py-2',
+				]"
+				:aria-label="menu.label"
 				@click="go(menu.path)"
 			>
 				<span :class="menu.icon" style="font-size: 1.2rem" />
-				<span class="flex-1 text-left">{{ menu.label }}</span>
-				<!-- Pending task count badge -->
-				<span
-					v-if="menu.path === '/my-tasks' && pendingCount > 0"
-					class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-xs font-bold bg-red-500 text-white"
-				>
-					{{ pendingCount > 99 ? '99+' : pendingCount }}
-				</span>
+				<span v-if="!collapsed" class="flex-1 text-left">{{ menu.label }}</span>
+				<!-- Pending task count — a full badge when expanded, a dot on the rail -->
+				<template v-if="menu.path === '/my-tasks' && pendingCount > 0">
+					<span
+						v-if="collapsed"
+						class="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500"
+					/>
+					<span
+						v-else
+						class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-xs font-bold bg-red-500 text-white"
+					>
+						{{ pendingCount > 99 ? '99+' : pendingCount }}
+					</span>
+				</template>
 			</button>
 
 			<!-- Data — browsable datasources, one section per group (§3) -->
 			<template v-for="section in dataSections" :key="section.label">
-				<p class="px-4 pt-4 pb-1 text-xs uppercase tracking-wide text-zinc-400">{{ section.label }}</p>
+				<!-- On the rail the group heading has no room; a divider keeps the grouping legible -->
+				<hr v-if="collapsed" class="w-6 my-1 border-zinc-200 dark:border-zinc-700" />
+				<p v-else class="px-4 pt-4 pb-1 text-xs uppercase tracking-wide text-zinc-400">{{ section.label }}</p>
 				<button
 					v-for="ds in section.items"
 					:key="ds.key"
-					class="cursor-pointer rounded-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex flex-row items-center gap-4 px-4 py-2 transition-colors"
-					:class="{ 'sidebar-active font-semibold': route.path.startsWith('/data/' + ds.key) }"
+					v-tooltip.right="collapsed ? `${section.label} — ${ds.name}` : undefined"
+					class="cursor-pointer rounded-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex flex-row items-center transition-colors"
+					:class="[
+						{ 'sidebar-active font-semibold': route.path.startsWith('/data/' + ds.key) },
+						collapsed ? 'w-10 h-10 justify-center' : 'gap-4 px-4 py-2',
+					]"
+					:aria-label="ds.name"
 					@click="go('/data/' + ds.key)"
 				>
 					<span :class="ds.icon?.trim() || 'pi pi-table'" style="font-size: 1.2rem" />
-					<span class="flex-1 text-left">{{ ds.name }}</span>
+					<span v-if="!collapsed" class="flex-1 text-left">{{ ds.name }}</span>
 				</button>
 			</template>
 		</nav>
@@ -62,9 +82,16 @@
 	import { useRouter, useRoute } from 'vue-router';
 	import { $api } from '@services/api';
 	import { DatasourcesService, type BrowsableDatasource } from '@services/DatasourcesService';
+	import { useSidebar } from '@/composables/useSidebar';
 
-	defineProps({ sidebarOpen: Boolean });
+	const props = defineProps({ sidebarOpen: Boolean });
 	defineEmits(['toggle-sidebar']);
+
+	const { isDesktop } = useSidebar();
+
+	// Closed on desktop means the icon rail; closed on mobile means off-canvas,
+	// where the full labelled menu is what slides back in.
+	const collapsed = computed(() => isDesktop.value && !props.sidebarOpen);
 
 	const router       = useRouter();
 	const route        = useRoute();

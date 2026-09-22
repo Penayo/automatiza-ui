@@ -1,6 +1,5 @@
 import { createApp } from 'vue'
 import './style.css'
-// import './dark-form-builder.css'
 
 import App from '@/App.vue'
 import router from '@/router';
@@ -17,20 +16,6 @@ import Tooltip from 'primevue/tooltip';
 // Vue Form
 import Vueform from '@vueform/vueform'
 import vueformConfig from './../vueform.config'
-
-// Element Plus — must be registered globally so @lljj/vue3-form-element can
-// resolve its components (ElInput, ElSelect, etc.) via resolveComponent()
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
-import en from 'element-plus/es/locale/lang/en'
-
-// Reset lljj's default Chinese AJV validation messages
-import { i18n as lljjI18n } from '@lljj/vue3-form-element'
-lljjI18n.useLocal(() => {});
-
-// Custom widgets (registered after app.use(ElementPlus) below)
-import DocReviewWidget from '@components/widgets/DocReviewWidget.vue'
-import InfoWidget from '@components/widgets/InfoWidget.vue'
 
 const MyPreset = definePreset(Aura, {
     semantic: {
@@ -75,14 +60,10 @@ const MyPreset = definePreset(Aura, {
 
 // Resolve the theme BEFORE the first render. Components pick their skin from
 // useTheme().isDark while global CSS keys off .dark on <html>; if the two are
-// resolved at different times they disagree for the first paint — which is how
-// form-js ends up with its light background under dark-mode text tokens.
+// resolved at different times they disagree for the first paint.
 useTheme().init();
 
 const app = createApp(App)
-app.use(ElementPlus, { locale: en })
-app.component('DocReviewWidget', DocReviewWidget)
-app.component('InfoWidget', InfoWidget)
 app.use(PrimeVue, {
 	theme: {
 		preset: MyPreset,

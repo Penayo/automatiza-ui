@@ -1,40 +1,25 @@
 <script setup lang="ts">
 /**
- * Renders a stored form, whichever editor produced it.
+ * Renders a stored form.
  *
- * Replaces the per-page `!isJsonSchema && !isCustom` branching that six runtime
- * surfaces each carried a copy of. Owns three engines:
- *
- *   form-js      imperative — mount/destroy a viewer, submit via an event
- *   jsonschema   @lljj/vue3-form-element, declarative
- *   vueform      @vueform/vueform, declarative
+ * Replaces the per-page branching that six runtime surfaces each carried a copy of.
+ * Vueform is the only authoring surface now — the form-js designer and the JSON-Schema
+ * editor were removed along with their renderers, so a form stored under one of their
+ * types resolves to a problem (see formEngine.ts) and this shows FormUnavailable.
  *
  * `type: 'custom'` is deliberately NOT handled here. Custom task views take a task-like
  * object and depend on page-level provides; folding them in would make this a task-page
  * component instead of a renderer. Pages check `isCustom` before reaching for this.
  *
- * The value of the component is `submit()`: it normalises three very different
- * submission models into one awaitable call.
+ * The value of the component is `submit()`: one awaitable call that validates first and
+ * refuses when the form is invalid.
  */
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
-import { Form } from '@bpmn-io/form-js';
-import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
-import '@/forms.scss';
-import { DocumentListModule } from '@/form-fields/DocumentListField';
-import { LinkModule } from '@/form-fields/LinkField';
+import { computed, nextTick, ref, watch } from 'vue';
 
-// JSON Schema renderer
-import VueFormJsonSchema from '@lljj/vue3-form-element';
-import 'element-plus/dist/index.css';
-import 'element-plus/theme-chalk/dark/css-vars.css';
-import { ElConfigProvider } from 'element-plus';
-import en from 'element-plus/es/locale/lang/en';
-
-import { resolveFormFiles } from '@/form-fields/form-js-submit';
-import { resolveNestedFiles } from '@/utils/form-files';
+import { resolveNestedFiles, type UploadContext } from '@/utils/form-files';
 import { resolveFormVariables } from '@/formbuilder/formVariables';
+import { resolveSeededSources } from '@/formbuilder/seededSources';
 import type { FilesService } from '@services/FilesService';
-import { useTheme } from '@/composables/useTheme';
 import { useFormLocale } from '@/composables/useFormLocale';
 import type { IForm } from '@services/FormsService';
 import FormUnavailable from './FormUnavailable.vue';
@@ -52,65 +37,33 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ change: [data: Record<string, any>]; finish: [] }>();
 
-const { isDark } = useTheme();
 const { locale } = useFormLocale();
 
 const engine = computed<FormEngine | null>(() => formEngineOf(props.schema));
 const problem = computed(() => formProblemOf(props.schema));
 
-// ── form-js ───────────────────────────────────────────────────────────────────
-const formJsHost = ref<HTMLElement | null>(null);
-const viewer = ref<any>(null);
-/** Live values from form-js's `changed` event — it has no public data getter. */
-const formJsData = ref<Record<string, any>>({});
-/** Resolves the promise `submit()` is waiting on; form-js reports via an event. */
-let pendingSubmit: ((r: { data: Record<string, any>; errors: unknown }) => void) | null = null;
-
-function destroyFormJs() {
-    viewer.value?.destroy();
-    viewer.value = null;
-}
-
-async function mountFormJs() {
-    destroyFormJs();
-    if (engine.value !== 'formjs' || !props.schema) return;
-
-    await nextTick();
-    if (!formJsHost.value) return;
-
-    const form = new Form({
-        container: formJsHost.value,
-        additionalModules: [DocumentListModule, LinkModule],
-    });
-    viewer.value = form;
-
-    await form.importSchema(props.schema as any, { ...props.data });
-    formJsData.value = { ...props.data };
-    form.setProperty('readOnly', props.readOnly);
-
-    form.on('changed', (event: { data: Record<string, any> }) => {
-        formJsData.value = event.data;
-        emit('change', event.data);
-    });
-    form.on('submit', (event: { data: Record<string, any>; errors: unknown }) => {
-        pendingSubmit?.(event);
-        pendingSubmit = null;
-    });
-}
-
-// ── JSON Schema (lljj) ────────────────────────────────────────────────────────
-const jsonData = ref<Record<string, any>>({});
-watch(jsonData, (v) => emit('change', v), { deep: true });
-
 // ── Vueform ───────────────────────────────────────────────────────────────────
 const vueformData = ref<Record<string, any>>({});
 const vueform$ = ref<any>(null);
+
+watch(vueformData, (v) => emit('change', v), { deep: true });
+
 /**
- * Form Variable markers are swapped for the resolved option lists the engine injected
- * into `data`; Vueform would otherwise read a bare-string `items` as a remote URL.
+ * Two schema references are resolved against the seeded variables before Vueform sees
+ * the schema, because neither survives the trip otherwise:
+ *
+ *   items         a Form Variable marker — Vueform reads a bare-string `items` as a
+ *                 remote URL and would issue an HTTP request to a nonsense one.
+ *   documents /   a documentList's checklist or a dataTable's rows, when either names
+ *   rows          a process variable. Vueform's `data` only holds keys that have an
+ *                 element, so a variable the form does not also ask for never reaches
+ *                 the element on its own.
  */
 const vueformSchema = computed(() =>
-    resolveFormVariables(props.schema?.vueform?.schema ?? {}, props.data),
+    resolveSeededSources(
+        resolveFormVariables(props.schema?.vueform?.schema ?? {}, props.data),
+        props.data,
+    ),
 );
 
 watch([vueform$, locale], () => vueform$.value?.setLanguage?.(locale.value));
@@ -207,79 +160,41 @@ const stepsState = computed<{ index: number; total: number; label: string } | nu
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 watch(
     () => [props.schema, engine.value] as const,
-    () => {
-        jsonData.value = { ...props.data };
-        vueformData.value = { ...props.data };
-        if (engine.value === 'formjs') void mountFormJs();
-        else destroyFormJs();
-    },
+    () => { vueformData.value = { ...props.data }; },
     { immediate: true },
 );
-
-watch(() => props.readOnly, (ro) => viewer.value?.setProperty('readOnly', ro));
-
-onUnmounted(destroyFormJs);
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /** Current values without validating — for draft saves. */
 function getData(): Record<string, any> {
-    switch (engine.value) {
-        case 'formjs': return { ...formJsData.value };
-        case 'jsonschema': return { ...jsonData.value };
-        case 'vueform': return vueform$.value?.requestData ?? { ...vueformData.value };
-        default: return {};
-    }
+    if (engine.value !== 'vueform') return {};
+    return vueform$.value?.requestData ?? { ...vueformData.value };
 }
 
 async function submit(): Promise<SubmitResult> {
-    switch (engine.value) {
-        case 'formjs': {
-            if (!viewer.value) return { ok: false, errors: 'Form is not ready.' };
-            const result = await new Promise<{ data: Record<string, any>; errors: unknown }>((resolve) => {
-                pendingSubmit = resolve;
-                viewer.value.submit();
-            });
-            // NOTE: form-js reports validation errors on this event but every call site
-            // has always submitted regardless, so that behaviour is preserved here
-            // rather than silently tightened during a refactor.
-            return { ok: true, data: result.data };
-        }
-        case 'vueform': {
-            await vueform$.value?.validate();
-            if (vueform$.value?.invalid) return { ok: false, errors: vueform$.value?.errors };
-            return { ok: true, data: vueform$.value?.requestData ?? {} };
-        }
-        case 'jsonschema':
-            // lljj exposes no programmatic validate; it validates on its own submit
-            // button, which every call site hides in favour of PrimeVue actions.
-            return { ok: true, data: { ...jsonData.value } };
-        default:
-            return { ok: false, errors: 'No renderable form.' };
-    }
+    if (engine.value !== 'vueform') return { ok: false, errors: 'No renderable form.' };
+
+    await vueform$.value?.validate();
+    if (vueform$.value?.invalid) return { ok: false, errors: vueform$.value?.errors };
+    return { ok: true, data: vueform$.value?.requestData ?? {} };
 }
 
 /**
  * Upload any files in the collected variables and replace them with DocumentReferences.
  *
- * Lives here because the strategy is per-engine: form-js keeps files in its own
- * fileRegistry behind "files::" strings, while Vueform holds raw File objects in the
- * model — possibly nested inside a group, object or list.
+ * Vueform holds raw File objects in the model — possibly nested inside a group, object
+ * or list — so the walk has to descend rather than scan the top level.
  */
 async function resolveFiles(
     data: Record<string, any>,
     filesService: FilesService,
     processInstanceId?: string,
     taskId?: string,
+    context?: UploadContext,
 ): Promise<Record<string, any>> {
-    switch (engine.value) {
-        case 'formjs':
-            return resolveFormFiles(data, filesService, viewer.value, processInstanceId, taskId);
-        case 'vueform':
-            return resolveNestedFiles(data, filesService, processInstanceId, taskId);
-        default:
-            return data;
-    }
+    if (engine.value !== 'vueform') return data;
+    return resolveNestedFiles(data, filesService, processInstanceId, taskId, context);
 }
 
 defineExpose({
@@ -290,35 +205,12 @@ defineExpose({
     submit,
     getData,
     resolveFiles,
-    /** The raw form-js viewer — needed by resolveFormFiles(). Null for other engines. */
-    formJsViewer: () => viewer.value,
 });
 </script>
 
 <template>
     <FormUnavailable v-if="problem" :problem="problem" />
 
-    <!-- form-js -->
-    <div
-        v-else-if="engine === 'formjs'"
-        ref="formJsHost"
-        :class="isDark ? 'formjs-dark' : 'formjs-light'"
-    />
-
-    <!-- JSON Schema — footer hidden; host pages drive submission with their own actions -->
-    <div v-else-if="engine === 'jsonschema'" class="jsf-preview-root">
-        <ElConfigProvider :locale="en">
-            <VueFormJsonSchema
-                v-model="jsonData"
-                :schema="props.schema?.jsonSchema ?? {}"
-                :ui-schema="props.schema?.uiSchema ?? {}"
-                :form-footer="{ show: false }"
-                :disabled="props.readOnly"
-            />
-        </ElConfigProvider>
-    </div>
-
-    <!-- Vueform -->
     <div v-else-if="engine === 'vueform'" class="p-1">
         <Vueform
             ref="vueform$"

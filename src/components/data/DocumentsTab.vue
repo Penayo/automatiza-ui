@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { DataTable, Column, Tag } from 'primevue';
-import { extractDocuments } from '@/utils/form-files';
+import { documentKey, extractDocuments } from '@/utils/form-files';
 import { $api } from '@services/api';
 
 const props = defineProps<{
@@ -10,7 +10,7 @@ const props = defineProps<{
 
 const documents = computed(() => extractDocuments(props.variables ?? []));
 
-// r2Key → fresh signedUrl, hydrated on mount
+// storage key → fresh signedUrl, hydrated on mount
 const signedUrls = ref<Record<string, string>>({});
 
 onMounted(async () => {
@@ -19,7 +19,8 @@ onMounted(async () => {
 
     const keys: Record<string, string> = {};
     for (const { docKey, file } of docs) {
-        if (file.r2Key) keys[docKey] = file.r2Key;
+        const key = documentKey(file);
+        if (key) keys[docKey] = key;
     }
 
     if (Object.keys(keys).length) {

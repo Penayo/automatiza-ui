@@ -75,7 +75,7 @@ async function openDocument(doc: ProcessDocumentRecord) {
         window.open(signedUrls.value[doc.id], '_blank', 'noopener,noreferrer');
         return;
     }
-    const url = await $api.files.refreshSignedUrl(doc.r2Key);
+    const url = await $api.files.refreshSignedUrl(doc.storageKey ?? doc.r2Key);
     signedUrls.value[doc.id] = url;
     window.open(url, '_blank', 'noopener,noreferrer');
 }

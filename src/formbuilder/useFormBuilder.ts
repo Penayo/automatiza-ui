@@ -507,14 +507,21 @@ export function createFormBuilder(initial?: BuilderDoc): BuilderApi {
         reconcileSelection();
     });
 
-    /** `static` holds no data and containers are addressed through their children. */
-    const NON_DATA_TYPES = new Set(['static', 'group', 'object', 'list']);
+    /**
+     * Whether a node can be the *source* of a condition — i.e. holds a value of its own.
+     *
+     * Display elements (heading, paragraph, button, data table) never do, and a
+     * container is addressed through its children rather than as a path. Read off the
+     * registry's `display` flag rather than a local list, so a new display element is
+     * excluded by declaring itself one, not by someone remembering this function.
+     */
+    const holdsData = (type: string) => !isContainerType(type) && !getElementDef(type)?.display;
 
     function fieldPaths(excludeId?: string): { value: string; label: string }[] {
         const out: { value: string; label: string }[] = [];
         const walk = (nodes: BuilderNode[]) => {
             for (const node of nodes) {
-                if (node.id !== excludeId && !NON_DATA_TYPES.has(node.type)) {
+                if (node.id !== excludeId && holdsData(node.type)) {
                     const path = pathOf(node.id);
                     if (path) out.push({ value: path, label: path });
                 }

@@ -39,3 +39,19 @@
   background-color: var(--layout-sidebar-active-bg);
   color: var(--layout-sidebar-active-fg);
 }
+
+/* ── Sidebar PanelMenu ────────────────────────────────────────────────────
+   Aura ships each panel as a bordered, surface-coloured card with a 0.5rem
+   gap between them. Inside a 18rem sidebar that reads as a stack of boxes
+   instead of a menu, so flatten it to match the frontoffice sidebar: no
+   panel chrome, no gap, and the sidebar's own background showing through.
+─────────────────────────────────────────────────────────────────────────── */
+[data-context="admin"] .p-panelmenu {
+  --p-panelmenu-gap:                       0;
+  --p-panelmenu-panel-background:          transparent;
+  --p-panelmenu-panel-border-width:        0;
+  --p-panelmenu-panel-first-border-width:  0;
+  --p-panelmenu-panel-last-border-width:   0;
+  --p-panelmenu-panel-padding:             0;
+  --p-panelmenu-panel-border-radius:       0;
+}

@@ -11,14 +11,15 @@ const visible = defineModel<boolean>('visible', { default: false });
 const props   = defineProps<{ dirty?: boolean }>();
 const { navigate, openInNewTab } = useDirtyNavigation(visible, () => !!props.dirty);
 
-/** JSON Schema forms and form-js forms have separate editors. */
+/** True for a form the retired form-js / JSON-Schema editors produced. */
+const isLegacy = (form: IForm) => form.type !== 'vueform';
+
 function formRoute(form: IForm) {
-    return form.type === 'jsonschema'
-        ? { name: 'JsonSchemaEdit', params: { id: form.id } }
-        : { name: 'FormsEdit',      params: { id: form.id } };
+    return { name: 'FormsEdit', params: { id: form.id } };
 }
 
 function openForm(form: IForm) {
+    if (isLegacy(form)) return;
     navigate(formRoute(form));
 }
 </script>
@@ -40,9 +41,9 @@ function openForm(form: IForm) {
                         <div class="flex items-center gap-2">
                             <span class="truncate">{{ data.name }}</span>
                             <Tag
-                                v-if="data.type === 'jsonschema'"
-                                value="JSON Schema"
-                                severity="secondary"
+                                v-if="isLegacy(data)"
+                                :value="data.type"
+                                severity="warn"
                                 style="font-size: 0.65rem; padding: 1px 6px;"
                             />
                         </div>
@@ -58,9 +59,13 @@ function openForm(form: IForm) {
             <Column style="width:90px">
                 <template #body="{ data }: { data: IForm }">
                     <Button icon="pi pi-pencil" text rounded size="small" severity="secondary"
-                        v-tooltip.top="data.type === 'jsonschema' ? 'Open JSON Schema editor' : 'Open in Form Builder'"
+                        :disabled="isLegacy(data)"
+                        v-tooltip.top="isLegacy(data)
+                            ? 'Built with a retired editor — rebuild it in the form builder'
+                            : 'Open in Form Builder'"
                         @click="openForm(data)" />
                     <Button icon="pi pi-external-link" text rounded size="small" severity="secondary"
+                        :disabled="isLegacy(data)"
                         v-tooltip.top="'Open in new tab'"
                         @click="openInNewTab(formRoute(data))" />
                 </template>

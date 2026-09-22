@@ -1,59 +1,36 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Button, DataTable, Column, InputText, IconField, InputIcon, SplitButton, Tag } from 'primevue';
+import { Button, DataTable, Column, InputText, IconField, InputIcon, Tag } from 'primevue';
 import type { IForm } from '@services/FormsService';
 import { $api } from '@services/api';
 import { useTableQuery, ROWS_PER_PAGE_OPTIONS } from '@/composables/useTableQuery';
 
 const router = useRouter();
 
-// Type filter: null = all, or one authoring surface.
-type TypeFilter = null | 'jsonschema' | 'vueform' | 'formjs';
+/**
+ * The builder is the only authoring surface, so the filter exists for one reason:
+ * finding forms left behind by the retired form-js designer and JSON-Schema editor.
+ * Those are every type that is not `vueform` ('default' | 'form' | 'Form' |
+ * 'jsonschema'), so it needs an exclusion rather than an equality match.
+ */
+type TypeFilter = null | 'legacy';
 const typeFilter = ref<TypeFilter>(null);
 
-// "form-js" is every type that is neither jsonschema nor vueform ('default' |
-// 'form' | 'Form' | 'custom'), so it needs an exclusion list rather than an
-// equality match.
 const {
     items: forms, totalRecords, loading, search, activeSearch,
     firstRow, rowsPerPage, reload, onPage, onSort, clearSearch,
 } = useTableQuery<IForm>({
     load: (params) => $api.forms.getPage(params),
-    filter: () => {
-        if (typeFilter.value === 'jsonschema') return { type: { equalsTo: 'jsonschema' } };
-        if (typeFilter.value === 'vueform')    return { type: { equalsTo: 'vueform' } };
-        if (typeFilter.value === 'formjs')     return { type: { notIn: 'jsonschema,vueform' } };
-        return undefined;
-    },
+    filter: () => (typeFilter.value === 'legacy' ? { type: { notIn: 'vueform' } } : undefined),
 });
 
-const newFormItems = [
-    {
-        label: 'Visual designer (form-js)',
-        icon:  'pi pi-objects-column',
-        command: () => router.push({ name: 'FormsNew' }),
-    },
-    {
-        label: 'JSON Schema form',
-        icon:  'pi pi-code',
-        command: () => router.push({ name: 'JsonSchemaNew' }),
-    },
-    {
-        label: 'Vueform builder',
-        icon:  'pi pi-th-large',
-        command: () => router.push({ name: 'VueformNew' }),
-    },
-];
+/** True for a form no editor can open any more. */
+const isLegacy = (form: IForm) => form.type !== 'vueform';
 
 function openEditor(data: IForm) {
-    if (data.type === 'jsonschema') {
-        router.push({ name: 'JsonSchemaEdit', params: { id: data.id } });
-    } else if (data.type === 'vueform') {
-        router.push({ name: 'VueformEdit', params: { id: data.id } });
-    } else {
-        router.push({ name: 'FormsEdit', params: { id: data.id } });
-    }
+    if (isLegacy(data)) return;
+    router.push({ name: 'FormsEdit', params: { id: data.id } });
 }
 </script>
 
@@ -75,11 +52,10 @@ function openEditor(data: IForm) {
                     />
                 </IconField>
                 <Button size="small" icon="pi pi-refresh" text rounded v-tooltip.top="'Refresh'" @click="reload" />
-                <SplitButton
+                <Button
                     size="small"
                     label="New Form"
                     icon="pi pi-plus"
-                    :model="newFormItems"
                     @click="router.push({ name: 'FormsNew' })"
                 />
             </div>
@@ -97,34 +73,14 @@ function openEditor(data: IForm) {
                 All
             </button>
             <button
-                @click="typeFilter = 'formjs'"
+                @click="typeFilter = 'legacy'"
                 class="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-                :class="typeFilter === 'formjs'
-                    ? 'bg-surface-800 dark:bg-surface-200 text-white dark:text-surface-900 border-transparent'
-                    : 'border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:border-surface-400'"
+                :class="typeFilter === 'legacy'
+                    ? 'bg-amber-600 text-white border-transparent'
+                    : 'border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 hover:border-amber-400'"
             >
-                <i class="pi pi-objects-column mr-1" style="font-size: 0.7rem" />
-                Visual
-            </button>
-            <button
-                @click="typeFilter = 'jsonschema'"
-                class="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-                :class="typeFilter === 'jsonschema'
-                    ? 'bg-violet-600 text-white border-transparent'
-                    : 'border-violet-300 dark:border-violet-700 text-violet-600 dark:text-violet-400 hover:border-violet-400'"
-            >
-                <i class="pi pi-code mr-1" style="font-size: 0.7rem" />
-                JSON Schema
-            </button>
-            <button
-                @click="typeFilter = 'vueform'"
-                class="px-3 py-1 rounded-full text-xs font-medium border transition-colors"
-                :class="typeFilter === 'vueform'
-                    ? 'bg-emerald-600 text-white border-transparent'
-                    : 'border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 hover:border-emerald-400'"
-            >
-                <i class="pi pi-th-large mr-1" style="font-size: 0.7rem" />
-                Vueform
+                <i class="pi pi-exclamation-triangle mr-1" style="font-size: 0.7rem" />
+                Legacy
             </button>
 
             <span class="text-xs text-surface-400 ml-1">
@@ -161,20 +117,16 @@ function openEditor(data: IForm) {
                     <div class="flex flex-col py-0.5">
                         <div class="flex items-center gap-2">
                             <a
+                                v-if="!isLegacy(data)"
                                 class="font-medium cursor-pointer hover:underline"
                                 style="color: var(--layout-accent-color)"
                                 @click="openEditor(data)"
                             >{{ data.name }}</a>
+                            <span v-else class="font-medium text-surface-500">{{ data.name }}</span>
                             <Tag
-                                v-if="data.type === 'jsonschema'"
-                                value="JSON Schema"
-                                severity="secondary"
-                                style="font-size: 0.65rem; padding: 1px 6px;"
-                            />
-                            <Tag
-                                v-else-if="data.type === 'vueform'"
-                                value="Vueform"
-                                severity="success"
+                                v-if="isLegacy(data)"
+                                :value="data.type"
+                                severity="warn"
                                 style="font-size: 0.65rem; padding: 1px 6px;"
                             />
                         </div>
@@ -186,7 +138,7 @@ function openEditor(data: IForm) {
             <Column header="Code" field="code" sortable style="width: 220px">
                 <template #body="{ data }: { data: IForm }">
                     <!-- Forms created before `code` existed fall back to the raw id,
-                         same as the editors do when they prefill the Code field. -->
+                         same as the builder does when it prefills the Code field. -->
                     <span class="text-xs font-mono text-surface-400">{{ data.code || data.id }}</span>
                 </template>
             </Column>
@@ -201,15 +153,10 @@ function openEditor(data: IForm) {
 
             <Column header="Fields" style="width: 100px">
                 <template #body="{ data }: { data: IForm }">
-                    <span v-if="data.type === 'jsonschema'" class="text-xs text-surface-400 italic">
-                        {{ Object.keys(data.jsonSchema?.properties ?? {}).length }} props
-                    </span>
-                    <span v-else-if="data.type === 'vueform'" class="text-sm text-surface-500">
+                    <span v-if="!isLegacy(data)" class="text-sm text-surface-500">
                         {{ data.vueform?.doc?.nodes?.length ?? 0 }} fields
                     </span>
-                    <span v-else class="text-sm text-surface-500">
-                        {{ data.components?.length ?? 0 }} fields
-                    </span>
+                    <span v-else class="text-xs text-surface-400 italic">—</span>
                 </template>
             </Column>
 
@@ -218,7 +165,10 @@ function openEditor(data: IForm) {
                     <Button
                         icon="pi pi-pencil"
                         size="small" text rounded
-                        v-tooltip.top="data.type === 'jsonschema' ? 'Open JSON Schema editor' : 'Open designer'"
+                        :disabled="isLegacy(data)"
+                        v-tooltip.top="isLegacy(data)
+                            ? 'Built with a retired editor — rebuild it in the form builder'
+                            : 'Open builder'"
                         @click="openEditor(data)"
                     />
                 </template>

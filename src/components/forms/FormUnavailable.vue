@@ -2,9 +2,10 @@
 /**
  * Shown instead of a blank area when a form reference cannot be rendered.
  *
- * The two cases are worth distinguishing: an unresolved key is a diagram
- * misconfiguration the designer can fix, while an unsupported type means the form was
- * built with an authoring surface this screen has not been wired for yet.
+ * The cases are worth distinguishing: an unresolved key is a diagram misconfiguration
+ * the designer can fix, a retired type is a form left behind by the form-js or
+ * JSON-Schema editor and has to be rebuilt in the Vueform builder, and an unsupported
+ * type is anything else the backend handed over.
  */
 import type { FormProblem } from './formEngine';
 
@@ -25,10 +26,20 @@ const props = defineProps<{ problem: FormProblem }>();
             </p>
         </template>
 
+        <template v-else-if="props.problem.kind === 'retired'">
+            <p class="text-sm font-medium">This form was built with a retired editor.</p>
+            <p class="max-w-md text-xs opacity-70">
+                Its type is <code class="font-mono">{{ props.problem.type }}</code>, produced by
+                the form-js designer or the JSON-Schema editor. Both have been removed — rebuild
+                the form in the <strong>Form builder</strong> and point the diagram at the new
+                form's code.
+            </p>
+        </template>
+
         <template v-else>
             <p class="text-sm font-medium">This form can't be displayed here.</p>
             <p class="max-w-md text-xs opacity-70">
-                It was built with an editor this screen does not support yet<span
+                It was built with an editor this screen does not support<span
                     v-if="props.problem.type"
                 > (<code class="font-mono">{{ props.problem.type }}</code>)</span>.
             </p>

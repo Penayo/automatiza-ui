@@ -8,6 +8,7 @@ import timersMd         from '@docs/timer-events.md?raw';
 import variablesMd      from '@docs/process-variables.md?raw';
 import serviceTasksMd   from '@docs/service-tasks.md?raw';
 import taskListenersMd  from '@docs/task-listeners.md?raw';
+import storageMd        from '@docs/storage-connections.md?raw';
 
 const pages = [
     { slug: 'feel-expressions',  label: 'FEEL Expressions',   icon: 'pi pi-code',        content: feelMd },
@@ -15,6 +16,7 @@ const pages = [
     { slug: 'process-variables', label: 'Process Variables',   icon: 'pi pi-database',    content: variablesMd },
     { slug: 'service-tasks',     label: 'Service Tasks',       icon: 'pi pi-cog',         content: serviceTasksMd },
     { slug: 'task-listeners',    label: 'Task Listeners',      icon: 'pi pi-bolt',        content: taskListenersMd },
+    { slug: 'storage-connections', label: 'Storage Connections', icon: 'pi pi-database',  content: storageMd },
 ];
 
 const route  = useRoute();

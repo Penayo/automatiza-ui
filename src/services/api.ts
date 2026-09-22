@@ -33,6 +33,7 @@ import { RecoveryService } from "@services/RecoveryService";
 import { ApiMocksService } from "@services/ApiMocksService";
 import { TestEmailLogsService } from "@services/TestEmailLogsService";
 import { TenantsService } from "@services/TenantsService";
+import { CommentsService } from "@services/CommentsService";
 
 export type PageRequest = {
 	page?: number;
@@ -50,7 +51,7 @@ export type PageResponse<T> = {
 export type StringFilter = {
 	equalsTo?: string;
 	notEqualsTo?: string;
-	/** Comma-separated exclusion list, e.g. 'jsonschema,vueform'. */
+	/** Comma-separated exclusion list, e.g. 'jsonschema,default'. */
 	notIn?: string;
 	like?: string;
 }
@@ -71,6 +72,7 @@ export const $api = {
 	variables: new VariablesService(),
 	processes: new ProcessesService(),
 	tasks: new TasksService(),
+	comments: new CommentsService(),
 	forms: new FormsService(),
 	authService: new AuthService(),
 	users: new UserService(),

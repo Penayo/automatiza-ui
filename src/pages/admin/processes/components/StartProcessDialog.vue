@@ -102,7 +102,28 @@ async function handleSubmit() {
     if (formSchema.value) {
         const result = await renderer.value?.submit();
         // ok:false means the renderer refused and is showing its own messages.
-        if (result?.ok) submitStart(result.data);
+        if (!result?.ok) return;
+
+        let variables = result.data;
+        try {
+            // Files reach here as raw File objects and would serialise to `{}` — upload
+            // them first and start the process with the DocumentReferences. There is no
+            // instance yet, so they land in the date-partitioned default folder.
+            starting.value = true;
+            variables = await renderer.value!.resolveFiles(variables, $api.files);
+        } catch (err: any) {
+            toast.add({
+                severity: 'error',
+                summary:  'File upload failed',
+                detail:   err?.response?.data?.message ?? err?.message ?? 'Could not upload the attached file.',
+                life:     6000,
+            });
+            return;
+        } finally {
+            starting.value = false;
+        }
+
+        submitStart(variables);
         return;
     }
     try {
@@ -167,7 +188,7 @@ async function handleSubmit() {
                     <span class="text-sm">Custom view not found for key "{{ formSchema.key }}"</span>
                 </div>
 
-                <!-- form-js / JSON Schema / Vueform -->
+                <!-- Builder form -->
                 <FormRenderer v-else ref="renderer" :schema="formSchema" @finish="handleSubmit" />
             </template>
             <div v-else class="flex flex-col gap-2">

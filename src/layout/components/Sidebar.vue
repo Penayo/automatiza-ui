@@ -2,19 +2,43 @@
 	<aside
 		class="border-r shadow-md
 		z-20 fixed inset-y-0 left-0
-		transform transition-transform duration-200 ease-in-out
-		md:relative md:translate-x-0
-		min-w-72
+		transform transition-all duration-200 ease-in-out
+		md:relative
+		w-72
 		overflow-y-auto
 		"
 		style="
 			background-color: var(--layout-sidebar-bg);
 			border-color: var(--layout-sidebar-border);
 		"
-		:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+		:class="sidebarOpen
+			? 'translate-x-0 md:w-72'
+			: '-translate-x-full md:translate-x-0 md:w-16 overflow-x-hidden'"
 	>
-		<nav class="flex flex-col mt-2 text-base px-1 gap-2">
-			<PanelMenu :model="menuItems" class="w-full md:w-80">
+		<!--
+			Collapsed on desktop: a rail of top-level icons. PanelMenu is an accordion,
+			so it has nothing meaningful to render at 4rem — each group opens its
+			children in a popup TieredMenu instead.
+		-->
+		<nav v-if="collapsed" class="flex flex-col items-center mt-2 gap-1 px-1">
+			<button
+				v-for="item in menuItems"
+				:key="labelOf(item)"
+				v-tooltip.right="labelOf(item)"
+				class="relative w-10 h-10 flex items-center justify-center rounded-md cursor-pointer text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+				:aria-label="labelOf(item)"
+				:aria-haspopup="!!item.items"
+				@click="openGroup($event, item)"
+			>
+				<span :class="[item.icon, 'text-primary text-lg']" />
+				<!-- Any badge below this group surfaces as a dot, since the counts don't fit -->
+				<span v-if="hasAlert(item.items)" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+			</button>
+			<TieredMenu ref="groupMenu" :model="activeGroup" :popup="true" />
+		</nav>
+
+		<nav v-else class="flex flex-col mt-2 text-base px-1">
+			<PanelMenu :model="menuItems" class="w-full">
 				<template #item="{ item }">
 					<a v-ripple class="flex items-center px-4 py-2 cursor-pointer group" @click="(e) => item.command?.({ originalEvent: e, item })">
 						<span :class="[item.icon, 'text-primary group-hover:text-inherit']" />
@@ -43,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-	import { Badge, PanelMenu } from 'primevue';
+	import { Badge, PanelMenu, TieredMenu } from 'primevue';
 	import type { MenuItem } from 'primevue/menuitem';
 	import { onMounted, onUnmounted, ref, computed } from 'vue';
 	import { useRouter } from 'vue-router';
@@ -52,8 +76,40 @@
 	import { AuthService } from '@services/AuthService';
 	import { DatasourcesService, type BrowsableDatasource } from '@services/DatasourcesService';
 
-	defineProps({ sidebarOpen: Boolean });
+	import { useSidebar } from '@/composables/useSidebar';
+
+	const props = defineProps({ sidebarOpen: Boolean });
 	const emit = defineEmits(['toggle-sidebar']);
+
+	const { isDesktop } = useSidebar();
+
+	// Closed on desktop means the icon rail; closed on mobile means off-canvas,
+	// where the full labelled PanelMenu is what slides back in.
+	const collapsed = computed(() => isDesktop.value && !props.sidebarOpen);
+
+	// ── Icon rail: one popup menu, re-pointed at whichever group was clicked ────
+	const groupMenu   = ref<{ toggle: (event: Event) => void } | null>(null);
+	const activeGroup = ref<MenuItem[]>([]);
+
+	function openGroup(event: Event, item: MenuItem) {
+		// A leaf group (none exist today, but the model allows it) just navigates.
+		if (!item.items?.length) {
+			item.command?.({ originalEvent: event as never, item });
+			return;
+		}
+		activeGroup.value = item.items;
+		groupMenu.value?.toggle(event);
+	}
+
+	/** MenuItem.label may be a getter function — the rail needs the plain string. */
+	const labelOf = (item: MenuItem) => (typeof item.label === 'function' ? item.label() : item.label ?? '');
+
+	/** True when any descendant carries a badge, so the rail icon can show a dot. */
+	function hasAlert(items?: MenuItem[]): boolean {
+		return !!items?.some(i =>
+			(labelOf(i) === 'Process Instances' && failedCount.value > 0) || !!i.badge || hasAlert(i.items)
+		);
+	}
 
 	const router      = useRouter();
 	const currentMenu = ref('dashboard');
@@ -200,6 +256,7 @@
 				{ label: 'Permissions', icon: 'pi pi-shield',  command: () => nav('/admin/permissions') },
 				{ label: 'Variables',   icon: 'pi pi-wrench',  command: () => nav('/admin/variables') },
 				{ label: 'Secrets',     icon: 'pi pi-wrench',  command: () => nav('/admin/secrets') },
+				{ label: 'Document Storage', icon: 'pi pi-cloud', command: () => nav('/admin/storage') },
 				{ label: 'API Keys',    icon: 'pi pi-key',     command: () => nav('/admin/api-keys') },
 				{ label: 'API Mocks',   icon: 'pi pi-server',  command: () => nav('/admin/api-mocks') },
 				{ label: 'Test Inbox',  icon: 'pi pi-inbox',   command: () => nav('/admin/test-inbox'), get badge() { return unreadCount.value || undefined; } },

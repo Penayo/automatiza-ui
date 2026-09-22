@@ -113,7 +113,7 @@ export type VueformSteps = Record<string, {
 
 /**
  * What gets stored on `IForm.vueform`. The server treats this as an opaque object
- * (`@IsOptional() @IsObject()`), exactly as it does `jsonSchema`.
+ * (`@IsOptional() @IsObject()`) — it never walks the schema.
  */
 export interface VueformPayload {
     builderVersion: 1;

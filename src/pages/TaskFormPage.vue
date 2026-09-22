@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted, markRaw, provide, type Component } from 'vue';
+import { ref, watch, watchEffect, computed, onMounted, onUnmounted, markRaw, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { $taskPublic } from '@services/TaskPublicService';
 import type { TaskFormData } from '@services/TaskPublicService';
 import { useTheme } from '@/composables/useTheme';
 import { applyBrandingPalette, type TenantBranding } from '@/composables/useTenantBranding';
 import { FilesService } from '@services/FilesService';
+import { setPublicFormContext, clearPublicFormContext } from '@services/publicFormContext';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
 import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
 
@@ -90,8 +91,9 @@ const accent = 'var(--fo-brand-500, var(--p-primary-500, #6366f1))';
 const renderer        = ref<InstanceType<typeof FormRenderer> | null>(null);
 
 // ── Form-type discrimination ───────────────────────────────────────────────────
-// The backend returns one of: a stored form-js schema, a stored JSON-Schema form
-// (type: 'jsonschema'), or a custom-view descriptor (type: 'custom', key).
+// The backend returns either a stored builder form (type: 'vueform') or a custom-view
+// descriptor (type: 'custom', key). Anything else is a form left behind by a retired
+// editor and FormRenderer shows FormUnavailable for it.
 const isCustom     = computed(() => data.value?.formSchema?.type === 'custom');
 
 // Custom Vue view
@@ -107,9 +109,6 @@ const taskLike = computed(() => ({
     name:              data.value?.taskName,
 }));
 
-// External submitters can always edit; provide context custom fields may read.
-provide('jsfFormData', computed(() => data.value?.formData ?? {}));
-provide('formDisabled', computed(() => false));
 
 // Key-value fallback (when no BPMN form schema)
 interface KVRow { key: string; value: string }
@@ -166,6 +165,7 @@ async function saveProgress(variables: Record<string, any>) {
             variables, filesService,
             data.value?.processInstanceId,
             data.value?.taskId,
+            { token: token.value },
         );
         await $taskPublic.save(token.value, resolvedData);
         saved.value = true;
@@ -300,6 +300,9 @@ async function submitForm() {
             variables, filesService,
             data.value?.processInstanceId,
             data.value?.taskId,
+            // No session on a public form: the token is what tells the engine which
+            // tenant — and therefore which storage provider — this upload belongs to.
+            { token: token.value },
         );
 
         await submit(variables);
@@ -311,8 +314,16 @@ async function submitForm() {
     }
 }
 
+// The share token is this page's only credential: document fields refresh their
+// signed URLs through it, since there is no session to scope them (spec §7).
+// It is re-published on every wizard step, because the token swaps in place.
+watchEffect(() => setPublicFormContext({ token: token.value }));
+
 onMounted(load);
-onUnmounted(() => chainAbort.value?.abort());
+onUnmounted(() => {
+    chainAbort.value?.abort();
+    clearPublicFormContext();
+});
 </script>
 
 <template>
@@ -436,7 +447,7 @@ onUnmounted(() => chainAbort.value?.abort());
                     <!-- Card wrapper -->
                     <div class="rounded-2xl border border-surface-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
 
-                        <!-- Rendered form (custom view / JSON-Schema / form-js) -->
+                        <!-- Rendered form (custom view / builder form) -->
                         <div v-if="data.formSchema" class="p-6">
 
                             <!-- Custom Vue component renderer -->
@@ -456,7 +467,7 @@ onUnmounted(() => chainAbort.value?.abort());
                                 <span class="text-sm">Custom view not found for key "{{ data.formSchema.key }}"</span>
                             </div>
 
-                            <!-- form-js / JSON Schema / Vueform -->
+                            <!-- Builder form -->
                             <FormRenderer
                                 v-else
                                 ref="renderer"

@@ -9,29 +9,17 @@ export interface IForm extends APIData {
     code: string;
     name: string;
     description?: string;
-    type: 'default' | 'form' | 'Form' | 'jsonschema' | 'vueform' | 'custom';
+    /**
+     * `vueform` is what the builder writes and `custom` points at a registered Vue view.
+     * The rest are **retired**: forms the removed form-js designer ('default' | 'form' |
+     * 'Form') and JSON-Schema editor ('jsonschema') left in the collection. They are kept
+     * in the union so the list page can label them; nothing renders or edits them.
+     */
+    type: 'vueform' | 'custom' | 'default' | 'form' | 'Form' | 'jsonschema';
     /** Only set when type === 'custom'. Maps to a registered key in task-views/index.ts */
     key?: string;
     version: number;
     schemaVersion: number;
-    components?: Array<{
-        type: string;
-        id: string;
-        label?: string;
-        key?: string;
-        validate?: {
-            required?: boolean;
-            minLength?: number;
-            maxLength?: number;
-            pattern?: string;
-            min?: number;
-            max?: number;
-        };
-        [key: string]: any;
-    }>;
-    jsonSchema?: Record<string, any>;
-    uiSchema?: Record<string, any>;
-    errorSchema?: Record<string, any>;
     /** Only set when type === 'vueform'. See src/formbuilder/types.ts for the payload shape. */
     vueform?: VueformPayload;
     metadata?: { key: string; value: any }[];

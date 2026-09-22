@@ -98,12 +98,15 @@ const routes = [
       // Design
       { path: 'modeler',     name: 'CamundaModeler', component: () => import('./pages/admin/modeler/Index.vue') },
       { path: 'forms',                    name: 'FormsList',        component: () => import('./pages/admin/forms/FormsIndex.vue') },
-      { path: 'forms/new',                name: 'FormsNew',         component: () => import('./pages/admin/forms/Index.vue') },
-      { path: 'forms/:id/edit',           name: 'FormsEdit',        component: () => import('./pages/admin/forms/Index.vue') },
-      { path: 'forms/jsonschema/new',     name: 'JsonSchemaNew',    component: () => import('./pages/admin/forms/JsonSchemaFormEditor.vue') },
-      { path: 'forms/jsonschema/:id/edit',name: 'JsonSchemaEdit',   component: () => import('./pages/admin/forms/JsonSchemaFormEditor.vue') },
-      { path: 'forms/vueform/new',        name: 'VueformNew',       component: () => import('./pages/admin/forms/vueform/Index.vue') },
-      { path: 'forms/vueform/:id/edit',   name: 'VueformEdit',      component: () => import('./pages/admin/forms/vueform/Index.vue') },
+      // One builder, so it owns the plain paths. The /vueform/* spellings the builder
+      // shipped under stay as redirects for links already in circulation; the retired
+      // form-js and JSON-Schema editors land on the list.
+      { path: 'forms/new',                name: 'FormsNew',         component: () => import('./pages/admin/forms/vueform/Index.vue') },
+      { path: 'forms/:id/edit',           name: 'FormsEdit',        component: () => import('./pages/admin/forms/vueform/Index.vue') },
+      { path: 'forms/vueform/new',        redirect: { name: 'FormsNew' } },
+      { path: 'forms/vueform/:id/edit',   redirect: (to: RouteLocationGeneric) => ({ name: 'FormsEdit', params: { id: to.params.id } }) },
+      { path: 'forms/jsonschema/new',     redirect: { name: 'FormsList' } },
+      { path: 'forms/jsonschema/:id/edit',redirect: { name: 'FormsList' } },
       { path: 'formbuilder', redirect: { name: 'FormsList' } },
 
       // Decisions (DMN)
@@ -172,6 +175,7 @@ const routes = [
 
       // Secrets
       { path: 'secrets', name: 'SecretsIndex', component: () => import('./pages/admin/secrets/Index.vue'), meta: { requiresPermission: 'manage_secrets' } },
+      { path: 'storage', name: 'StorageSettings', component: () => import('./pages/admin/storage/Index.vue'), meta: { requiresPermission: 'manage_secrets' } },
       { path: 'secrets/new', name: 'SecretsNew', component: () => import('./pages/admin/secrets/New.vue'), meta: { requiresPermission: 'manage_secrets' } },
       { path: 'secrets/:key/edit', name: 'SecretsEdit', component: () => import('./pages/admin/secrets/Edit.vue'), meta: { requiresPermission: 'manage_secrets' } },
 

@@ -11,7 +11,8 @@ export default defineConfig({
   },
   resolve: {
     dedupe: [
-      '@bpmn-io/form-js-viewer', 'preact', 'preact/hooks',
+      // preact: the bpmn-js properties panel bundles it.
+      'preact', 'preact/hooks',
       '@codemirror/state', '@codemirror/view',
     ],
     alias: {

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import '@bpmn-io/form-js-viewer/dist/assets/form-js.css';
-import '@/forms.scss';
 
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';

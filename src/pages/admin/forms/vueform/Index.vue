@@ -207,16 +207,13 @@ async function save() {
             type: 'vueform',
             schemaVersion: 1,
             version: form.value?.version ?? 1,
-            // The backend keeps `components` for form-js; vueform forms store an empty
-            // array exactly as JSON Schema forms do.
-            components: [],
             vueform: buildPayload(builder.doc.value),
         } as IForm;
 
         const saved = await $api.forms.save(payload) as IForm;
         form.value = saved;
         builder.dirty.value = false;
-        if (isNew.value) router.replace({ name: 'VueformEdit', params: { id: saved.id } });
+        if (isNew.value) router.replace({ name: 'FormsEdit', params: { id: saved.id } });
         toast.add({ severity: 'success', summary: 'Saved', detail: `"${saved.name}" saved.`, life: 3000 });
         metaVisible.value = false;
     } catch (err: any) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed, onUnmounted, onErrorCaptured, provide, markRaw, type Component } from 'vue';
+import { ref, watch, computed, onUnmounted, onErrorCaptured, markRaw, type Component } from 'vue';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
 
 onErrorCaptured((err) => {
@@ -16,6 +16,7 @@ import type { IAccess } from "@services/AuthService.ts";
 import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
 
 import FormRenderer from '@components/forms/FormRenderer.vue';
+import ProcessComments from '@components/comments/ProcessComments.vue';
 const toast    = useToast();
 const confirm  = useConfirm();
 
@@ -46,17 +47,8 @@ const userInfo        = ref<IAccess | null>(null);
 const completed       = ref<boolean>(false);
 
 
-// Provide full task formData (process variables) to child widgets such as
-// DocReviewWidget that need to read sibling keys (e.g. uploadedDocuments).
-provide('jsfFormData', formData);
-
-// Provide disabled state explicitly — @lljj/vue3-form-element does not reliably
-// propagate :disabled to custom ui:field components.
-const formDisabled = computed(() => !isTaskAssignedToUser());
-provide('formDisabled', formDisabled);
-
 // Custom views are the one form type FormRenderer does not own — they take a
-// task-like object and read the page-level provides above.
+// task-like object rather than a schema.
 const isCustom     = computed(() => formSchema.value?.type === 'custom');
 
 const customView    = ref<Component | null>(null);
@@ -296,83 +288,98 @@ onUnmounted(() => chainAbort.value?.abort());
         </p>
     </div>
 
-    <!-- ── Form panel ─────────────────────────────────────────────────────── -->
-    <div v-else>
+    <!-- ── Form panel + instance comments ─────────────────────────────────── -->
+    <!-- Side by side on wide screens; below xl they stack with the form first —
+         the form is the task, the thread is context that follows the case. -->
+    <div v-else class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)] xl:items-start">
+        <div class="min-w-0">
 
-        <!-- Wizard step indicator -->
-        <div
-            v-if="isWizard"
-            class="px-4 pt-3 text-xs font-medium uppercase tracking-wide text-surface-400"
-        >
-            Stage {{ step }}
-        </div>
+            <!-- Wizard step indicator -->
+            <div
+                v-if="isWizard"
+                class="px-4 pt-3 text-xs font-medium uppercase tracking-wide text-surface-400"
+            >
+                Stage {{ step }}
+            </div>
 
-        <!-- Test mode banner -->
-        <div
-            v-if="activeTask?.testMode"
-            class="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-sm"
-        >
-            <i class="pi pi-flask text-base shrink-0" />
-            <span><strong>Test run</strong> — this task is part of a test process instance. Submissions will be recorded but no real actions will occur.</span>
-        </div>
+            <!-- Test mode banner -->
+            <div
+                v-if="activeTask?.testMode"
+                class="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-sm"
+            >
+                <i class="pi pi-flask text-base shrink-0" />
+                <span><strong>Test run</strong> — this task is part of a test process instance. Submissions will be recorded but no real actions will occur.</span>
+            </div>
 
-        <!-- Custom Vue component renderer -->
-        <component
-            v-if="isCustom && customView"
-            :is="customView"
-            ref="customViewRef"
-            :task="task"
-            :variables="formData"
-            :read-only="!isTaskAssignedToUser()"
-        />
+            <!-- Custom Vue component renderer -->
+            <component
+                v-if="isCustom && customView"
+                :is="customView"
+                ref="customViewRef"
+                :task="task"
+                :variables="formData"
+                :read-only="!isTaskAssignedToUser()"
+            />
 
-        <div
-            v-else-if="isCustom && !customView && !loading"
-            class="flex flex-col items-center gap-2 py-12 text-surface-400"
-        >
-            <i class="pi pi-exclamation-triangle text-2xl" />
-            <span class="text-sm">Custom view not found for key "{{ formSchema?.key }}"</span>
-        </div>
+            <div
+                v-else-if="isCustom && !customView && !loading"
+                class="flex flex-col items-center gap-2 py-12 text-surface-400"
+            >
+                <i class="pi pi-exclamation-triangle text-2xl" />
+                <span class="text-sm">Custom view not found for key "{{ formSchema?.key }}"</span>
+            </div>
 
-        <!-- form-js / JSON Schema / Vueform. PrimeVue actions below drive submission. -->
-        <FormRenderer
-            v-else
-            ref="renderer"
-            class="p-4"
-            :schema="formSchema"
-            :data="formData"
-            :read-only="!canEditForm"
-            @finish="submitForm"
-        />
+            <!-- Builder form. PrimeVue actions below drive submission. -->
+            <FormRenderer
+                v-else
+                ref="renderer"
+                class="p-4"
+                :schema="formSchema"
+                :data="formData"
+                :read-only="!canEditForm"
+                @finish="submitForm"
+            />
 
-        <!-- Action bar — shared across all form types -->
-        <div class="flex flex-row items-center justify-between p-3">
-            <span v-if="saved" class="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
-                <i class="pi pi-check-circle" /> Progress saved
-            </span>
-            <span v-else />
-            <div class="flex gap-2">
-                <Button
-                    size="small"
-                    severity="secondary"
-                    icon="pi pi-save"
-                    label="Save"
-                    :loading="saving"
-                    :disabled="!isTaskAssignedToUser() || loading"
-                    @click="saveTask"
-                />
-                <!-- A paginated form submits from its own Finish button on the last page. -->
-                <Button
-                    v-if="!renderer?.hasSteps"
-                    size="small"
-                    icon="pi pi-send"
-                    label="Submit"
-                    :loading="loading"
-                    :disabled="!isTaskAssignedToUser() || saving"
-                    @click="submitForm"
-                />
+            <!-- Action bar — shared across all form types -->
+            <div class="flex flex-row items-center justify-between p-3">
+                <span v-if="saved" class="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                    <i class="pi pi-check-circle" /> Progress saved
+                </span>
+                <span v-else />
+                <div class="flex gap-2">
+                    <Button
+                        size="small"
+                        severity="secondary"
+                        icon="pi pi-save"
+                        label="Save"
+                        :loading="saving"
+                        :disabled="!isTaskAssignedToUser() || loading"
+                        @click="saveTask"
+                    />
+                    <!-- A paginated form submits from its own Finish button on the last page. -->
+                    <Button
+                        v-if="!renderer?.hasSteps"
+                        size="small"
+                        icon="pi pi-send"
+                        label="Submit"
+                        :loading="loading"
+                        :disabled="!isTaskAssignedToUser() || saving"
+                        @click="submitForm"
+                    />
+                </div>
             </div>
         </div>
+
+        <aside
+            class="min-w-0 p-4 border-t xl:border-t-0 xl:border-l border-surface-200 dark:border-zinc-800"
+        >
+            <ProcessComments
+                :process-instance-id="activeTask?.processInstanceId"
+                :task-id="activeTask?.id"
+                :task-name="activeTask?.name"
+                :read-only="!isTaskAssignedToUser()"
+            />
+        </aside>
     </div>
 </template>
 

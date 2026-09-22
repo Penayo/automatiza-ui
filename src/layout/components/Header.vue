@@ -99,16 +99,16 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside));
 			border-color: var(--layout-header-border);
 		"
 	>
-		<!-- Hamburger (mobile) -->
+		<!-- Sidebar toggle — hides/shows the main menu on every breakpoint -->
 		<button
-			class="md:hidden mr-2 opacity-70 hover:opacity-100"
+			class="mr-2 w-9 h-9 flex items-center justify-center rounded-md opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
 			style="color: var(--layout-header-text);"
 			@click="$emit('toggle-sidebar', !sidebarOpen)"
-			aria-label="Open sidebar"
+			:aria-label="sidebarOpen ? 'Hide menu' : 'Show menu'"
+			:aria-expanded="sidebarOpen"
+			:title="sidebarOpen ? 'Hide menu' : 'Show menu'"
 		>
-			<svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-			</svg>
+			<i class="pi pi-bars text-lg" />
 		</button>
 
 		<!-- Logo / company name -->

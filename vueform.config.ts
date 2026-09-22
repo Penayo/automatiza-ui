@@ -6,6 +6,9 @@ import { defineConfig } from '@vueform/vueform'
 // You might place these anywhere else in your project
 import '@vueform/vueform/dist/vueform.css';
 
+import DocumentListElement from './src/form-fields/vueform/DocumentListElement.vue'
+import DataTableElement from './src/form-fields/vueform/DataTableElement.vue'
+
 /**
  * Renders an array as a real <ul>, for use inside a `static` element's content:
  *
@@ -42,4 +45,11 @@ export default defineConfig({
   expression: {
     functions: { LIST },
   },
+  /**
+   * Custom elements. Registered here rather than per-form because Vueform resolves an
+   * element from its `type` through the global component table — a schema saying
+   * `type: 'documentList'` looks for a `DocumentListElement` component and renders
+   * nothing at all if one was never installed.
+   */
+  elements: [DocumentListElement, DataTableElement],
 })

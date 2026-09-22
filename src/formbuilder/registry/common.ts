@@ -18,6 +18,26 @@ export const PLACEHOLDER_PROP = {
 } as const;
 
 /**
+ * Which storage connection this field's files are written to — the `code` of one
+ * registered under Settings › Document Storage, or a FEEL expression resolving to
+ * one. Empty inherits: task, then process, then the tenant default.
+ *
+ * A free-text code rather than a dropdown: the registry is static schema, with no
+ * place to load the tenant's connections from. The server validates it anyway, and
+ * an unknown or archived code falls through to the next level rather than failing
+ * the upload.
+ */
+export const STORAGE_PROP = {
+    storage: {
+        type: 'text',
+        label: 'Storage connection',
+        description:
+            'Code of a connection from Settings › Document Storage, e.g. acme-sharepoint. '
+            + 'Leave empty to use the task\'s or the process\'s storage. FEEL supported.',
+    },
+} as const;
+
+/**
  * Vueform has no number/email/password element — those are a `text` element with the
  * matching `inputType`. Exposing it here is what lets a text field become any of them.
  */

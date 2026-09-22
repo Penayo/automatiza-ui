@@ -2,10 +2,10 @@
  * Form Variables in a Vueform schema.
  *
  * A Form Variable is a tenant-scoped named option list (countries, branches, …) so a
- * dropdown does not hard-code its choices. form-js expresses the reference as a FEEL
- * `valuesExpression`; Vueform has no equivalent, and its `items` prop treats a bare
- * string as a *remote URL* — so the reference is stored as a prefixed marker instead
- * and swapped for the resolved list before Vueform ever sees the schema.
+ * dropdown does not hard-code its choices. Vueform has no expression syntax for that,
+ * and its `items` prop treats a bare string as a *remote URL* — so the reference is
+ * stored as a prefixed marker instead and swapped for the resolved list before Vueform
+ * ever sees the schema.
  *
  * The engine injects the resolved lists into formData (see
  * FormVariableService.resolveForSchema), which is what `data` here holds.

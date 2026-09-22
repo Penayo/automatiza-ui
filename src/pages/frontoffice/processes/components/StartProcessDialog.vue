@@ -80,7 +80,23 @@ async function submitForm() {
     }
     const result = await renderer.value?.submit();
     // ok:false means the renderer refused and is showing its own messages.
-    if (result?.ok) startProcess(result.data);
+    if (!result?.ok) return;
+
+    let variables = result.data;
+    try {
+        // Files reach here as raw File objects and would serialise to `{}` — upload
+        // them first and start the process with the DocumentReferences. There is no
+        // instance yet, so they land in the date-partitioned default folder.
+        starting.value = true;
+        variables = await renderer.value!.resolveFiles(variables, $api.files);
+    } catch (err) {
+        toast.add({ ...parseApiError(err), life: 6000 });
+        return;
+    } finally {
+        starting.value = false;
+    }
+
+    startProcess(variables);
 }
 
 function startAnother() {

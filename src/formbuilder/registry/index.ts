@@ -10,6 +10,7 @@
 import {
     generalTab, selectionGeneralTab, validationTab, conditionsTab,
     PLACEHOLDER_PROP, COLUMNS_PROP, INPUT_TYPE_PROP, EXPRESSION_PROP, READONLY_PROP,
+    STORAGE_PROP,
     matrixGeneralTab, matrixLayoutTab,
 } from './common';
 import type { ElementDef, PaletteItem } from './types';
@@ -101,6 +102,7 @@ const DEFS: ElementDef[] = [
     {
         type: 'static',
         label: 'Paragraph',
+        display: true,
         icon: 'pi-align-justify',
         namePrefix: 'static',
         defaults: { content: 'Text', tag: 'p' },
@@ -339,6 +341,7 @@ const DEFS: ElementDef[] = [
                     placeholder: '.pdf,.png,image/*',
                 },
                 drop: { type: 'toggle', label: 'Drag & drop area' },
+                ...STORAGE_PROP,
             }),
             validationTab(),
             conditionsTab(),
@@ -359,7 +362,60 @@ const DEFS: ElementDef[] = [
                 },
                 drop: { type: 'toggle', label: 'Drag & drop area' },
                 sort: { type: 'toggle', label: 'Reorderable' },
+                ...STORAGE_PROP,
             }),
+            validationTab(),
+            conditionsTab(),
+        ],
+    },
+
+    {
+        type: 'documentList',
+        label: 'Document list',
+        icon: 'pi-list-check',
+        namePrefix: 'documents',
+        // Custom element — see form-fields/vueform/DocumentListElement.vue. The value is
+        // a { [doc.key]: File } map, so the files ride the same submit-time upload as
+        // `file` and `multifile` do; nothing here uploads.
+        defaults: { label: 'Documents', documents: [] },
+        tabs: [
+            {
+                key: 'general',
+                label: 'General',
+                schema: {
+                    label: { type: 'text', label: 'Label' },
+                    description: { type: 'text', label: 'Description', description: 'Shown under the field.' },
+                    documentsFrom: {
+                        type: 'text',
+                        label: 'Documents from variable',
+                        placeholder: 'e.g. requiredDocs',
+                        description:
+                            'Name of a variable holding [{ key, label }]. Works with a process '
+                            + 'variable or another field on this form. Overrides the static list below.',
+                    },
+                    documents: {
+                        type: 'list',
+                        label: 'Documents',
+                        addText: 'Add document',
+                        // Stored exactly as edited — the element takes [{key,label}] — so
+                        // this tab needs no toForm/fromForm projection.
+                        element: {
+                            type: 'object',
+                            schema: {
+                                key:   { type: 'text', placeholder: 'key', columns: 5 },
+                                label: { type: 'text', placeholder: 'Label', columns: 7 },
+                            },
+                        },
+                    },
+                    accept: {
+                        type: 'text',
+                        label: 'Accepted types',
+                        placeholder: '.pdf,.png,image/*',
+                    },
+                    ...STORAGE_PROP,
+                    ...COLUMNS_PROP,
+                },
+            },
             validationTab(),
             conditionsTab(),
         ],
@@ -370,6 +426,7 @@ const DEFS: ElementDef[] = [
         label: 'Button',
         icon: 'pi-stop',
         namePrefix: 'button',
+        display: true,
         // submits:false because every host page drives submission with its own
         // actions — an in-form submit button would bypass that pipeline.
         defaults: { buttonLabel: 'Button', buttonType: 'button', submits: false },
@@ -419,6 +476,69 @@ const DEFS: ElementDef[] = [
             presets: ['matrix-table'],
         },
         tabs: [matrixGeneralTab(), matrixLayoutTab(), validationTab(), conditionsTab()],
+    },
+
+    {
+        type: 'dataTable',
+        label: 'Data table',
+        icon: 'pi-table',
+        namePrefix: 'table',
+        display: true,
+        // Custom element — see form-fields/vueform/DataTableElement.vue. Read-only, and
+        // `submit: false` is what keeps it out of the submitted variables: Vueform's
+        // requestData drops any element whose submit is false. A matrix is the editable
+        // counterpart; this one only shows.
+        defaults: { label: 'Table', cols: [], striped: true, submit: false },
+        tabs: [
+            {
+                key: 'general',
+                label: 'General',
+                schema: {
+                    label: { type: 'text', label: 'Label' },
+                    description: { type: 'text', label: 'Description', description: 'Shown under the table.' },
+                    rowsFrom: {
+                        type: 'text',
+                        label: 'Rows from variable',
+                        placeholder: 'e.g. screeningMatches',
+                        description:
+                            'Name of a variable holding an array of row objects. Works with a '
+                            + 'process variable or another field on this form.',
+                    },
+                    // `cols`, not `columns` — Vueform's `columns` is the element's
+                    // layout width, which COLUMNS_PROP below edits.
+                    cols: {
+                        type: 'list',
+                        label: 'Columns',
+                        addText: 'Add column',
+                        description: 'Leave empty to derive the columns from the data.',
+                        // Stored exactly as edited — the element takes [{key,label,align}] —
+                        // so this tab needs no toForm/fromForm projection.
+                        element: {
+                            type: 'object',
+                            schema: {
+                                key:   { type: 'text', placeholder: 'key or a.b.c', columns: 5 },
+                                label: { type: 'text', placeholder: 'Label', columns: 4 },
+                                align: {
+                                    type: 'select',
+                                    placeholder: 'Align',
+                                    items: { left: 'Left', center: 'Center', right: 'Right' },
+                                    columns: 3,
+                                },
+                            },
+                        },
+                    },
+                    emptyText: {
+                        type: 'text',
+                        label: 'Empty message',
+                        placeholder: 'No data.',
+                    },
+                    striped: { type: 'toggle', label: 'Striped rows', columns: 6 },
+                    dense: { type: 'toggle', label: 'Dense', columns: 6 },
+                    ...COLUMNS_PROP,
+                },
+            },
+            conditionsTab(),
+        ],
     },
 
     // ── Containers ────────────────────────────────────────────────────────────────
@@ -646,9 +766,19 @@ const PALETTE_ITEMS: PaletteItem[] = [
         category: 'Advanced', description: 'Several files. Produces an array of document references.',
     },
     {
+        id: 'documentList', type: 'documentList', label: 'Document list', icon: 'pi-list-check',
+        category: 'Advanced',
+        description: 'Checklist of named documents, one upload each. The list can come from a variable.',
+    },
+    {
         id: 'matrix', type: 'matrix', label: 'Matrix table', icon: 'pi-table',
         category: 'Advanced',
         description: 'Spreadsheet-like grid of inputs. Rows can be fixed labels or user-addable.',
+    },
+    {
+        id: 'dataTable', type: 'dataTable', label: 'Data table', icon: 'pi-table',
+        category: 'Advanced',
+        description: 'Read-only table of an array variable. Holds no value and submits nothing.',
     },
     {
         id: 'signature', type: 'signature', label: 'Signature', icon: 'pi-pen-to-square',

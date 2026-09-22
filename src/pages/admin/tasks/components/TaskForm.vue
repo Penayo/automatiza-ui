@@ -9,6 +9,7 @@ import { parseApiError } from "@/utils/error";
 import type { IAccess } from "@services/AuthService.ts";
 
 import FormRenderer from '@components/forms/FormRenderer.vue';
+import ProcessComments from '@components/comments/ProcessComments.vue';
 const toast = useToast();
 const confirm = useConfirm();
 
@@ -58,7 +59,26 @@ function submitForm() {
     async function onConfirm() {
         const result = await renderer.value?.submit();
         // ok:false means the renderer refused and is showing its own messages.
-        if (result?.ok) completeTask(result.data);
+        if (!result?.ok) return;
+
+        let variables = result.data;
+        try {
+            // Files reach here as raw File objects and would serialise to `{}` —
+            // upload them first and complete the task with the DocumentReferences.
+            loading.value = true;
+            variables = await renderer.value!.resolveFiles(
+                variables, $api.files,
+                props.task?.processInstanceId,
+                props.task?.id,
+            );
+        } catch (error) {
+            toast.add({ ...parseApiError(error), life: 6000 });
+            return;
+        } finally {
+            loading.value = false;
+        }
+
+        completeTask(variables);
     }
 
     onApprove(confirm, `Está seguro de procesar el formulario?\nEsto enviará la tarea a la siguiente etapa!`, onConfirm)
@@ -77,31 +97,45 @@ onMounted(() => {
 </script>
 
 <template>
-    <div>
-        <!-- Test mode banner -->
-        <div
-            v-if="props.task?.testMode"
-            class="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-sm"
+    <!-- Form and the instance comment thread sit side by side on wide screens and
+         stack (form first) below xl — the form is the task, comments are context. -->
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)] xl:items-start">
+        <div class="min-w-0">
+            <!-- Test mode banner -->
+            <div
+                v-if="props.task?.testMode"
+                class="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-sm"
+            >
+                <i class="pi pi-flask text-base shrink-0" />
+                <span><strong>Test run</strong> — this task is part of a test process instance.</span>
+            </div>
+            <FormRenderer
+                ref="renderer"
+                :schema="formSchema"
+                :data="formSchema?.metadata ?? {}"
+                :read-only="!isTaskAssignedToUser()"
+                @finish="submitForm"
+            />
+            <div class="flex flex-row gap-2 justify-end p-3">
+                <Button size="small" severity="secondary" :disabled="!isTaskAssignedToUser()">Save</Button>
+                <!-- A paginated form submits from its own Finish button on the last page. -->
+                <Button
+                    v-if="!renderer?.hasSteps"
+                    size="small"
+                    :disabled="!isTaskAssignedToUser()"
+                    @click="submitForm"
+                >Procesar</Button>
+            </div>
+        </div>
+
+        <aside
+            class="min-w-0 p-4 border-t xl:border-t-0 xl:border-l border-surface-200 dark:border-zinc-800"
         >
-            <i class="pi pi-flask text-base shrink-0" />
-            <span><strong>Test run</strong> — this task is part of a test process instance.</span>
-        </div>
-        <FormRenderer
-            ref="renderer"
-            :schema="formSchema"
-            :data="formSchema?.metadata ?? {}"
-            :read-only="!isTaskAssignedToUser()"
-            @finish="submitForm"
-        />
-        <div class="flex flex-row gap-2 justify-end p-3">
-            <Button size="small" severity="secondary" :disabled="!isTaskAssignedToUser()">Save</Button>
-            <!-- A paginated form submits from its own Finish button on the last page. -->
-            <Button
-                v-if="!renderer?.hasSteps"
-                size="small"
-                :disabled="!isTaskAssignedToUser()"
-                @click="submitForm"
-            >Procesar</Button>
-        </div>
+            <ProcessComments
+                :process-instance-id="props.task?.processInstanceId"
+                :task-id="props.task?.id"
+                :task-name="props.task?.name"
+            />
+        </aside>
     </div>
 </template>

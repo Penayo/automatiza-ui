@@ -6,9 +6,12 @@ import { useTheme } from '@/composables/useTheme';
 import { applyBrandingPalette, type TenantBranding } from '@/composables/useTenantBranding';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
 import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
+import { FilesService } from '@services/FilesService';
+import { setPublicFormContext, clearPublicFormContext } from '@services/publicFormContext';
 
 import FormRenderer from '@components/forms/FormRenderer.vue';
 const BASE = import.meta.env.VITE_API_HOST ?? 'http://localhost:3000';
+const filesService = new FilesService();
 
 const { isDark } = useTheme();
 const fallbackCompanyName = import.meta.env.VITE_COMPANY_NAME ?? 'Process Linker';
@@ -42,8 +45,8 @@ const renderer   = ref<InstanceType<typeof FormRenderer> | null>(null);
 
 // ── Form-type discrimination ───────────────────────────────────────────────────
 // The backend resolves the start event's form the same way it resolves task forms:
-// a stored form-js schema, a stored JSON-Schema form (type: 'jsonschema'), or a
-// custom-view descriptor (type: 'custom', key) rendered by a registered Vue view.
+// either a stored builder form (type: 'vueform') or a custom-view descriptor
+// (type: 'custom', key) rendered by a registered Vue view.
 const isCustom     = computed(() => formSchema.value?.type === 'custom');
 
 // Custom Vue view
@@ -179,7 +182,7 @@ async function submit(variables: Record<string, any>) {
  *
  * Steps 2+ of a wizard are ordinary share-link task forms, so this hands off to
  * /task-form/:token rather than re-implementing the task renderer here — that
- * page already handles form-js, JSON-Schema and custom views, file uploads and
+ * page already handles builder forms and custom views, file uploads and
  * save-progress. `replace` (not `push`) so Back cannot return to a start form
  * that has already been submitted.
  *
@@ -224,7 +227,29 @@ async function submitForm() {
     }
     const result = await renderer.value?.submit();
     // ok:false means the renderer refused and is showing its own messages.
-    if (result?.ok) submit(result.data);
+    if (!result?.ok) return;
+
+    let variables = result.data;
+    try {
+        // Files reach here as raw File objects and would serialise to `{}` — upload
+        // them first and submit the DocumentReferences. There is no instance or task
+        // yet, so the tenant is identified by the start token, or by the definition id
+        // when the process is openly startable.
+        // `submitting` stays latched across both phases — submit() owns clearing it.
+        submitting.value = true;
+        variables = await renderer.value!.resolveFiles(
+            variables, filesService,
+            undefined, undefined,
+            { token: startToken, processDefinitionId: processId },
+        );
+    } catch (err: any) {
+        errorMsg.value   = err?.response?.data?.message ?? err?.message ?? 'Could not upload the attached file.';
+        state.value      = 'error';
+        submitting.value = false;
+        return;
+    }
+
+    submit(variables);
 }
 
 function goLogin() {
@@ -233,8 +258,17 @@ function goLogin() {
     router.push(`/login?redirect=${redirect}`);
 }
 
+// Same posture as the task form: with no session the link's own token is what
+// entitles this page to anything. A start form addresses no instance yet, so it
+// authorizes nothing today — it is set so the page does not have to change when
+// start-form uploads get their own ProcessDocument rows.
+setPublicFormContext({ token: startToken, processDefinitionId: processId });
+
 onMounted(load);
-onUnmounted(() => chainAbort.value?.abort());
+onUnmounted(() => {
+    chainAbort.value?.abort();
+    clearPublicFormContext();
+});
 </script>
 
 <template>
@@ -361,7 +395,7 @@ onUnmounted(() => chainAbort.value?.abort());
 
                     <div class="rounded-2xl border border-surface-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
 
-                        <!-- Rendered form (custom view / JSON-Schema / form-js) -->
+                        <!-- Rendered form (custom view / builder form) -->
                         <div v-if="formSchema" class="p-6">
 
                             <!-- Custom Vue component renderer -->
@@ -381,7 +415,7 @@ onUnmounted(() => chainAbort.value?.abort());
                                 <span class="text-sm">Custom view not found for key "{{ formSchema.key }}"</span>
                             </div>
 
-                            <!-- form-js / JSON Schema / Vueform -->
+                            <!-- Builder form -->
                             <FormRenderer v-else ref="renderer" :schema="formSchema" @finish="submitForm" />
 
                             <!-- A paginated form submits from its own Finish button on the last page. -->

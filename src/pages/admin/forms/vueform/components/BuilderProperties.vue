@@ -8,7 +8,11 @@
  *
  * The field name is deliberately NOT part of that schema: it is the schema key, so
  * editing it remounts the element and drops focus. It gets its own input, committed on
- * blur.
+ * blur — and only for elements that actually hold data. A display element
+ * (`def.display`: heading, paragraph, button, data table) still needs a key, because a
+ * Vueform schema is an object keyed by element name, but nothing the author does
+ * depends on what it is: those elements are skipped by `data`, `requestData` and
+ * validation, so the generated name stays hidden plumbing.
  */
 import { computed, ref, watch, nextTick } from 'vue';
 import { InputText, Message } from 'primevue';
@@ -40,6 +44,8 @@ const activeSchema = computed(() => {
 });
 
 // ── Name ──────────────────────────────────────────────────────────────────────
+/** Display elements carry a generated key the author never sees or types. */
+const namesData = computed(() => !def.value?.display);
 const nameDraft = ref('');
 const nameError = ref<string | null>(null);
 
@@ -111,20 +117,27 @@ watch(
                     {{ def?.label ?? node.type }}
                 </div>
 
-                <label class="mb-1 block text-[11px] font-medium opacity-70">Field name</label>
-                <InputText
-                    v-model="nameDraft"
-                    class="w-full"
-                    size="small"
-                    :invalid="!!nameError"
-                    @blur="commitName"
-                    @keyup.enter="commitName"
-                />
-                <Message v-if="nameError" severity="error" size="small" variant="simple" class="mt-1">
-                    {{ nameError }}
-                </Message>
-                <p v-else class="mt-1 text-[11px] opacity-50">
-                    Data path <code class="font-mono">{{ props.builder.pathOf(node.id) }}</code>
+                <template v-if="namesData">
+                    <label class="mb-1 block text-[11px] font-medium opacity-70">Field name</label>
+                    <InputText
+                        v-model="nameDraft"
+                        class="w-full"
+                        size="small"
+                        :invalid="!!nameError"
+                        @blur="commitName"
+                        @keyup.enter="commitName"
+                    />
+                    <Message v-if="nameError" severity="error" size="small" variant="simple" class="mt-1">
+                        {{ nameError }}
+                    </Message>
+                    <p v-else class="mt-1 text-[11px] opacity-50">
+                        Data path <code class="font-mono">{{ props.builder.pathOf(node.id) }}</code>
+                    </p>
+                </template>
+
+                <!-- Display element: shows information, submits nothing. -->
+                <p v-else class="text-[11px] opacity-50">
+                    Display only — holds no value and is not submitted.
                 </p>
             </div>
 
