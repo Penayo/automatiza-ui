@@ -198,8 +198,13 @@ async function save() {
     if (!metaName.value.trim() || !metaCode.value.trim()) { openMeta(); return; }
     saving.value = true;
     try {
+        // Explicit fields, not a spread of the loaded form: legacy form-js documents
+        // still carry `components`, and the DTO rejects any property it doesn't declare.
+        const { metadata, processDefinitionId, taskDefinitionId } = (form.value ?? {}) as any;
         const payload: IForm = {
-            ...(form.value ?? {}),
+            ...(metadata ? { metadata } : {}),
+            ...(processDefinitionId ? { processDefinitionId } : {}),
+            ...(taskDefinitionId ? { taskDefinitionId } : {}),
             id: form.value?.id ?? generateId(),
             code: metaCode.value.trim(),
             name: metaName.value.trim(),
