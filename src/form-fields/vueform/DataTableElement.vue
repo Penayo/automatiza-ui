@@ -62,7 +62,7 @@
  */
 import { computed } from 'vue';
 import { defineElement } from '@vueform/vueform';
-import { normalizeColumns, columnsFromRows } from '@/formbuilder/seededSources';
+import { normalizeColumns, columnsFromRows, getPath } from '@/formbuilder/seededSources';
 
 export default defineElement({
     name: 'DataTableElement',
@@ -122,10 +122,24 @@ export default defineElement({
     },
 
     setup(props, context) {
-        const { form$ } = context.element;
+        const { form$, parent, value } = context.element;
+
+        /**
+         * `rowsFrom` is a dotted path, tried first next to this table (so a table inside
+         * a list item reads that item's rows) and then from the form root. With no
+         * `rowsFrom`, data loaded under the table's own name is used.
+         */
+        const liveRows = () => {
+            const data = form$.value?.data;
+            if (!props.rowsFrom) return value.value;
+            const path = props.rowsFrom.trim();
+            const parentPath = parent.value?.dataPath;
+            const sibling = parentPath ? getPath(data, `${parentPath}.${path}`) : undefined;
+            return Array.isArray(sibling) ? sibling : getPath(data, path);
+        };
 
         const resolvedRows = computed(() => {
-            const live = props.rowsFrom ? form$.value?.data?.[props.rowsFrom] : undefined;
+            const live = liveRows();
             const source = Array.isArray(live) ? live : props.rows;
             // Only object rows can be indexed by column key; a bare array of scalars is
             // shown in a single `value` column instead of rendering empty cells.

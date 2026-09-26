@@ -81,6 +81,14 @@ export function columnsFromRows(rows: unknown): ColumnSpec[] {
     return [...keys].map((key) => ({ key, label: key }));
 }
 
+/** Dotted-path lookup (`a.b.0.c`); undefined when any step is missing. */
+export function getPath(source: unknown, path: string): unknown {
+    return path.split('.').reduce<any>(
+        (node, part) => (node === null || node === undefined ? undefined : node[part]),
+        source,
+    );
+}
+
 export function resolveSeededSources(
     schema: VueformSchema,
     data: Record<string, any> = {},
@@ -100,7 +108,7 @@ export function resolveSeededSources(
         }
 
         if (out.type === DATA_TABLE_TYPE && typeof out.rowsFrom === 'string') {
-            const seeded = data[out.rowsFrom.trim()];
+            const seeded = getPath(data, out.rowsFrom.trim());
             // Rows are handed over as-is: the element normalises scalars and derives
             // columns, and doing it here would bake that guess into the render path.
             if (Array.isArray(seeded)) out.rows = seeded;
