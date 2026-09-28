@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import { Badge, useToast } from 'primevue';
+import { Badge, Splitter, SplitterPanel, useToast } from 'primevue';
 import { $api } from '@services/api';
 import type { Task } from '@services/TasksService';
 import type { ProcessInstance } from '@services/ProcessesService';
@@ -48,10 +48,16 @@ defineExpose({ loadTasks });
 </script>
 
 <template>
-    <div class="flex h-full">
+    <!-- Panel widths are drag-resizable and remembered per browser via stateKey. -->
+    <Splitter
+        class="h-full app-splitter border-0 rounded-none"
+        :gutter-size="5"
+        state-key="instance-diagram-tab"
+        state-storage="local"
+    >
 
         <!-- ── Canvas ────────────────────────────────────────────────────── -->
-        <div class="flex-1 min-w-0 relative">
+        <SplitterPanel :size="65" :min-size="30" class="min-w-0 relative">
             <BpmnInstanceViewer
                 v-if="instance?.processDefinition?.bpmnXml && loaded"
                 :bpmn-xml="instance.processDefinition.bpmnXml"
@@ -65,10 +71,10 @@ defineExpose({ loadTasks });
                 <i class="pi pi-spin pi-spinner" v-if="!loaded && instance" />
                 <span>{{ instance ? 'Loading diagram…' : 'No instance loaded.' }}</span>
             </div>
-        </div>
+        </SplitterPanel>
 
         <!-- ── Variable inspector ────────────────────────────────────────── -->
-        <div class="w-140 shrink-0 border-l border-surface-200 dark:border-surface-700 flex flex-col overflow-hidden">
+        <SplitterPanel :size="35" :min-size="20" class="min-w-0 flex flex-col overflow-hidden">
 
             <!-- Empty state -->
             <div
@@ -107,6 +113,6 @@ defineExpose({ loadTasks });
                 </div>
             </template>
 
-        </div>
-    </div>
+        </SplitterPanel>
+    </Splitter>
 </template>

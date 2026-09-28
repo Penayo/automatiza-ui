@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { Button } from 'primevue';
 import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
 import 'bpmn-js/dist/assets/bpmn-js.css';
+// Shared light/dark canvas theme (element fills, strokes, labels).
+import '@pages/admin/modeler/styles.css';
 import type { Task } from '@services/TasksService';
 
 const props = defineProps<{
@@ -112,11 +115,31 @@ watch(() => props.bpmnXml, async (xml) => {
     applyOverlays();
 });
 
+// ── Zoom ──────────────────────────────────────────────────────────────────────
+// Mouse wheel zooms only with Ctrl/⌘ held (bpmn-js default), so expose buttons too.
+
+function zoomBy(factor: number) {
+    const canvas = viewer.value?.get('canvas');
+    if (canvas) canvas.zoom(canvas.zoom() * factor);
+}
+
+function zoomFit() {
+    viewer.value?.get('canvas').zoom('fit-viewport', 'auto');
+}
+
 onUnmounted(() => viewer.value?.destroy());
 </script>
 
 <template>
-    <div ref="containerRef" style="width:100%;height:100%;" />
+    <div class="relative w-full h-full">
+        <div ref="containerRef" class="w-full h-full" />
+
+        <div class="absolute top-3 right-3 flex flex-col gap-1">
+            <Button icon="pi pi-plus"   size="small" severity="secondary" v-tooltip.left="'Zoom in (Ctrl/⌘ + wheel)'" @click="zoomBy(1.2)" />
+            <Button icon="pi pi-minus"  size="small" severity="secondary" v-tooltip.left="'Zoom out'" @click="zoomBy(1 / 1.2)" />
+            <Button icon="pi pi-expand" size="small" severity="secondary" v-tooltip.left="'Fit to screen'" @click="zoomFit" />
+        </div>
+    </div>
 </template>
 
 <style>
