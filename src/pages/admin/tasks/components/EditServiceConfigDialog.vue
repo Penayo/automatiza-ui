@@ -269,7 +269,7 @@ watch(() => props.task, (task) => {
     jsonError.value   = '';
     testResult.value  = null;
     showRespHeaders.value = false;
-    const c = (task?.serviceConfig ?? {}) as Record<string, any>;
+    const c = (task?.service?.config ?? task?.serviceConfig ?? {}) as Record<string, any>;
     if (serviceFormType.value === 'rest')   loadRest(c);
     if (serviceFormType.value === 'email')  loadEmail(c);
     if (serviceFormType.value === 'report') loadReport(c);

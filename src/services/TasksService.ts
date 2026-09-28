@@ -54,6 +54,7 @@ export interface Task extends APIData {
     service?: {
         type?: string;
         topic?: string;
+        config?: Record<string, any>;
     };
 }
 
