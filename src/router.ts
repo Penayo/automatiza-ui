@@ -117,6 +117,11 @@ const routes = [
       // Form Variables
       { path: 'form-variables',   name: 'FormVariablesIndex', component: () => import('./pages/admin/form-variables/Index.vue') },
 
+      // Workers (Script Task "Job worker" implementations)
+      { path: 'workers',          name: 'WorkersIndex',     component: () => import('./pages/admin/workers/Index.vue') },
+      { path: 'workers/new',      name: 'WorkerNew',        component: () => import('./pages/admin/workers/Edit.vue') },
+      { path: 'workers/:id',      name: 'WorkerEdit',       component: () => import('./pages/admin/workers/Edit.vue') },
+
       // Datasources
       { path: 'datasources',      name: 'DatasourcesIndex', component: () => import('./pages/admin/datasources/Index.vue') },
 

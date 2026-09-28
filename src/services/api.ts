@@ -25,6 +25,7 @@ import { AuditService } from "@services/AuditService.ts";
 import { MessagesService } from "@services/MessagesService";
 import { DecisionsService } from "@services/DecisionsService";
 import { FormVariablesService } from "@services/FormVariablesService";
+import { WorkersService } from "@services/WorkersService";
 import { DatasourcesService } from "@services/DatasourcesService";
 import { ReportsService } from "@services/ReportsService";
 import { EmailTemplatesService } from "@services/EmailTemplatesService";
@@ -85,6 +86,7 @@ export const $api = {
 	messages: new MessagesService(),
 	decisions: new DecisionsService(),
 	formVariables: new FormVariablesService(),
+	workers: new WorkersService(),
 	datasources: new DatasourcesService(),
 	reports: new ReportsService(),
 	emailTemplates: new EmailTemplatesService(),

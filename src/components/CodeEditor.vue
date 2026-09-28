@@ -4,9 +4,10 @@ import { EditorView, basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
 import { xml } from '@codemirror/lang-xml';
 import { json } from '@codemirror/lang-json';
+import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
 
-type Lang = 'xml' | 'json';
+type Lang = 'xml' | 'json' | 'js';
 
 const props = withDefaults(defineProps<{
     modelValue: string;
@@ -26,7 +27,9 @@ const view = shallowRef<EditorView | null>(null);
 let ignoreNext = false;
 
 function langExtension(l: Lang) {
-    return l === 'json' ? json() : xml();
+    if (l === 'json') return json();
+    if (l === 'js') return javascript();
+    return xml();
 }
 
 function buildState(content: string) {
