@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useToast, Button, InputText, Textarea } from 'primevue';
+import { useToast, Button, InputText, InputNumber, Textarea } from 'primevue';
 import CodeEditor from '@components/CodeEditor.vue';
 import { $api } from '@services/api';
 import type { SaveWorkerDto, WorkerTestResult } from '@services/WorkersService';
@@ -13,8 +13,8 @@ const toast  = useToast();
 const { isDark } = useTheme();
 
 const DEFAULT_CODE = `// \`variables\` holds the process variables. Return an object: its keys are
-// merged into the process variables. Synchronous only, 1 s timeout,
-// no require / fetch / console.
+// merged into the process variables. Synchronous only, stopped at the
+// timeout set above; no require / fetch / console.
 const total = (variables.items ?? []).reduce((sum, i) => sum + i.qty * i.price, 0);
 
 return {
@@ -27,7 +27,7 @@ const id      = computed(() => route.params.id as string | undefined);
 const loading = ref(false);
 const saving  = ref(false);
 const version = ref<number | null>(null);
-const form    = ref<SaveWorkerDto>({ type: '', name: '', description: '', code: DEFAULT_CODE });
+const form    = ref<SaveWorkerDto>({ type: '', name: '', description: '', code: DEFAULT_CODE, timeoutMs: 1000 });
 
 const canSave = computed(() => !!form.value.type.trim() && !!form.value.name.trim() && !!form.value.code.trim());
 
@@ -36,7 +36,7 @@ onMounted(async () => {
     loading.value = true;
     try {
         const w = await $api.workers.findById(id.value);
-        form.value = { type: w.type, name: w.name, description: w.description ?? '', code: w.code };
+        form.value = { type: w.type, name: w.name, description: w.description ?? '', code: w.code, timeoutMs: w.timeoutMs ?? 1000 };
         version.value = w.version;
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load the worker.', life: 4000 });
@@ -87,7 +87,7 @@ async function runTest() {
     testing.value = true;
     try {
         // Runs the editor's current (possibly unsaved) code.
-        testResult.value = await $api.workers.test(form.value.code, variables);
+        testResult.value = await $api.workers.test(form.value.code, variables, form.value.timeoutMs);
     } catch (err: any) {
         testResult.value = { error: err?.response?.data?.message ?? 'Test request failed.', durationMs: 0 };
     } finally {
@@ -112,7 +112,7 @@ async function runTest() {
         </div>
 
         <!-- Metadata -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="flex flex-col gap-1">
                 <label class="text-sm font-medium">Type <span class="text-red-500">*</span></label>
                 <InputText v-model="form.type" placeholder="e.g. approval-level" class="font-mono" />
@@ -124,6 +124,11 @@ async function runTest() {
                 <InputText v-model="form.name" placeholder="e.g. Approval level" />
             </div>
             <div class="flex flex-col gap-1">
+                <label class="text-sm font-medium">Timeout</label>
+                <InputNumber v-model="form.timeoutMs" :min="100" :max="10000" :step="100" suffix=" ms" showButtons :useGrouping="false" />
+                <p class="text-xs text-surface-400">100 – 10 000 ms. Stops runaway code; typical logic finishes in a few ms.</p>
+            </div>
+            <div class="flex flex-col gap-1">
                 <label class="text-sm font-medium">Description</label>
                 <Textarea v-model="form.description" rows="1" auto-resize placeholder="Optional description" />
             </div>
@@ -131,14 +136,14 @@ async function runTest() {
 
         <!-- Code + test -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
-            <div class="lg:col-span-2 flex flex-col gap-1 min-h-0">
+            <div class="lg:col-span-2 flex flex-col gap-1 min-h-0 min-w-0">
                 <label class="text-sm font-medium">Code <span class="text-red-500">*</span></label>
-                <div class="editor-box">
+                <div class="editor-box editor-box--fill">
                     <CodeEditor v-if="!loading" v-model="form.code" lang="js" :dark="isDark" />
                 </div>
             </div>
 
-            <div class="flex flex-col gap-2 min-h-0">
+            <div class="flex flex-col gap-2 min-h-0 min-w-0">
                 <div class="flex items-center justify-between">
                     <label class="text-sm font-medium">Test variables (JSON)</label>
                     <Button label="Run" icon="pi pi-play" size="small" severity="secondary" :loading="testing" :disabled="!form.code.trim()" @click="runTest" />
@@ -165,13 +170,16 @@ async function runTest() {
 
 <style scoped>
 .editor-box {
-    height: 460px;
     border: 1px solid var(--p-content-border-color);
     border-radius: 6px;
     overflow: hidden;
 }
+.editor-box--fill {
+    flex: 1;
+    min-height: 300px;
+}
 .editor-box--small {
-    height: 180px;
+    height: 300px;
 }
 .test-output {
     font-family: ui-monospace, monospace;

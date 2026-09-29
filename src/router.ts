@@ -124,6 +124,8 @@ const routes = [
 
       // Datasources
       { path: 'datasources',      name: 'DatasourcesIndex', component: () => import('./pages/admin/datasources/Index.vue') },
+      { path: 'datasources/new',  name: 'DatasourceNew',    component: () => import('./pages/admin/datasources/Edit.vue') },
+      { path: 'datasources/:id',  name: 'DatasourceEdit',   component: () => import('./pages/admin/datasources/Edit.vue') },
 
       // Reports
       { path: 'reports',          name: 'ReportsList', component: () => import('./pages/admin/reports/Index.vue') },

@@ -1,6 +1,6 @@
 /**
  * Everything a diagram points at outside itself — forms, email templates, reports,
- * DMN decisions, datasources and called processes — read straight out of the BPMN XML.
+ * DMN decisions, datasources, job workers and called processes — read straight out of the BPMN XML.
  *
  * Parsing happens in the browser: EditProcess already holds `bpmnXml`, so the Info tab
  * needs no extra round trip. The XML is walked once by local element name, which keeps
@@ -14,6 +14,7 @@ export type ResourceKind =
     | 'report'
     | 'decision'
     | 'datasource'
+    | 'worker'
     | 'process';
 
 /** A diagram element that carries a reference — what the user clicks back to in the modeler. */
@@ -142,11 +143,16 @@ export function extractBpmnResources(bpmnXml: string | null | undefined): BpmnRe
                 add('process', el.getAttribute('processId'), ownerOf(el));
                 break;
 
-            // Connector service tasks name their resource in an io-mapping input.
+            // Connector service tasks name their resource in an io-mapping input; a script
+            // task set to "Job worker" names a platform worker by its type.
             case 'taskDefinition': {
                 const owner = ownerOf(el);
                 if (!owner) break;
                 const type   = el.getAttribute('type') ?? '';
+                if (owner.localName === 'scriptTask') {
+                    add('worker', type, owner);
+                    break;
+                }
                 const inputs = inputsOf(owner);
 
                 if (EMAIL_TASK_TYPES.has(type))        add('emailTemplate', inputs.template  ?? null, owner);

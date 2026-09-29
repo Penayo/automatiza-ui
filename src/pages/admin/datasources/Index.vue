@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useToast, useConfirm, Button, InputText, IconField, InputIcon } from 'primevue';
 import { $api } from '@services/api';
 import type { Datasource } from '@services/DatasourcesService';
 import { onApprove } from '@/utils/common';
 import { useTableQuery } from '@/composables/useTableQuery';
 import DatasourceTable from './components/DatasourceTable.vue';
-import DatasourceEditorDialog from './components/DatasourceEditorDialog.vue';
 
+const router  = useRouter();
 const toast   = useToast();
 const confirm = useConfirm();
 
@@ -18,14 +18,12 @@ const {
     load: (params) => $api.datasources.getPage(params),
 });
 
-const editorRef = ref<InstanceType<typeof DatasourceEditorDialog> | null>(null);
-
 function openNew() {
-    editorRef.value?.openNew();
+    router.push({ name: 'DatasourceNew' });
 }
 
 function openEdit(ds: Datasource) {
-    editorRef.value?.openEdit(ds);
+    router.push({ name: 'DatasourceEdit', params: { id: ds.id } });
 }
 
 function remove(ds: Datasource) {
@@ -67,7 +65,5 @@ function remove(ds: Datasource) {
             :first-row="firstRow" :rows-per-page="rowsPerPage"
             @page="onPage" @sort="onSort" @edit="openEdit" @delete="remove"
         />
-
-        <DatasourceEditorDialog ref="editorRef" @saved="reload" />
     </div>
 </template>

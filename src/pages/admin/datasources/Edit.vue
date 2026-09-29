@@ -1,29 +1,29 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
-import { useToast, Button, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue';
+import { useRoute, useRouter } from 'vue-router';
+import { useToast, Button, Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue';
 import { useTheme } from '@/composables/useTheme';
 import { $api } from '@services/api';
 import type { Datasource, SaveDatasourceDto, DatasourceOperation } from '@services/DatasourcesService';
 import type { IRole } from '@services/RoleService';
-import { findPreset } from '../presets';
-import PresetPicker from './PresetPicker.vue';
-import GeneralTab from './GeneralTab.vue';
-import QueryShapeTab from './QueryShapeTab.vue';
-import OperationsTab from './OperationsTab.vue';
-import FieldConfigTab from './FieldConfigTab.vue';
-import AccessControlTab from './AccessControlTab.vue';
-import TestTab from './TestTab.vue';
+import { findPreset } from './presets';
+import PresetPicker from './components/PresetPicker.vue';
+import GeneralTab from './components/GeneralTab.vue';
+import QueryShapeTab from './components/QueryShapeTab.vue';
+import OperationsTab from './components/OperationsTab.vue';
+import FieldConfigTab from './components/FieldConfigTab.vue';
+import AccessControlTab from './components/AccessControlTab.vue';
+import TestTab from './components/TestTab.vue';
 
-const toast = useToast();
+const route  = useRoute();
+const router = useRouter();
+const toast  = useToast();
 const { isDark } = useTheme();
 
-const emit = defineEmits<{
-    (e: 'saved'): void;
-}>();
-
-const dialogVisible = ref(false);
-const saving        = ref(false);
-const editingId     = ref<string | null>(null);
+const loading   = ref(false);
+const saving    = ref(false);
+/** Set once the datasource exists — from the route, or after the first create. */
+const editingId = ref<string | null>((route.params.id as string | undefined) ?? null);
 
 function emptyForm(): SaveDatasourceDto {
     return {
@@ -51,8 +51,22 @@ const roleOptions = ref<IRole[]>([]);
 const groupOptions = ref<string[]>([]);
 
 onMounted(async () => {
+    loadGroupOptions();
     const result = await $api.roles.fetchRoles({ keys: [] });
     roleOptions.value = Array.isArray(result) ? result : (result.rows ?? []);
+});
+
+onMounted(async () => {
+    if (!editingId.value) return;
+    loading.value = true;
+    try {
+        loadDatasource(await $api.datasources.findById(editingId.value));
+    } catch {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load the datasource.', life: 4000 });
+        router.push({ name: 'DatasourcesIndex' });
+    } finally {
+        loading.value = false;
+    }
 });
 
 async function loadGroupOptions() {
@@ -199,25 +213,7 @@ function applyPreset(id: string | null) {
     });
 }
 
-const testTabRef = ref<InstanceType<typeof TestTab> | null>(null);
-
-function openNew() {
-    editingId.value = null;
-    selectedPreset.value = null;
-    form.value = emptyForm();
-    resourceSegment.value = null;
-    operationsJson.value = '[]';
-    paginationWireJson.value = '{}';
-    defaultHeadersJson.value = '{}';
-    jsonError.value = wireError.value = headersError.value = '';
-    testTabRef.value?.reset();
-    loadGroupOptions();
-    dialogVisible.value = true;
-}
-
-function openEdit(ds: Datasource) {
-    editingId.value = ds.id;
-    selectedPreset.value = null;
+function loadDatasource(ds: Datasource) {
     form.value = {
         key: ds.key, name: ds.name, description: ds.description ?? '', group: ds.group ?? '',
         baseUrl: ds.baseUrl,
@@ -247,12 +243,8 @@ function openEdit(ds: Datasource) {
     }, null, 2);
     defaultHeadersJson.value = JSON.stringify(ds.defaultHeaders ?? {}, null, 2);
     jsonError.value = wireError.value = headersError.value = '';
-    testTabRef.value?.reset();
-    loadGroupOptions();
-    dialogVisible.value = true;
 }
 
-defineExpose({ openNew, openEdit });
 
 function parseOperations(): DatasourceOperation[] | null {
     const parsed = parseJson<DatasourceOperation[]>(operationsJson.value, jsonError, []);
@@ -308,11 +300,12 @@ async function save() {
             await $api.datasources.update(editingId.value, dto);
             toast.add({ severity: 'success', summary: 'Updated', detail: `"${dto.name}" updated.`, life: 3000 });
         } else {
-            await $api.datasources.create(dto);
+            const created = await $api.datasources.create(dto);
+            editingId.value = created.id;
             toast.add({ severity: 'success', summary: 'Created', detail: `"${dto.name}" created.`, life: 3000 });
+            // Stay on the page — the Test tab needs the saved datasource.
+            router.replace({ name: 'DatasourceEdit', params: { id: created.id } });
         }
-        dialogVisible.value = false;
-        emit('saved');
     } catch (err: any) {
         // The backend's cross-field rules (§7.1 filter contributions, §9.2
         // idempotency gate, healthCheck resolution) report here.
@@ -327,11 +320,28 @@ async function save() {
 </script>
 
 <template>
-    <Dialog v-model:visible="dialogVisible" modal
-            :header="editingId ? 'Edit Datasource' : 'New Datasource'"
-            :style="{ width: '58rem' }">
+    <div class="p-6 flex flex-col gap-4">
 
-        <div class="flex flex-col gap-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <Button icon="pi pi-arrow-left" text rounded size="small" v-tooltip.top="'Back to datasources'"
+                        @click="router.push({ name: 'DatasourcesIndex' })" />
+                <div>
+                    <h1 class="text-2xl font-semibold" style="color: var(--layout-title-color)">
+                        {{ editingId ? form.name || 'Datasource' : 'New Datasource' }}
+                    </h1>
+                    <code v-if="editingId && form.key" class="text-xs text-surface-400">{{ form.key }}</code>
+                </div>
+            </div>
+            <Button label="Save" icon="pi pi-check" size="small" :loading="saving" :disabled="loading" @click="save" />
+        </div>
+
+        <div v-if="loading" class="py-10 text-center text-surface-400">
+            <i class="pi pi-spin pi-spinner" />
+        </div>
+
+        <div v-else class="flex flex-col gap-4">
 
             <PresetPicker v-model="selectedPreset" @apply="applyPreset" />
 
@@ -386,7 +396,6 @@ async function save() {
 
                     <TabPanel value="test">
                         <TestTab
-                            ref="testTabRef"
                             :editing-id="editingId"
                             :datasource-key="form.key"
                             :parsed-operation-keys="parsedOperationKeys"
@@ -396,10 +405,5 @@ async function save() {
                 </TabPanels>
             </Tabs>
         </div>
-
-        <template #footer>
-            <Button label="Cancel" text size="small" @click="dialogVisible = false" />
-            <Button label="Save" icon="pi pi-check" size="small" :loading="saving" @click="save" />
-        </template>
-    </Dialog>
+    </div>
 </template>

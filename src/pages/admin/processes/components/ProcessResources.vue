@@ -8,6 +8,7 @@ import type { EmailTemplateDefinition } from '@services/EmailTemplatesService';
 import type { ReportDefinition } from '@services/ReportsService';
 import type { DecisionDefinition } from '@services/DecisionsService';
 import type { Datasource } from '@services/DatasourcesService';
+import type { Worker } from '@services/WorkersService';
 import type { ProcessDefinition } from '@services/ProcessesService';
 
 const props = defineProps<{ bpmnXml?: string | null }>();
@@ -21,6 +22,7 @@ interface Catalogs {
     report?:        ReportDefinition[];
     decision?:      DecisionDefinition[];
     datasource?:    Datasource[];
+    worker?:        Worker[];
     process?:       ProcessDefinition[];
 }
 
@@ -30,6 +32,7 @@ const SECTIONS: { kind: ResourceKind; label: string; icon: string }[] = [
     { kind: 'report',        label: 'Reports',         icon: 'pi pi-file-pdf'  },
     { kind: 'decision',      label: 'Decisions',       icon: 'pi pi-table'     },
     { kind: 'datasource',    label: 'Datasources',     icon: 'pi pi-database'  },
+    { kind: 'worker',        label: 'Workers',         icon: 'pi pi-code'      },
     { kind: 'process',       label: 'Called Processes', icon: 'pi pi-sitemap'  },
 ];
 
@@ -61,6 +64,7 @@ async function loadCatalogs() {
         report:        () => $api.reports.getAll(),
         decision:      () => $api.decisions.getAll(),
         datasource:    () => $api.datasources.getAll(),
+        worker:        () => $api.workers.getAll(),
         process:       () => $api.processes.getAllProcessDefinitions(),
     };
 
@@ -133,10 +137,15 @@ function resolve(ref: BpmnResourceRef): ResolvedResource {
                 : { ref, resolved: false };
         }
         case 'datasource': {
-            // Datasources have no per-item route yet, so the button opens the list.
             const d = (catalog as Datasource[]).find(d => d.key === ref.ref);
             return d
-                ? { ref, name: d.name, href: hrefFor({ name: 'DatasourcesIndex' }), resolved: true }
+                ? { ref, name: d.name, href: hrefFor({ name: 'DatasourceEdit', params: { id: d.id } }), resolved: true }
+                : { ref, resolved: false };
+        }
+        case 'worker': {
+            const w = (catalog as Worker[]).find(w => w.type === ref.ref);
+            return w
+                ? { ref, name: w.name, href: hrefFor({ name: 'WorkerEdit', params: { id: w.id } }), resolved: true }
                 : { ref, resolved: false };
         }
         case 'process': {
@@ -172,7 +181,7 @@ function usedByLabel(ref: BpmnResourceRef): string {
         </div>
 
         <p v-if="!total" class="text-sm text-surface-400">
-            This diagram references no forms, templates, reports or other processes.
+            This diagram references no forms, templates, reports, workers or other processes.
         </p>
 
         <div v-else class="space-y-5">
