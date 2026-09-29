@@ -27,7 +27,9 @@ const id      = computed(() => route.params.id as string | undefined);
 const loading = ref(false);
 const saving  = ref(false);
 const version = ref<number | null>(null);
-const form    = ref<SaveWorkerDto>({ type: '', name: '', description: '', code: DEFAULT_CODE, timeoutMs: 1000 });
+const DEFAULT_TEST_VARIABLES = '{\n    "items": [{ "qty": 2, "price": 600 }]\n}';
+
+const form    = ref<SaveWorkerDto & { testVariables: string }>({ type: '', name: '', description: '', code: DEFAULT_CODE, timeoutMs: 1000, testVariables: DEFAULT_TEST_VARIABLES });
 
 const canSave = computed(() => !!form.value.type.trim() && !!form.value.name.trim() && !!form.value.code.trim());
 
@@ -36,7 +38,7 @@ onMounted(async () => {
     loading.value = true;
     try {
         const w = await $api.workers.findById(id.value);
-        form.value = { type: w.type, name: w.name, description: w.description ?? '', code: w.code, timeoutMs: w.timeoutMs ?? 1000 };
+        form.value = { type: w.type, name: w.name, description: w.description ?? '', code: w.code, timeoutMs: w.timeoutMs ?? 1000, testVariables: w.testVariables ?? '{}' };
         version.value = w.version;
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load the worker.', life: 4000 });
@@ -69,7 +71,6 @@ async function save() {
 }
 
 // ── Test ──────────────────────────────────────────────────────────────────────
-const testVariables = ref('{\n    "items": [{ "qty": 2, "price": 600 }]\n}');
 const testing       = ref(false);
 const testResult    = ref<WorkerTestResult | null>(null);
 const testInputError = ref('');
@@ -78,7 +79,7 @@ async function runTest() {
     testInputError.value = '';
     let variables: Record<string, any>;
     try {
-        variables = JSON.parse(testVariables.value || '{}');
+        variables = JSON.parse(form.value.testVariables || '{}');
     } catch (e: any) {
         testInputError.value = `Invalid JSON: ${e.message}`;
         return;
@@ -149,7 +150,7 @@ async function runTest() {
                     <Button label="Run" icon="pi pi-play" size="small" severity="secondary" :loading="testing" :disabled="!form.code.trim()" @click="runTest" />
                 </div>
                 <div class="editor-box editor-box--small">
-                    <CodeEditor v-model="testVariables" lang="json" :dark="isDark" />
+                    <CodeEditor v-if="!loading" v-model="form.testVariables" lang="json" :dark="isDark" />
                 </div>
                 <p v-if="testInputError" class="text-xs text-red-500">{{ testInputError }}</p>
 

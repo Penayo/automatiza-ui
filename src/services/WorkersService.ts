@@ -10,6 +10,7 @@ export interface Worker {
     code:         string;
     version:      number;
     timeoutMs:    number;
+    testVariables?: string;
     updatedBy?:   string;
     createdAt?:   string;
     updatedAt?:   string;
@@ -22,6 +23,8 @@ export interface SaveWorkerDto {
     code:         string;
     /** 100 – 10 000 ms; the backend defaults to 1 000. */
     timeoutMs?:   number;
+    /** Test panel sample input, raw JSON text. */
+    testVariables?: string;
 }
 
 export interface WorkerTestResult {

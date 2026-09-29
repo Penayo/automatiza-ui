@@ -99,8 +99,9 @@ onMounted(() => {
 <template>
     <!-- Form and the instance comment thread sit side by side on wide screens and
          stack (form first) below xl — the form is the task, comments are context. -->
-    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)] xl:items-start">
-        <div class="min-w-0">
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)] xl:h-full">
+        <!-- xl: form and comments scroll independently inside the bounded tab panel. -->
+        <div class="min-w-0 xl:h-full xl:overflow-y-auto">
             <!-- Test mode banner -->
             <div
                 v-if="props.task?.testMode"
@@ -129,7 +130,7 @@ onMounted(() => {
         </div>
 
         <aside
-            class="min-w-0 p-4 border-t xl:border-t-0 xl:border-l border-surface-200 dark:border-zinc-800"
+            class="min-w-0 p-4 xl:h-full xl:overflow-y-auto border-t xl:border-t-0 xl:border-l border-surface-200 dark:border-zinc-800"
         >
             <ProcessComments
                 :process-instance-id="props.task?.processInstanceId"

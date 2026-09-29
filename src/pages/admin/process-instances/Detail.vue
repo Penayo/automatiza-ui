@@ -7,6 +7,7 @@ import { $api } from '@services/api';
 import type { ProcessInstance } from '@services/ProcessesService';
 import DataItem from '@components/data/DataItem.vue';
 import VariableList from '@components/data/VariableList.vue';
+import CopyVariables from '@components/data/CopyVariables.vue';
 import TaskList from '@pages/admin/process-instances/components/TaskList.vue';
 import PauseProcessInstance from '@pages/admin/process-instances/components/PauseProcessInstance.vue';
 import ResumeProcessInstance from '@pages/admin/process-instances/components/ResumeProcessInstance.vue';
@@ -49,6 +50,15 @@ const fetchInstance = async () => {
 };
 
 onMounted(fetchInstance);
+
+/** Re-reads the instance in place — no spinner, so the open tab stays mounted. */
+const refreshInstance = async () => {
+  try {
+    instance.value = await $api.processes.getInstance(instance.value!.id!);
+  } catch {
+    // The next full load picks it up.
+  }
+};
 
 /**
  * Severity for the current task's own status (not the instance's) — FAILED is the "stuck here"
@@ -204,14 +214,17 @@ function confirmTerminate() {
                 </div>
 
                 <div class="col-12">
-                  <h3 class="text-lg font-semibold pb-3">Variables List</h3>
+                  <div class="flex items-center justify-between pb-3">
+                    <h3 class="text-lg font-semibold">Variables List</h3>
+                    <CopyVariables :variables="instance?.variables" />
+                  </div>
                   <VariableList :variables="instance?.variables" />
                 </div>
               </div>
             </TabPanel>
 
             <TabPanel value="1">
-              <TaskList v-if="activeTab === '1'" ref="taskListRef" :processInstanceId="instance?.id" />
+              <TaskList v-if="activeTab === '1'" ref="taskListRef" :processInstanceId="instance?.id" @variables-saved="refreshInstance" />
             </TabPanel>
 
             <TabPanel value="2" class="p-0! overflow-hidden!" style="height:100%;">

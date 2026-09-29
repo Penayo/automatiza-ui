@@ -5,6 +5,7 @@ import { $api } from '@services/api';
 import type { Task } from '@services/TasksService';
 import type { ProcessInstance } from '@services/ProcessesService';
 import VariableList from '@components/data/VariableList.vue';
+import CopyVariables from '@components/data/CopyVariables.vue';
 import BpmnInstanceViewer from './BpmnInstanceViewer.vue';
 
 const props = defineProps<{
@@ -103,11 +104,17 @@ defineExpose({ loadTasks });
 
                 <div class="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-surface-400 mb-2">Input Variables</p>
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-surface-400">Input Variables</p>
+                            <CopyVariables :variables="selectedTask.inputVariables" />
+                        </div>
                         <VariableList :variables="selectedTask.inputVariables" />
                     </div>
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-surface-400 mb-2">Output Variables</p>
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-surface-400">Output Variables</p>
+                            <CopyVariables :variables="selectedTask.variables" />
+                        </div>
                         <VariableList :variables="selectedTask.variables" />
                     </div>
                 </div>

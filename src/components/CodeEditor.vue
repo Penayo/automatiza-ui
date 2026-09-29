@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, shallowRef } from 'vue';
 import { EditorView, basicSetup } from 'codemirror';
+import { keymap } from '@codemirror/view';
+import { indentWithTab } from '@codemirror/commands';
 import { EditorState } from '@codemirror/state';
 import { xml } from '@codemirror/lang-xml';
 import { json } from '@codemirror/lang-json';
@@ -37,6 +39,8 @@ function buildState(content: string) {
         doc: content,
         extensions: [
             basicSetup,
+            // Tab indents instead of moving focus; Esc then Tab still leaves the editor.
+            keymap.of([indentWithTab]),
             langExtension(props.lang),
             ...(props.dark ? [oneDark] : []),
             EditorView.editable.of(!props.readonly),

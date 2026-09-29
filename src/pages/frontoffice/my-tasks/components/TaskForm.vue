@@ -291,8 +291,9 @@ onUnmounted(() => chainAbort.value?.abort());
     <!-- ── Form panel + instance comments ─────────────────────────────────── -->
     <!-- Side by side on wide screens; below xl they stack with the form first —
          the form is the task, the thread is context that follows the case. -->
-    <div v-else class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)] xl:items-start">
-        <div class="min-w-0">
+    <div v-else class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)] xl:h-full">
+        <!-- xl: form and comments scroll independently inside the bounded tab panel. -->
+        <div class="min-w-0 xl:h-full xl:overflow-y-auto">
 
             <!-- Wizard step indicator -->
             <div
@@ -371,7 +372,7 @@ onUnmounted(() => chainAbort.value?.abort());
         </div>
 
         <aside
-            class="min-w-0 p-4 border-t xl:border-t-0 xl:border-l border-surface-200 dark:border-zinc-800"
+            class="min-w-0 p-4 xl:h-full xl:overflow-y-auto border-t xl:border-t-0 xl:border-l border-surface-200 dark:border-zinc-800"
         >
             <ProcessComments
                 :process-instance-id="activeTask?.processInstanceId"

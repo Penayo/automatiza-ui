@@ -13,6 +13,7 @@ import ReplayFromTaskDialog from '@pages/admin/tasks/components/ReplayFromTaskDi
 import { taskIcon } from '@/utils/bpmn';
 
 const props = defineProps<{ processInstanceId?: string }>();
+const emit  = defineEmits<{ 'variables-saved': [] }>();
 
 const toast   = useToast();
 const confirm = useConfirm();
@@ -276,7 +277,7 @@ defineExpose({ reload });
     <EditVariablesDialog
         v-model:visible="variablesDialogVisible"
         :task="variablesTask"
-        @saved="reload"
+        @saved="reload(); emit('variables-saved')"
     />
 
     <!-- Service config dialog -->
