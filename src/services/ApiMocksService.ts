@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ModelApiService } from '@services/ModelAPI';
+import { getAccessToken } from '@services/authStore';
 
 export interface ApiMockScenario {
     name: string;
@@ -60,7 +61,7 @@ export class ApiMocksService extends ModelApiService {
 
     private async _patch<T = IApiMock>(path: string, data?: any): Promise<T> {
         const base  = import.meta.env.VITE_API_HOST;
-        const token = localStorage.getItem('token');
+        const token = getAccessToken();
         const { data: result } = await axios.patch(
             `${base}/bpmn/api-mocks/${path}`,
             data ?? {},

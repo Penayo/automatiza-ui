@@ -74,9 +74,9 @@ function goProfile() {
     router.push(route.path.startsWith('/admin') ? '/admin/profile' : '/profile');
 }
 
-function logout() {
+async function logout() {
     menuOpen.value = false;
-    authService.logout();
+    await authService.logout();
     router.push('/login');
 }
 

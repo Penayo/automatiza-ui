@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Tabs, Tab, TabList, TabPanels, TabPanel, Button, useToast, useConfirm } from 'primevue';
 import TaskData from '@pages/frontoffice/my-tasks/components/TaskData.vue';
 import TaskForm from '@pages/frontoffice/my-tasks/components/TaskForm.vue';
@@ -30,6 +30,9 @@ const confirm = useConfirm();
 
 const props = defineProps<{ currentTask: Task | null }>();
 const emit  = defineEmits(['refresh']);
+
+const currentUser = computed(() => $api.authService.getAccessInfo()?.user.username);
+const assignee    = computed(() => props.currentTask?.assignment?.assignee);
 
 // Task list rows carry no variable payload — the server strips it so a page of
 // tasks does not ship every task's whole variable set. The Documents tab needs
@@ -143,8 +146,14 @@ async function updateTask(key: string, value: string) {
                         <i class="pi pi-check text-[10px]" /> Submitted
                     </span>
 
-                    <Button v-if="!props.currentTask?.assignment?.assignee" size="small" @click="claimTask">Claim</Button>
-                    <Button v-else size="small" severity="secondary" @click="unclaimTask">Release</Button>
+                    <Button v-if="!assignee" size="small" @click="claimTask">Claim</Button>
+                    <Button v-else-if="assignee === currentUser" size="small" severity="secondary" @click="unclaimTask">Release</Button>
+                    <span
+                        v-else
+                        class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                    >
+                        <i class="pi pi-lock text-[10px]" /> Claimed by {{ assignee }}
+                    </span>
                 </div>
             </div>
         </div>

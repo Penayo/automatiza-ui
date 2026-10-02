@@ -8,6 +8,8 @@
  * response points at until the wizard resolves.
  */
 
+import { getAccessToken } from '@services/authStore';
+
 const BASE = import.meta.env.VITE_API_HOST ?? 'http://localhost:3000';
 
 export type FormChainReason =
@@ -43,7 +45,7 @@ export function hasNextForm(chain: FormChain | undefined): chain is FormChain & 
 }
 
 function authHeaders(): Record<string, string> {
-    const token = localStorage.getItem('token');
+    const token = getAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

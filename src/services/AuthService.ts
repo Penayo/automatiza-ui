@@ -1,8 +1,6 @@
 import type { IUser } from "@services/UserService";
 import { ModelApiService } from "@services/ModelAPI";
-import CryptoJS from 'crypto-js';
-
-const SECRET_KEY = import.meta.env.VITE_CRYPTO_KEY ?? 'fallback-dev-key';
+import { clearAccess, getAccessInfo, setAccess } from "@services/authStore";
 
 export interface ILogin {
     tenantSlug: string;
@@ -46,10 +44,12 @@ export class AuthService extends ModelApiService {
         super("auth");
     }
 
+    // login/signup set the httpOnly refresh cookie, so they must run with credentials
+    // (the dev UI calls the engine cross-origin). The access token stays in memory.
     async login(loginUser: ILogin): Promise<IAccess> {
-        const data = await this.post<IAccess>('login', loginUser);
+        const data = await this.post<IAccess>('login', loginUser, { withCredentials: true });
         localStorage.removeItem('errors');
-        localStorage.setItem('token', data.access_token);
+        setAccess(data);
         // Login is tenant-scoped, but the slug is not carried in the JWT or the
         // user payload. Keep it so the in-place re-auth dialog can log the same
         // user back in without asking which organization they belong to.
@@ -58,15 +58,10 @@ export class AuthService extends ModelApiService {
     }
 
     async signup(payload: ISignup): Promise<IAccess> {
-        const data = await this.post<IAccess>('signup', payload);
-        localStorage.setItem('token', data.access_token);
+        const data = await this.post<IAccess>('signup', payload, { withCredentials: true });
+        setAccess(data);
         localStorage.setItem('tenantSlug', payload.tenantSlug);
         return data;
-    }
-
-    saveAccessInfo(access: IAccess) {
-        const accessInfo = CryptoJS.AES.encrypt(JSON.stringify(access), SECRET_KEY).toString();
-        localStorage.setItem('accessInfo', accessInfo);
     }
 
     /** The current user's own profile (GET /auth/me). */
@@ -79,27 +74,22 @@ export class AuthService extends ModelApiService {
         await this.post('change-password', payload);
     }
 
-    /** Clears all client-side auth state. Callers should redirect to /login afterwards. */
-    logout() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('accessInfo');
+    /**
+     * Revokes the session server-side and clears all client-side auth state.
+     * Local state is cleared even if the server call fails. Callers should
+     * redirect to /login afterwards.
+     */
+    async logout(): Promise<void> {
+        try {
+            await this.post('logout', {}, { withCredentials: true });
+        } catch { /* already signed out, or offline — local state is cleared regardless */ }
+
+        clearAccess();
         localStorage.removeItem('selectedTenantId');
         localStorage.removeItem('tenantSlug');
     }
 
     getAccessInfo(): IAccess | null {
-        const accessInfo = localStorage.getItem('accessInfo');
-        if (!accessInfo) return null;
-
-        try {
-            const bytes = CryptoJS.AES.decrypt(accessInfo, SECRET_KEY);
-            return JSON.parse(bytes.toString(CryptoJS.enc.Utf8)) as IAccess;
-        } catch {
-            // Stale or encrypted-with-different-key data — clear it and force re-login
-            localStorage.removeItem('accessInfo');
-            localStorage.removeItem('token');
-            localStorage.removeItem('tenantSlug');
-            return null;
-        }
+        return getAccessInfo();
     }
 };

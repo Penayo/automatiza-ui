@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, nextTick, computed } from 'vue';
+import { getAccessToken } from '@services/authStore';
 import { marked, type Renderer } from 'marked';
 import hljs from 'highlight.js';
 
@@ -71,7 +72,7 @@ const baseUrl = import.meta.env.VITE_API_HOST as string;
 // Mirror BaseService.getRequestHeaders: send auth + the SUPER_ADMIN tenant
 // selector's X-Tenant-Id so the AI key resolves to the tenant currently in view.
 function requestHeaders(): Record<string, string> {
-    const token    = localStorage.getItem('token');
+    const token    = getAccessToken();
     const tenantId = localStorage.getItem('selectedTenantId');
     return {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

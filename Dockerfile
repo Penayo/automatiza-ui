@@ -13,9 +13,7 @@ COPY . .
 
 # VITE_API_HOST must point to /api so nginx proxies calls to the engine
 ARG VITE_API_HOST=/api
-ARG VITE_CRYPTO_KEY
 ENV VITE_API_HOST=$VITE_API_HOST
-ENV VITE_CRYPTO_KEY=$VITE_CRYPTO_KEY
 
 RUN NODE_OPTIONS=--max-old-space-size=4096 pnpm run build
 

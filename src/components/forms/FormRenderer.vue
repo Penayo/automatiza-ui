@@ -59,12 +59,35 @@ watch(vueformData, (v) => emit('change', v), { deep: true });
  *                 element, so a variable the form does not also ask for never reaches
  *                 the element on its own.
  */
-const vueformSchema = computed(() =>
-    resolveSeededSources(
+const vueformSchema = computed(() => {
+    const resolved = resolveSeededSources(
         resolveFormVariables(props.schema?.vueform?.schema ?? {}, props.data),
         props.data,
-    ),
-);
+    );
+    return props.readOnly ? disableAll(resolved) : resolved;
+});
+
+/**
+ * Read-only has to be stamped onto every element. Vueform's root `:disabled` only
+ * gates submit (`form$.isDisabled`); each element resolves its own disabled state
+ * from its own `disabled` prop, so without this the inputs stay editable.
+ *
+ * Descends the three places a schema nests elements: a container's `schema`, a
+ * list's `element`, and a matrix's cell definition in `items`.
+ */
+function disableAll(schema: Record<string, any>): Record<string, any> {
+    const disableNode = (node: any): any => {
+        if (!node || typeof node !== 'object' || Array.isArray(node)) return node;
+        const out: Record<string, any> = { ...node, disabled: true };
+        if (out.schema && typeof out.schema === 'object') out.schema = disableAll(out.schema);
+        if (out.element) out.element = disableNode(out.element);
+        if (out.items && !Array.isArray(out.items) && typeof out.items === 'object' && out.items.type) {
+            out.items = disableNode(out.items);
+        }
+        return out;
+    };
+    return Object.fromEntries(Object.entries(schema).map(([key, node]) => [key, disableNode(node)]));
+}
 
 watch([vueform$, locale], () => vueform$.value?.setLanguage?.(locale.value));
 

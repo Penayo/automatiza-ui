@@ -26,7 +26,6 @@ const handleLogin = (event: Event) => {
         rememberMe: rememberMe.value,
     })
         .then((access: IAccess) => {
-            $api.authService.saveAccessInfo(access);
             const roles = access.user.roles ?? [];
             const isAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN');
             router.push(isAdmin ? '/admin/dashboard' : '/dashboard');

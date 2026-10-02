@@ -2,6 +2,7 @@
 import { computed, inject, ref } from 'vue';
 import { useToast } from 'primevue';
 import axios from 'axios';
+import { getAccessToken } from '@services/authStore';
 import type { ProcessDefinition, UpdateProcessMetaDto } from '@services/ProcessesService';
 import ProcessInfo from '../components/ProcessInfo.vue';
 import ProcessResources from '../components/ProcessResources.vue';
@@ -62,7 +63,7 @@ async function regenerateToken() {
     if (!process.value?.id) return;
     regenerating.value = true;
     try {
-        const token = localStorage.getItem('token');
+        const token = getAccessToken();
         const { data } = await axios.post(
             `${BASE}/bpmn/processes/${process.value.id}/regenerate-token`,
             {},

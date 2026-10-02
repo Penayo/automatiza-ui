@@ -4,7 +4,6 @@ import Page from '@components/Page.vue';
 import { InputText, Password, Button, useToast } from 'primevue';
 import { useRouter } from 'vue-router';
 import FormField from '@components/form/FormField.vue';
-import type { IAccess } from '@services/AuthService.ts';
 import { $api } from '@services/api';
 
 const toast   = useToast();
@@ -28,8 +27,7 @@ const handleSignup = (event: Event) => {
         email:       email.value,
         password:    password.value,
     })
-        .then((access: IAccess) => {
-            $api.authService.saveAccessInfo(access);
+        .then(() => {
             router.push('/admin/dashboard');
             setTimeout(() => toast.add({ severity: 'success', summary: 'Welcome!', detail: 'Your organization has been created.' }), 500);
         })

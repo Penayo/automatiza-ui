@@ -2,6 +2,7 @@
 import { computed, ref, watch, onMounted, onUnmounted, markRaw, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+import { getAccessToken } from '@services/authStore';
 import { useTheme } from '@/composables/useTheme';
 import { applyBrandingPalette, type TenantBranding } from '@/composables/useTenantBranding';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
@@ -97,7 +98,7 @@ const accent = 'var(--fo-brand-500, var(--p-primary-500, #6366f1))';
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 function authHeaders(): Record<string, string> {
-    const token = localStorage.getItem('token');
+    const token = getAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

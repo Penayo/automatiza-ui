@@ -51,12 +51,11 @@ async function submit() {
     error.value   = '';
 
     try {
-        const result = await auth.login({
+        await auth.login({
             tenantSlug: tenantSlug.value,
             username:   username.value,
             password:   password.value,
         });
-        auth.saveAccessInfo(result);
         password.value = '';
         // Releases every caller waiting on this dialog; each replays its request.
         completeReauth();
@@ -71,9 +70,9 @@ function signOut() {
     confirmIfDirty(
         confirm,
         hasUnsavedWork(),
-        () => {
+        async () => {
             abandonReauth();
-            auth.logout();
+            await auth.logout();
             navigateTo('/login');
         },
         'You have unsaved changes on this page. Signing out will discard them. Sign out anyway?'

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteLocationGeneric } from 'vue-router'
 import { AuthService } from '@services/AuthService';
+import { ensureSession } from '@services/authStore';
 import { $api, type IPermission, type IRole, type PageResponse } from '@services/api';
 
 import FrontofficeLayout from '@layout/FrontofficeLayout.vue';
@@ -214,6 +215,10 @@ const router = createRouter({
 
 // Navigation guard
 router.beforeEach(async (to, _from, next) => {
+  // The access token lives in memory; after a reload the first navigation waits
+  // for the refresh cookie to be exchanged for a new one (auth spec §11 D12).
+  await ensureSession();
+
   const authService = new AuthService();
   const accessInfo = authService.getAccessInfo();
 

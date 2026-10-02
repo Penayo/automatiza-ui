@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { navigateTo } from '@services/routerRef';
 import { requireReauth } from '@services/session';
+import { getAccessInfo, getAccessToken, refreshSession } from '@services/authStore';
 
 // Axios 1.x serializes arrays as keys[]=v (bracket notation). NestJS ValidationPipe
 // with forbidNonWhitelisted:true rejects the literal "keys[]" property name.
@@ -53,11 +54,12 @@ export type ILog = {
 }
 
 /**
- * The two calls that *establish* a session. A 401 from them means "wrong
- * password", so they must never trigger the re-auth dialog — that would recurse.
+ * The calls that *establish or end* a session. A 401 from them means "wrong
+ * password" or "no session", so they must never trigger refresh or the re-auth
+ * dialog — that would recurse.
  */
 function isCredentialCheck(url: string): boolean {
-  return url.includes('/auth/login') || url.includes('/auth/signup');
+  return ['/auth/login', '/auth/signup', '/auth/refresh', '/auth/logout'].some(p => url.includes(p));
 }
 
 export interface APIData {
@@ -185,25 +187,33 @@ export class BaseService {
     // caller replay: the page never unmounts, so nothing is lost.
     // See docs/specs/authentication-and-sessions.spec.md §11 (D7).
     if (status === 401) {
-      // The login/signup calls are how we recover from a 401 — a 401 from them
-      // is a wrong password, not an expired session. Never recurse into re-auth.
       const url = err?.config?.url ?? '';
       if (isCredentialCheck(url)) return false;
 
-      // No stored identity means there is nobody to re-authenticate as.
-      if (!localStorage.getItem('accessInfo')) {
-        localStorage.removeItem('token');
+      // No identity in memory means there is nobody to refresh or re-authenticate as.
+      if (!getAccessInfo()) {
         navigateTo('/login');
         window.dispatchEvent(new CustomEvent('api-unauthorized'));
         return false;
       }
 
-      // Deliberately do NOT clear the token here: the dialog may be cancelled,
-      // and a half-cleared session would break the retry the user makes next.
-      const reauthenticated = await requireReauth();
-      if (reauthenticated) return true;
+      // D8 — the server says why. Only session failures touch the session; a
+      // resource-level 401 (AUTH_REQUIRED on a public process, a bad API key) is
+      // an ordinary error for the caller.
+      const code = err?.response?.data?.code;
 
-      window.dispatchEvent(new CustomEvent('api-unauthorized'));
+      // Expired access token: swap the refresh cookie for a new one and replay
+      // silently. Concurrent failures share one refresh (D6).
+      if (code === 'TOKEN_EXPIRED' && await refreshSession()) return true;
+
+      if (code === 'TOKEN_EXPIRED' || code === 'TOKEN_INVALID' || code === 'SESSION_REVOKED') {
+        // Refresh is gone too (revoked, idle past the window): re-authenticate
+        // in place. The page never unmounts, so nothing on screen is lost.
+        const reauthenticated = await requireReauth();
+        if (reauthenticated) return true;
+
+        window.dispatchEvent(new CustomEvent('api-unauthorized'));
+      }
       return false;
     }
 
@@ -226,7 +236,7 @@ export class BaseService {
   }
 
   getAuthorizationHeader () {
-    const authToken = localStorage.getItem('token')
+    const authToken = getAccessToken()
 
     if (authToken) {
       return {

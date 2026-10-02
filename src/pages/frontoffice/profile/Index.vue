@@ -86,8 +86,8 @@ async function submit() {
         });
 
         // Force re-login: clear local auth state and send back to /login.
-        setTimeout(() => {
-            auth.logout();
+        setTimeout(async () => {
+            await auth.logout();
             router.push('/login');
         }, 1500);
     } catch (err: any) {
