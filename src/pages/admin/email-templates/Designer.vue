@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useToast, Button, InputText, Textarea, Dialog, Tag } from 'primevue';
+import { useToast, Button, InputText, Textarea, Dialog, Tag, Message } from 'primevue';
 import { $api } from '@services/api';
 import type { EmailTemplateDefinition, EmailTemplateType } from '@services/EmailTemplatesService';
 import EmailDesigner from './components/EmailDesigner.vue';
+import VersionPicker from '@components/VersionPicker.vue';
+import type { DesignRevisionSummary } from '@services/ReportsService';
 
 const route  = useRoute();
 const router = useRouter();
@@ -17,6 +19,40 @@ const template    = ref<EmailTemplateDefinition | null>(null);
 const loading     = ref(false);
 const saving      = ref(false);
 const designerRef = ref<InstanceType<typeof EmailDesigner> | null>(null);
+
+// ── Versions (docs/specs/design-versioning.spec.md §4) ────────────────────────
+// `?version=N` opens a saved revision; anything older than the newest is read-only.
+const versions = ref<DesignRevisionSummary[]>([]);
+const latestVersion = computed(() => versions.value[0]?.version ?? null);
+const requestedVersion = computed(() => {
+    const n = Number(route.query.version);
+    return Number.isInteger(n) && n > 0 ? n : null;
+});
+const shownVersion = computed(() => requestedVersion.value ?? latestVersion.value);
+const readOnly = computed(() =>
+    requestedVersion.value !== null && latestVersion.value !== null && requestedVersion.value < latestVersion.value);
+
+async function loadVersions(templateId: string) {
+    try {
+        versions.value = await $api.emailTemplates.getVersions(templateId);
+    } catch {
+        versions.value = [];
+    }
+}
+
+function selectVersion(version: number) {
+    router.replace({ query: { ...route.query, version: version === latestVersion.value ? undefined : String(version) } });
+}
+
+/** The Unlayer design JSON: the editor has no source tab, so this is what can be re-imported. */
+async function copyDesign() {
+    try {
+        await navigator.clipboard.writeText(JSON.stringify(template.value?.design ?? {}, null, 2));
+        toast.add({ severity: 'success', summary: 'Copied', detail: `v${shownVersion.value} design JSON copied.`, life: 3000 });
+    } catch {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Clipboard is not available.', life: 3000 });
+    }
+}
 
 // New items pick their type from the tab they were created from (?type=block);
 // existing items keep whatever type they were saved with.
@@ -60,8 +96,20 @@ async function load() {
     if (isNew.value) return;
 
     try {
-        template.value = await $api.emailTemplates.findById(id.value!);
+        const [loaded] = await Promise.all([
+            requestedVersion.value
+                ? $api.emailTemplates.findVersion(id.value!, requestedVersion.value)
+                : $api.emailTemplates.findById(id.value!),
+            loadVersions(id.value!),
+        ]);
+        template.value = loaded;
     } catch {
+        if (requestedVersion.value) {
+            // A bad ?version is a bad link, not a missing template: fall back to the latest.
+            toast.add({ severity: 'warn', summary: 'Not found', detail: `Version ${requestedVersion.value} does not exist.`, life: 4000 });
+            router.replace({ query: { ...route.query, version: undefined } });
+            return;
+        }
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load email template.', life: 4000 });
         router.push({ name: 'EmailTemplatesList' });
     }
@@ -69,6 +117,7 @@ async function load() {
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 async function save() {
+    if (readOnly.value) return;
     if (!metaName.value.trim() || !metaKey.value.trim()) {
         openMeta();
         return;
@@ -98,6 +147,7 @@ async function save() {
             template.value = (updated as any)?.data ?? updated;
             toast.add({ severity: 'success', summary: 'Saved', detail: `"${dto.name}" updated.`, life: 3000 });
         }
+        if (template.value?.id) void loadVersions(template.value.id);
 
         metaVisible.value = false;
     } catch (err: any) {
@@ -108,6 +158,7 @@ async function save() {
 }
 
 function handleSave() {
+    if (readOnly.value) return;
     if (isNew.value && !metaName.value) {
         openMeta();
     } else {
@@ -119,6 +170,17 @@ onMounted(async () => {
     loading.value = true;
     try {
         await Promise.all([load(), loadReusableBlocks()]);
+    } finally {
+        loading.value = false;
+    }
+});
+
+// The designer is built once at mount, so a version switch remounts it via `loading`.
+watch(() => route.query.version, async () => {
+    if (isNew.value) return;
+    loading.value = true;
+    try {
+        await load();
     } finally {
         loading.value = false;
     }
@@ -150,6 +212,12 @@ onMounted(async () => {
                     >
                         {{ template.key }}
                     </span>
+                    <VersionPicker
+                        v-if="versions.length > 1"
+                        :versions="versions.map(v => ({ version: v.version, savedAt: v.createdAt }))"
+                        :model-value="shownVersion"
+                        @update:model-value="selectVersion"
+                    />
                 </div>
             </div>
 
@@ -157,6 +225,7 @@ onMounted(async () => {
             <Button
                 icon="pi pi-pencil"
                 size="small" text rounded
+                :disabled="readOnly"
                 v-tooltip.left="'Edit name & key'"
                 @click="openMeta"
             />
@@ -167,9 +236,21 @@ onMounted(async () => {
                 icon="pi pi-save"
                 size="small"
                 :loading="saving"
+                :disabled="readOnly"
+                v-tooltip.bottom="readOnly ? 'Older versions are read-only' : undefined"
                 @click="handleSave"
             />
         </div>
+
+        <Message v-if="readOnly && !loading" severity="info" class="mx-4 mt-2 shrink-0">
+            <div class="flex flex-wrap items-center gap-2">
+                <span>
+                    Viewing <strong>v{{ shownVersion }}</strong> of {{ latestVersion }} (read-only).
+                </span>
+                <Button label="Copy design JSON" icon="pi pi-copy" size="small" @click="copyDesign" />
+                <Button label="Go to latest" size="small" text @click="selectVersion(latestVersion!)" />
+            </div>
+        </Message>
 
         <!-- ── Designer canvas ─────────────────────────────────────────────── -->
         <div v-if="!loading" class="flex-1 min-h-0 overflow-hidden">

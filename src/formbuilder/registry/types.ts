@@ -1,6 +1,6 @@
 import type { BuilderNode } from '../types';
 
-export type PropTabKey = 'general' | 'validation' | 'layout' | 'conditions' | 'data';
+export type PropTabKey = 'general' | 'validation' | 'layout' | 'conditions' | 'data' | 'appearance';
 
 /** What a tab schema can see about the rest of the form when it is built. */
 export interface PropTabContext {

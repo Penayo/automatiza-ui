@@ -12,6 +12,7 @@ import {
     PLACEHOLDER_PROP, COLUMNS_PROP, INPUT_TYPE_PROP, EXPRESSION_PROP, READONLY_PROP,
     STORAGE_PROP,
     matrixGeneralTab, matrixLayoutTab,
+    listAppearanceTab, containerAppearanceTab,
 } from './common';
 import type { ElementDef, PaletteItem } from './types';
 
@@ -549,7 +550,7 @@ const DEFS: ElementDef[] = [
         container: 'object',
         namePrefix: 'group',
         defaults: { label: 'Group' },
-        tabs: [generalTab(), conditionsTab()],
+        tabs: [generalTab(), containerAppearanceTab(), conditionsTab()],
     },
     {
         type: 'object',
@@ -558,7 +559,7 @@ const DEFS: ElementDef[] = [
         container: 'object',
         namePrefix: 'object',
         defaults: { label: 'Object' },
-        tabs: [generalTab(), conditionsTab()],
+        tabs: [generalTab(), containerAppearanceTab(), conditionsTab()],
     },
     {
         type: 'list',
@@ -572,6 +573,7 @@ const DEFS: ElementDef[] = [
                 addText: { type: 'text', label: 'Add button text' },
                 sort: { type: 'toggle', label: 'Sortable' },
             }),
+            listAppearanceTab(),
             validationTab(),
             conditionsTab(),
         ],
@@ -713,6 +715,19 @@ const PALETTE_ITEMS: PaletteItem[] = [
             allowHtml: true,
             expressions: true,
             addClass: 'form-info',
+        },
+    },
+    {
+        id: 'card-title', type: 'static', label: 'Card title', icon: 'pi-id-card',
+        category: 'Static',
+        description: 'Header for each item of a repeating list. Put it first in the item and use {list.*.field} for the current item\'s value.',
+        namePrefix: 'card_title',
+        // Same expression mechanics as the info line. Styled by `.form-card-title`.
+        defaults: {
+            tag: 'h4',
+            content: '{field}',
+            expressions: true,
+            addClass: 'form-card-title',
         },
     },
     {

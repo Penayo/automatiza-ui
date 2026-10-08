@@ -18,6 +18,16 @@ export interface SaveDecisionDto {
     description?: string;
 }
 
+/** One row of a decision's history, without the XML. See docs/specs/design-versioning.spec.md §3.3. */
+export interface DecisionDefinitionVersion {
+    id: string;
+    decisionId: string;
+    name: string;
+    version: number;
+    createdAt: string;
+    deployedAt?: string;
+}
+
 export class DecisionsService extends ModelApiService {
     constructor() {
         super('decisions');
@@ -31,6 +41,11 @@ export class DecisionsService extends ModelApiService {
     /** One page. `page` is what makes the backend return the envelope. */
     getPage(params: ListQuery & { page: number }): Promise<PageResponse<DecisionDefinition>> {
         return this.get<PageResponse<DecisionDefinition>>('', { params });
+    }
+
+    /** Every version of this decision, newest first (design-versioning spec §3.3). */
+    getVersions(id: string): Promise<DecisionDefinitionVersion[]> {
+        return this.get<DecisionDefinitionVersion[]>(`${id}/versions`);
     }
 
     findById(id: string): Promise<DecisionDefinition> {

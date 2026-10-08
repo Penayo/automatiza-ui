@@ -6,6 +6,7 @@ import { $api } from '@services/api';
 import { useRouter } from 'vue-router';
 import type { ProcessDefinition, ProcessInstance, ProcessInstanceQuery } from '@services/ProcessesService';
 import { useInstanceCurrentTasks } from '@/composables/useInstanceCurrentTasks';
+import { useBusinessKeyColumn } from '@/composables/useBusinessKeyColumn';
 import type { PageResponse } from '@services/api';
 
 const $router = useRouter();
@@ -13,6 +14,9 @@ const toast = useToast();
 const pageRef = ref<InstanceType<typeof Page>>();
 
 const items = ref<PageResponse<ProcessInstance>>();
+
+// Business key column (process-instance-runtime spec §6a)
+const businessKey = useBusinessKeyColumn(items);
 const selectedItem = ref<ProcessInstance | null>(null);
 const loading = ref(false);
 
@@ -169,6 +173,7 @@ onMounted(async () => {
         </div>
 
         <DataTable
+            :key="businessKey.tableKey.value"
             v-model:selection="selectedItem"
             :value="items?.rows"
             :totalRecords="items?.totalRecords"
@@ -188,6 +193,15 @@ onMounted(async () => {
             <Column field="id" header="Process">
                 <template #body="{ data }">
                     <span class="font-mono text-xs">{{ data.processInfo ? data.processInfo.name : data.processDefinitionId }}</span>
+                </template>
+            </Column>
+
+            <Column v-if="businessKey.showBusinessKey.value" :header="businessKey.header.value">
+                <template #body="{ data }">
+                    <span v-if="businessKey.hasBusinessKey(data)" class="text-sm">
+                        <span v-if="businessKey.cellLabel(data)" class="text-zinc-500">{{ businessKey.cellLabel(data) }}:</span>
+                        {{ businessKey.businessKeyText(data) ?? '-' }}
+                    </span>
                 </template>
             </Column>
 

@@ -80,11 +80,11 @@ async function updateTask(key: string, value: string) {
             <h3 class="text-(--layout-accent-color) text-2xl font-semibold">{{ props.currentTask?.name }}</h3>
 
             <div
-                v-if="props.currentTask?.processInfo?.correlationKey"
+                v-if="props.currentTask?.processInfo?.correlationKey || props.currentTask?.processInfo?.correlationDisplay"
                 class="font-light text-(--layout-accent-color) pt-1"
             >
                 {{ props.currentTask?.processInfo.correlationLabel }}:
-                {{ props.currentTask?.processInfo?.correlationValue }}
+                {{ props.currentTask?.processInfo?.correlationDisplay ?? props.currentTask?.processInfo?.correlationValue }}
             </div>
 
             <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">

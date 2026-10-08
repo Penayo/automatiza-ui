@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { inject, ref } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import { useRouter, type RouteLocationNormalized, type RouteLocationRaw } from 'vue-router';
-import { useToast } from 'primevue';
+import { useConfirm, useToast } from 'primevue';
 import { $api } from '@services/api';
-import type { ProcessDefinition } from '@services/ProcessesService';
+import type { ProcessDefinition, ProcessDefinitionVersion } from '@services/ProcessesService';
 // Static import is fine: this whole tab is a lazily-loaded route component, so the
 // bpmn-js/camunda-modeler stack stays out of the parent route's chunk either way.
 import CamundaModeler from '@pages/admin/modeler/components/CamundaModeler.vue';
@@ -15,6 +15,7 @@ const { process, setProcess } = inject(processEditKey)!;
 
 const router = useRouter();
 const toast  = useToast();
+const confirm = useConfirm();
 
 const modelerRef = ref<InstanceType<typeof CamundaModeler> | null>(null);
 
@@ -24,7 +25,7 @@ const modelerRef = ref<InstanceType<typeof CamundaModeler> | null>(null);
  * the returned id. Returns null when the save failed.
  */
 async function persist(xml: string): Promise<ProcessDefinition | null> {
-    if (!process.value) return null;
+    if (!process.value || readOnly.value) return null;
     try {
         process.value.bpmnXml = xml;
         const saved = await $api.processes.saveProcess(process.value) as ProcessDefinition | null;
@@ -37,6 +38,45 @@ async function persist(xml: string): Promise<ProcessDefinition | null> {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not save diagram.', life: 3000 });
         return null;
     }
+}
+
+// ── Versions (docs/specs/design-versioning.spec.md §4) ────────────────────────
+// Every version is its own definition id, so picking one navigates to that id; the
+// page refetches on :id change. Anything older than the newest is read-only.
+const versions = ref<ProcessDefinitionVersion[]>([]);
+const versionOptions = computed(() => versions.value.map(v => ({ version: v.version, savedAt: v.createdAt })));
+const readOnly = computed(() =>
+    !!process.value && !!versions.value.length && (process.value.version ?? 1) < versions.value[0].version);
+
+async function loadVersions(id: string | undefined) {
+    // Already listed (we just navigated within the family): nothing new to fetch.
+    if (!id || versions.value.some(v => v.id === id)) return;
+    try {
+        versions.value = await $api.processes.getVersions(id);
+    } catch {
+        versions.value = [];
+    }
+}
+watch(() => process.value?.id, loadVersions, { immediate: true });
+
+function selectVersion(version: number) {
+    const target = versions.value.find(v => v.version === version);
+    if (!target || target.id === process.value?.id) return;
+    const go = () => router.push({ name: 'ProcessEditDiagram', params: { id: target.id } });
+    // Same route, new :id — not a route leave, so the unsaved guard never sees it.
+    if (modelerRef.value?.hasUnsavedChanges) {
+        confirm.require({
+            header: 'Discard unsaved changes?',
+            message: 'Opening another version discards the diagram changes you have not saved.',
+            acceptLabel: 'Discard',
+            rejectLabel: 'Cancel',
+            acceptProps: { severity: 'danger', size: 'small' },
+            rejectProps: { severity: 'secondary', text: true, size: 'small' },
+            accept: go,
+        });
+        return;
+    }
+    go();
 }
 
 /** The modeler's own Save button. */
@@ -75,7 +115,15 @@ function retarget(to: RouteLocationNormalized, oldId: string | undefined, newId:
 
 <template>
     <div class="h-full flex flex-col overflow-hidden">
-        <CamundaModeler v-if="process" ref="modelerRef" :process="process" @save="saveDiagram" />
+        <CamundaModeler
+            v-if="process"
+            ref="modelerRef"
+            :process="process"
+            :versions="versionOptions"
+            :read-only="readOnly"
+            @save="saveDiagram"
+            @select-version="selectVersion"
+        />
     </div>
 
     <UnsavedChangesDialog

@@ -19,6 +19,13 @@ export interface SaveReportDto {
     template:     Record<string, any>;
 }
 
+/** One saved revision, without the body. See docs/specs/design-versioning.spec.md §3.4. */
+export interface DesignRevisionSummary {
+    version: number;
+    createdAt: string;
+    createdBy?: string;
+}
+
 export class ReportsService extends ModelApiService {
     constructor() { super('reports'); }
 
@@ -30,6 +37,16 @@ export class ReportsService extends ModelApiService {
     /** One page. `page` is what makes the backend return the envelope. */
     getPage(params: ListQuery & { page: number }): Promise<PageResponse<ReportDefinition>> {
         return this.get<PageResponse<ReportDefinition>>('', { params });
+    }
+
+    /** Saved revisions, newest first (design-versioning spec §3.4). */
+    getVersions(id: string): Promise<DesignRevisionSummary[]> {
+        return this.get<DesignRevisionSummary[]>(`${id}/versions`);
+    }
+
+    /** The report as saved in one revision. */
+    findVersion(id: string, version: number): Promise<ReportDefinition> {
+        return this.get<ReportDefinition>(`${id}/versions/${version}`);
     }
 
     findById(id: string): Promise<ReportDefinition> {

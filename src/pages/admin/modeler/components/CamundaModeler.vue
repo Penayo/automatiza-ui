@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
-import { SpeedDial, Button, useToast } from 'primevue';
+import { SpeedDial, Button, Message, useToast } from 'primevue';
 import { layoutProcess } from 'bpmn-auto-layout';
 import CodeEditor from '@components/CodeEditor.vue';
 import DocsDrawer from '@components/DocsDrawer.vue';
+import VersionPicker, { type VersionOption } from '@components/VersionPicker.vue';
 import AiChatPanel from '@components/chat/AiChatPanel.vue';
 import ReportListDialog         from './dialogs/ReportListDialog.vue';
 import FormListDialog           from './dialogs/FormListDialog.vue';
@@ -28,8 +29,23 @@ const toast = useToast();
 
 const props = defineProps<{
 	process?: ProcessDefinition
+	/** The process's saved versions, newest first. A picker shows when there is more than one. */
+	versions?: VersionOption[]
+	/** An older version: viewable and copyable, never saved (docs/specs/design-versioning.spec.md §4). */
+	readOnly?: boolean
 }>();
-const emit = defineEmits<{ save: [xml: string] }>();
+const emit = defineEmits<{ save: [xml: string]; selectVersion: [version: number] }>();
+
+const latestVersion = computed(() => props.versions?.[0]?.version ?? null);
+
+async function copyXml() {
+	try {
+		await navigator.clipboard.writeText(props.process?.bpmnXml ?? '');
+		toast.add({ severity: 'success', summary: 'Copied', detail: `v${props.process?.version} XML copied. Paste it in the latest version's XML tab.`, life: 3000 });
+	} catch {
+		toast.add({ severity: 'error', summary: 'Error', detail: 'Clipboard is not available.', life: 3000 });
+	}
+}
 
 const modeler      = ref<any>(null);
 const containerRef = ref<HTMLElement | null>(null);
@@ -55,8 +71,8 @@ const currentXml = ref('');
 const dirty = ref(false);
 
 /** Edits typed in the XML tab count too, even before they are applied. */
-const hasUnsavedChanges = computed(() =>
-	dirty.value || (activeTab.value === 'xml' && xmlText.value !== currentXml.value)
+const hasUnsavedChanges = computed(() => !props.readOnly
+	&& (dirty.value || (activeTab.value === 'xml' && xmlText.value !== currentXml.value))
 );
 
 /**
@@ -162,6 +178,7 @@ async function getSaveXml(): Promise<string> {
 }
 
 async function save() {
+	if (props.readOnly) return;
 	saving.value = true;
 	try {
 		emit('save', await getSaveXml());
@@ -283,7 +300,13 @@ watch(() => props.process, async (p) => {
 				<span class="text-sm font-semibold truncate" style="color: var(--layout-title-color)">
 					{{ process.name }}
 				</span>
-				<span class="text-xs font-mono bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded text-surface-500 shrink-0">
+				<VersionPicker
+					v-if="(versions?.length ?? 0) > 1"
+					:versions="versions!"
+					:model-value="process.version ?? 1"
+					@update:model-value="emit('selectVersion', $event)"
+				/>
+				<span v-else class="text-xs font-mono bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded text-surface-500 shrink-0">
 					v{{ process.version ?? 1 }}
 				</span>
 			</div>
@@ -315,9 +338,22 @@ watch(() => props.process, async (p) => {
 				icon="pi pi-save"
 				size="small"
 				:loading="saving"
+				:disabled="readOnly"
+				v-tooltip.bottom="readOnly ? 'Older versions are read-only' : undefined"
 				@click="save"
 			/>
 		</div>
+
+		<Message v-if="readOnly" severity="info" class="mx-4 mt-2 shrink-0">
+			<div class="flex flex-wrap items-center gap-2">
+				<span>
+					Viewing <strong>v{{ process?.version }}</strong> of {{ latestVersion }} (read-only).
+					Copy what you need and paste it into the latest version.
+				</span>
+				<Button label="Copy XML" icon="pi pi-copy" size="small" @click="copyXml" />
+				<Button label="Go to latest" size="small" text @click="emit('selectVersion', latestVersion!)" />
+			</div>
+		</Message>
 
 		<!-- ── Designer tab ───────────────────────────────────────────────── -->
 		<div v-show="activeTab === 'designer'" class="flex flex-1 min-h-0">

@@ -354,7 +354,10 @@ export function createFormBuilder(initial?: BuilderDoc): BuilderApi {
     function patchPropsImpl(id: string, props: Record<string, unknown>) {
         const node = findNode(doc.value.nodes, id);
         if (!node) return;
-        node.props = { ...node.props, ...props };
+        const next = { ...node.props, ...props };
+        // undefined means "remove": a tab's fromForm cannot delete a key through a merge.
+        for (const key of Object.keys(next)) if (next[key] === undefined) delete next[key];
+        node.props = next;
     }
 
     // Structural edits each get their own history entry; property and name edits

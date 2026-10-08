@@ -1,5 +1,6 @@
 import { ModelApiService } from '@services/ModelAPI';
 import type { ListQuery, PageResponse } from '@services/api';
+import type { DesignRevisionSummary } from '@services/ReportsService';
 
 export type EmailTemplateType = 'template' | 'block';
 
@@ -35,6 +36,16 @@ export class EmailTemplatesService extends ModelApiService {
     /** One page. `page` is what makes the backend return the envelope. */
     getPage(params: ListQuery & { page: number }): Promise<PageResponse<EmailTemplateDefinition>> {
         return this.get<PageResponse<EmailTemplateDefinition>>('', { params });
+    }
+
+    /** Saved revisions, newest first (design-versioning spec §3.4). */
+    getVersions(id: string): Promise<DesignRevisionSummary[]> {
+        return this.get<DesignRevisionSummary[]>(`${id}/versions`);
+    }
+
+    /** The template as saved in one revision. */
+    findVersion(id: string, version: number): Promise<EmailTemplateDefinition> {
+        return this.get<EmailTemplateDefinition>(`${id}/versions/${version}`);
     }
 
     findById(id: string): Promise<EmailTemplateDefinition> {

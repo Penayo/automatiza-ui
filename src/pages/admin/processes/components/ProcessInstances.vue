@@ -7,6 +7,7 @@ import type { ProcessInstance, ProcessInstanceQuery } from '@services/ProcessesS
 import type { PageResponse } from '@services/api';
 import StartProcessDialog from './StartProcessDialog.vue';
 import { useInstanceCurrentTasks } from '@/composables/useInstanceCurrentTasks';
+import { useBusinessKeyColumn } from '@/composables/useBusinessKeyColumn';
 
 const props = defineProps<{
     processId: string;
@@ -19,6 +20,8 @@ const route  = useRoute();
 const toast  = useToast();
 
 const instances   = ref<PageResponse<ProcessInstance>>();
+// Business key column (process-instance-runtime spec §6a)
+const businessKey = useBusinessKeyColumn(instances);
 const loading     = ref(false);
 const rowsPerPage = ref(15);
 const currentPage = ref(1);
@@ -127,6 +130,7 @@ onMounted(fetch);
 
         <!-- Instances table -->
         <DataTable
+            :key="businessKey.tableKey.value"
             :value="instances?.rows"
             :totalRecords="instances?.totalRecords"
             :loading="loading"
@@ -145,6 +149,14 @@ onMounted(fetch);
                         style="color: var(--layout-accent-color)"
                         @click="openDetail(data.id)"
                     >{{ data.id }}</button>
+                </template>
+            </Column>
+            <Column v-if="businessKey.showBusinessKey.value" :header="businessKey.header.value">
+                <template #body="{ data }">
+                    <span v-if="businessKey.hasBusinessKey(data)" class="text-sm">
+                        <span v-if="businessKey.cellLabel(data)" class="text-zinc-500">{{ businessKey.cellLabel(data) }}:</span>
+                        {{ businessKey.businessKeyText(data) ?? '-' }}
+                    </span>
                 </template>
             </Column>
             <Column field="status" header="Status" style="width: 9rem">

@@ -26,6 +26,8 @@ export interface Task extends APIData {
         correlationLabel?: string;
         /** Denormalised on the task so list rows need no variable payload. */
         correlationValue?: string | null;
+        /** `correlationDisplay` evaluated when the task was created; shown instead of the raw value. */
+        correlationDisplay?: string | null;
     };
     name: string;
     type: string;

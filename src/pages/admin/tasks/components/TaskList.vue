@@ -164,11 +164,11 @@ defineExpose({ getTasks });
 
                     <!-- Correlation key value (if set) -->
                     <div
-                        v-if="slotProps.data.processInfo?.correlationKey"
+                        v-if="slotProps.data.processInfo?.correlationKey || slotProps.data.processInfo?.correlationDisplay"
                         class="text-sm font-semibold mt-0.5"
                     >
                         {{ slotProps.data.processInfo.correlationLabel }}:
-                        {{ slotProps.data.processInfo?.correlationValue }}
+                        {{ slotProps.data.processInfo?.correlationDisplay ?? slotProps.data.processInfo?.correlationValue }}
                     </div>
 
                     <!-- Process name -->

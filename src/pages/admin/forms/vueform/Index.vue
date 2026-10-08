@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Button, InputText, Textarea, Dialog, Message, Splitter, SplitterPanel, useConfirm, useToast } from 'primevue';
 import { $api } from '@services/api';
-import type { IForm } from '@services/FormsService';
+import type { IForm, IFormVersion } from '@services/FormsService';
 import FormField from '@components/form/FormField.vue';
 import UnsavedChangesDialog from '@components/UnsavedChangesDialog.vue';
+import VersionPicker from '@components/VersionPicker.vue';
 import JsonEditor from 'vue3-ts-jsoneditor';
 import { useUnsavedGuard } from '@/composables/useUnsavedGuard';
 import { provideFormBuilder } from '@/formbuilder/useFormBuilder';
@@ -33,6 +34,21 @@ const loading = ref(false);
 const saving = ref(false);
 /** Set when a stored builder tree had to be rebuilt from its schema — see loadPayload(). */
 const rebuiltNotice = ref(false);
+
+// ── Versions ──────────────────────────────────────────────────────────────────
+// docs/specs/design-versioning.spec.md §4: any saved version can be opened, and one
+// that is not the latest is read-only (view and copy, never save).
+const versions = ref<IFormVersion[]>([]);
+const latestVersion = computed(() => versions.value[0]?.version ?? form.value?.version ?? null);
+/** `?version=N` in the URL; absent means the latest. */
+const requestedVersion = computed(() => {
+    const n = Number(route.query.version);
+    return Number.isInteger(n) && n > 0 ? n : null;
+});
+const isReadOnly = computed(() =>
+    !!form.value && latestVersion.value !== null && form.value.version < latestVersion.value);
+/** The loaded version's schema JSON, captured before any browsing edits. */
+const loadedSchemaJson = ref('');
 
 const builder = provideFormBuilder(emptyDoc());
 
@@ -195,6 +211,7 @@ function generateId(): string {
 }
 
 async function save() {
+    if (isReadOnly.value) return;
     if (!metaName.value.trim() || !metaCode.value.trim()) { openMeta(); return; }
     saving.value = true;
     try {
@@ -219,6 +236,7 @@ async function save() {
         form.value = saved;
         builder.dirty.value = false;
         if (isNew.value) router.replace({ name: 'FormsEdit', params: { id: saved.id } });
+        void loadVersions(saved.id);
         toast.add({ severity: 'success', summary: 'Saved', detail: `"${saved.name}" saved.`, life: 3000 });
         metaVisible.value = false;
     } catch (err: any) {
@@ -234,16 +252,31 @@ async function save() {
 }
 
 function handleSave() {
+    if (isReadOnly.value) return;
     if (!metaName.value || !metaCode.value) openMeta();
     else void save();
 }
 
 // ── Load ──────────────────────────────────────────────────────────────────────
+async function loadVersions(formId: string) {
+    try {
+        versions.value = await $api.forms.getVersions(formId);
+    } catch {
+        // The picker just stays empty; the form itself still loaded.
+        versions.value = [];
+    }
+}
+
 async function load() {
     if (isNew.value) return;
     loading.value = true;
     try {
-        const loaded = await $api.forms.findById(id.value!);
+        const [loaded] = await Promise.all([
+            requestedVersion.value
+                ? $api.forms.findVersion(id.value!, requestedVersion.value)
+                : $api.forms.findById(id.value!),
+            loadVersions(id.value!),
+        ]);
         form.value = loaded;
         metaName.value = loaded.name ?? '';
         metaDesc.value = loaded.description ?? '';
@@ -251,9 +284,16 @@ async function load() {
 
         const { doc, rebuilt } = loadPayload(loaded.vueform);
         builder.reset(doc);
+        loadedSchemaJson.value = JSON.stringify(builder.schema.value, null, 2);
         rebuiltNotice.value = rebuilt;
         coverageNotice.value = rebuilt && unassigned.value.length > 0;
     } catch {
+        if (requestedVersion.value) {
+            // A bad ?version is a bad link, not a missing form: fall back to the latest.
+            toast.add({ severity: 'warn', summary: 'Not found', detail: `Version ${requestedVersion.value} does not exist.`, life: 4000 });
+            router.replace({ query: { ...route.query, version: undefined } });
+            return;
+        }
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load form.', life: 4000 });
         router.push({ name: 'FormsList' });
     } finally {
@@ -264,7 +304,8 @@ async function load() {
 // Holds in-app navigation while the tree has unsaved edits, and covers the
 // re-auth gate and the browser's own beforeunload via the shared registry.
 const guard = useUnsavedGuard({
-    isDirty: () => builder.dirty.value,
+    // Edits made while browsing an old version are throwaway; never prompt for them.
+    isDirty: () => builder.dirty.value && !isReadOnly.value,
     save: async () => {
         if (!metaName.value.trim() || !metaCode.value.trim()) {
             // Nowhere to save to yet — the form has never been named.
@@ -278,6 +319,43 @@ const guard = useUnsavedGuard({
 });
 
 onMounted(load);
+
+/** Picker choice -> URL; the watcher below does the loading. */
+function selectVersion(version: number) {
+    const go = () => router.replace({
+        query: { ...route.query, version: version === latestVersion.value ? undefined : String(version) },
+    });
+    // A query change is not a route leave, so the unsaved guard does not see it.
+    if (builder.dirty.value && !isReadOnly.value) {
+        confirm.require({
+            header: 'Discard unsaved changes?',
+            message: 'Opening another version discards the changes you have not saved.',
+            acceptLabel: 'Discard',
+            rejectLabel: 'Cancel',
+            acceptProps: { severity: 'danger', size: 'small' },
+            rejectProps: { severity: 'secondary', text: true, size: 'small' },
+            accept: go,
+        });
+        return;
+    }
+    go();
+}
+
+watch(() => route.query.version, () => { if (!isNew.value) void load(); });
+
+async function copyVersionJson() {
+    try {
+        await navigator.clipboard.writeText(loadedSchemaJson.value);
+        toast.add({
+            severity: 'success',
+            summary: 'Copied',
+            detail: `v${form.value?.version} JSON copied. Paste it in the latest version's JSON tab.`,
+            life: 3000,
+        });
+    } catch {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Clipboard is not available.', life: 3000 });
+    }
+}
 </script>
 
 <template>
@@ -298,10 +376,13 @@ onMounted(load);
                     <span class="font-semibold truncate" style="color: var(--layout-title-color)">
                         {{ form?.name ?? 'New Form' }}
                     </span>
-                    <span v-if="form?.version" class="text-xs font-mono bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded text-surface-500">
-                        v{{ form.version }}
-                    </span>
-                    <span v-if="builder.dirty.value" class="text-xs text-amber-600">unsaved</span>
+                    <VersionPicker
+                        v-if="form?.version"
+                        :versions="versions.map(v => ({ version: v.version, savedAt: v.createdAt }))"
+                        :model-value="form.version"
+                        @update:model-value="selectVersion"
+                    />
+                    <span v-if="builder.dirty.value && !isReadOnly" class="text-xs text-amber-600">unsaved</span>
                 </div>
             </div>
 
@@ -348,9 +429,25 @@ onMounted(load);
                 @click="builder.redo()"
             />
 
-            <Button icon="pi pi-pencil" size="small" text rounded v-tooltip.left="'Edit name'" @click="openMeta" />
-            <Button label="Save" icon="pi pi-save" size="small" :loading="saving" @click="handleSave" />
+            <Button icon="pi pi-pencil" size="small" text rounded :disabled="isReadOnly" v-tooltip.left="'Edit name'" @click="openMeta" />
+            <Button
+                label="Save" icon="pi pi-save" size="small"
+                :loading="saving" :disabled="isReadOnly"
+                v-tooltip.bottom="isReadOnly ? 'Older versions are read-only' : undefined"
+                @click="handleSave"
+            />
         </div>
+
+        <Message v-if="isReadOnly" severity="info" class="mx-4 mt-2 shrink-0">
+            <div class="flex flex-wrap items-center gap-2">
+                <span>
+                    Viewing <strong>v{{ form?.version }}</strong> of {{ latestVersion }} (read-only).
+                    Copy what you need and paste it into the latest version.
+                </span>
+                <Button label="Copy JSON" icon="pi pi-copy" size="small" @click="copyVersionJson" />
+                <Button label="Go to latest" size="small" text @click="selectVersion(latestVersion!)" />
+            </div>
+        </Message>
 
         <Message
             v-if="rebuiltNotice"
@@ -442,7 +539,7 @@ onMounted(load);
                         The compiled Vueform schema. Applying replaces the designer tree —
                         field order and nesting are kept, builder-only notes are reset.
                     </p>
-                    <Button label="Apply to designer" size="small" icon="pi pi-check" @click="applyJson" />
+                    <Button label="Apply to designer" size="small" icon="pi pi-check" :disabled="isReadOnly" @click="applyJson" />
                 </div>
                 <Message v-if="jsonError" severity="error" size="small" class="mb-2">{{ jsonError }}</Message>
                 <JsonEditor

@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useToast, Button } from 'primevue';
+import { useToast, Button, Message } from 'primevue';
 import { useTheme } from '@/composables/useTheme';
 import { $api } from '@services/api';
-import type { DecisionDefinition } from '@services/DecisionsService';
+import type { DecisionDefinition, DecisionDefinitionVersion } from '@services/DecisionsService';
 import DmnModeler from './components/DmnModeler.vue';
 import CodeEditor from '@components/CodeEditor.vue';
+import VersionPicker from '@components/VersionPicker.vue';
 import AiChatPanel from '@components/chat/AiChatPanel.vue';
 
 const { isDark } = useTheme();
@@ -21,6 +22,37 @@ const loading    = ref(false);
 const saving     = ref(false);
 const deploying  = ref(false);
 const modelerRef = ref<InstanceType<typeof DmnModeler> | null>(null);
+
+// ── Versions (docs/specs/design-versioning.spec.md §4) ────────────────────────
+// Each version is its own definition id: picking one navigates to it. Anything older
+// than the newest is read-only (no Save, no Deploy).
+const versions = ref<DecisionDefinitionVersion[]>([]);
+const latestVersion = computed(() => versions.value[0]?.version ?? null);
+const readOnly = computed(() =>
+    !!decision.value && latestVersion.value !== null && decision.value.version < latestVersion.value);
+
+async function loadVersions(decisionDefId: string) {
+    if (versions.value.some(v => v.id === decisionDefId)) return;
+    try {
+        versions.value = await $api.decisions.getVersions(decisionDefId);
+    } catch {
+        versions.value = [];
+    }
+}
+
+function selectVersion(version: number) {
+    const target = versions.value.find(v => v.version === version);
+    if (target && target.id !== decision.value?.id) router.push({ name: 'DecisionEdit', params: { id: target.id } });
+}
+
+async function copyXml() {
+    try {
+        await navigator.clipboard.writeText(decision.value?.dmnXml ?? '');
+        toast.add({ severity: 'success', summary: 'Copied', detail: `v${decision.value?.version} XML copied. Paste it in the latest version's XML tab.`, life: 3000 });
+    } catch {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Clipboard is not available.', life: 3000 });
+    }
+}
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 type Tab = 'designer' | 'xml' | 'preview';
@@ -110,6 +142,7 @@ async function load() {
     loading.value = true;
     try {
         decision.value = await $api.decisions.findById(id.value!);
+        void loadVersions(decision.value.id);
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load decision.', life: 4000 });
         router.push({ name: 'DecisionsList' });
@@ -121,7 +154,7 @@ async function load() {
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 async function save() {
-    if (!modelerRef.value) return;
+    if (!modelerRef.value || readOnly.value) return;
     saving.value = true;
     try {
         await modelerRef.value.saveXml();
@@ -144,9 +177,10 @@ async function onSave(xml: string) {
             detail:   `"${saved.name}" saved as version ${saved.version}.`,
             life:     3000,
         });
-        if (isNew.value) {
-            router.replace({ name: 'DecisionEdit', params: { id: saved.id } });
-        }
+        // Every save is a new definition id. Rebinding the URL keeps a reload on the
+        // latest version, which would otherwise now open read-only.
+        router.replace({ name: 'DecisionEdit', params: { id: saved.id } });
+        void loadVersions(saved.id);
     } catch {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not save decision.', life: 4000 });
     } finally {
@@ -170,6 +204,9 @@ async function deploy() {
 }
 
 onMounted(load);
+
+// Version picker and post-save rebinding both change :id on the same route.
+watch(id, (next) => { if (next && next !== decision.value?.id) void load(); });
 </script>
 
 <template>
@@ -190,7 +227,13 @@ onMounted(load);
                     <span class="font-semibold truncate" style="color: var(--layout-title-color)">
                         {{ decision.name }}
                     </span>
-                    <span class="text-xs font-mono bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded text-surface-500">
+                    <VersionPicker
+                        v-if="versions.length > 1"
+                        :versions="versions.map(v => ({ version: v.version, savedAt: v.createdAt }))"
+                        :model-value="decision.version"
+                        @update:model-value="selectVersion"
+                    />
+                    <span v-else class="text-xs font-mono bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded text-surface-500">
                         v{{ decision.version }}
                     </span>
                     <span
@@ -231,12 +274,14 @@ onMounted(load);
                 icon="pi pi-save"
                 size="small"
                 :loading="saving"
+                :disabled="readOnly"
+                v-tooltip.bottom="readOnly ? 'Older versions are read-only' : undefined"
                 @click="save"
             />
 
             <!-- Deploy -->
             <Button
-                v-if="decision && !decision.deployedAt"
+                v-if="decision && !decision.deployedAt && !readOnly"
                 label="Deploy"
                 icon="pi pi-cloud-upload"
                 size="small"
@@ -250,6 +295,17 @@ onMounted(load);
                 <i class="pi pi-check-circle" /> Active
             </span>
         </div>
+
+        <Message v-if="readOnly" severity="info" class="mx-4 mt-2 shrink-0">
+            <div class="flex flex-wrap items-center gap-2">
+                <span>
+                    Viewing <strong>v{{ decision?.version }}</strong> of {{ latestVersion }} (read-only).
+                    Copy what you need and paste it into the latest version.
+                </span>
+                <Button label="Copy XML" icon="pi pi-copy" size="small" @click="copyXml" />
+                <Button label="Go to latest" size="small" text @click="selectVersion(latestVersion!)" />
+            </div>
+        </Message>
 
         <!-- ── Content ────────────────────────────────────────────────────────── -->
         <div v-if="loading" class="flex-1 flex items-center justify-center text-surface-400">

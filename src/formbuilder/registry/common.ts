@@ -626,3 +626,132 @@ export function matrixLayoutTab(): PropTab {
         },
     };
 }
+
+// ── Appearance ────────────────────────────────────────────────────────────────────
+
+/**
+ * Container appearance, stored as Vueform's own `addClass` and styled in style.css.
+ *
+ * There is deliberately no builder-only prop: compile spreads `props` straight into the
+ * schema, so anything that is not a real Vueform prop would leak onto the DOM. The tab
+ * projects `addClass` into editor fields and back, and only touches the classes owned by
+ * the fields it renders, so a class typed by hand in the JSON tab survives an edit here.
+ */
+export const ITEM_STYLE_CLASSES = {
+    divider: 'form-items',
+    card: 'form-items--card',
+    striped: 'form-items--striped',
+} as const;
+export const NUMBERED_CLASS = 'form-items--numbered';
+export const SECTION_CLASS = 'form-section';
+export const CARD_CLASS = 'form-card';
+
+/** The classes each editor field owns; a field absent from the tab owns nothing. */
+const OWNED_BY_FIELD: Record<string, string[]> = {
+    itemStyle: [...Object.values(ITEM_STYLE_CLASSES), NUMBERED_CLASS],
+    sectionHeading: [SECTION_CLASS],
+    cardStyle: [CARD_CLASS],
+};
+
+type ItemStyle = 'none' | keyof typeof ITEM_STYLE_CLASSES;
+
+/**
+ * Vueform also accepts `addClass` as an array or a { class: bool } map. Strings and
+ * arrays are read as class lists; the map form is left to the JSON tab (see fromForm).
+ */
+function splitClasses(value: unknown): string[] {
+    if (typeof value === 'string') return value.split(/\s+/).filter(Boolean);
+    if (Array.isArray(value)) return value.flatMap(splitClasses);
+    return [];
+}
+
+export function appearanceToForm(props: Record<string, unknown>): Record<string, unknown> {
+    const classes = new Set(splitClasses(props.addClass));
+    // Several item styles on one element: the first in table order wins (spec §5.1).
+    const itemStyle = (Object.keys(ITEM_STYLE_CLASSES) as (keyof typeof ITEM_STYLE_CLASSES)[])
+        .find((key) => classes.has(ITEM_STYLE_CLASSES[key])) ?? 'none';
+
+    return {
+        itemStyle,
+        numbered: classes.has(NUMBERED_CLASS),
+        sectionHeading: classes.has(SECTION_CLASS),
+        cardStyle: classes.has(CARD_CLASS) ? 'card' : 'none',
+    };
+}
+
+export function appearanceFromForm(
+    data: Record<string, unknown>,
+    props: Record<string, unknown>,
+): Record<string, unknown> {
+    // A { class: bool } map cannot be merged into a class string without guessing.
+    if (props.addClass && typeof props.addClass === 'object' && !Array.isArray(props.addClass)) return {};
+
+    const owned = new Set(Object.keys(OWNED_BY_FIELD).filter((f) => f in data).flatMap((f) => OWNED_BY_FIELD[f]));
+    const classes = splitClasses(props.addClass).filter((c) => !owned.has(c));
+    if (data.sectionHeading) classes.push(SECTION_CLASS);
+
+    // Only the fields this element's tab renders are present in `data`.
+    const itemStyle = data.itemStyle as ItemStyle | undefined;
+    if (itemStyle && itemStyle !== 'none' && itemStyle in ITEM_STYLE_CLASSES) {
+        classes.push(ITEM_STYLE_CLASSES[itemStyle]);
+        if (itemStyle === 'card' && data.numbered) classes.push(NUMBERED_CLASS);
+    }
+    if (data.cardStyle === 'card') classes.push(CARD_CLASS);
+
+    // undefined removes the prop (patchProps drops undefined keys).
+    return { addClass: classes.length ? classes.join(' ') : undefined };
+}
+
+const SECTION_HEADING_PROP = {
+    sectionHeading: {
+        type: 'toggle',
+        label: 'Section heading',
+        description: 'Shows the label as a section title with a rule under it.',
+    },
+} as const;
+
+/** Appearance for a repeating list: how one item is separated from the next. */
+export function listAppearanceTab(): PropTab {
+    return {
+        key: 'appearance',
+        label: 'Appearance',
+        schema: {
+            itemStyle: {
+                type: 'select',
+                label: 'Item style',
+                description: 'Add a Card title element first in the item to label each card.',
+                items: { none: 'None', divider: 'Divider', card: 'Card', striped: 'Striped' },
+                default: 'none',
+            },
+            numbered: {
+                type: 'toggle',
+                label: 'Numbered',
+                description: 'Shows #1, #2… in the corner of each card.',
+                conditions: [['itemStyle', '==', 'card']],
+            },
+            ...SECTION_HEADING_PROP,
+        },
+        toForm: appearanceToForm,
+        fromForm: appearanceFromForm,
+    };
+}
+
+/** Appearance for an object or group: the container drawn as one card. */
+export function containerAppearanceTab(): PropTab {
+    return {
+        key: 'appearance',
+        label: 'Appearance',
+        schema: {
+            cardStyle: {
+                type: 'select',
+                label: 'Style',
+                description: 'Card draws a rounded border around the fields, e.g. a row of related fields.',
+                items: { none: 'None', card: 'Card' },
+                default: 'none',
+            },
+            ...SECTION_HEADING_PROP,
+        },
+        toForm: appearanceToForm,
+        fromForm: appearanceFromForm,
+    };
+}

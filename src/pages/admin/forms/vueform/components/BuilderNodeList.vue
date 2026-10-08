@@ -16,6 +16,7 @@
  */
 import { compile } from '@/formbuilder/compile';
 import { getElementDef } from '@/formbuilder/registry';
+import { appearanceToForm } from '@/formbuilder/registry/common';
 import { isContainerType, isSingleChildContainer, type BuilderNode, type CompiledElement } from '@/formbuilder/types';
 import type { BuilderApi } from '@/formbuilder/useFormBuilder';
 import type { BuilderDndApi } from '@/formbuilder/useBuilderDnd';
@@ -61,6 +62,13 @@ function spanOf(node: BuilderNode): number {
     const columns = node.props.columns;
     const n = typeof columns === 'number' || typeof columns === 'string' ? Number(columns) : NaN;
     return Number.isFinite(n) ? Math.min(Math.max(Math.round(n), 1), 12) : 12;
+}
+
+/** Appearance tab choice as a short canvas label, e.g. "cards"; '' when plain. */
+function appearanceLabel(node: BuilderNode): string {
+    const { itemStyle, cardStyle } = appearanceToForm(node.props);
+    if (node.type === 'list') return itemStyle === 'none' ? '' : itemStyle === 'card' ? 'cards' : String(itemStyle);
+    return cardStyle === 'card' ? 'card' : '';
 }
 
 /** 'before' | 'after' | null — which edge of this node the pending drop would land on. */
@@ -135,11 +143,15 @@ function edgeClass(node: BuilderNode, index: number): string {
                 <!-- Body -->
                 <div class="px-2 pb-2">
                     <template v-if="isContainerType(node.type)">
-                        <div class="rounded border border-dashed border-surface-300 p-2 dark:border-surface-600">
+                        <div
+                            class="border border-surface-300 p-2 dark:border-surface-600"
+                            :class="appearanceLabel(node) ? 'rounded-lg border-solid' : 'rounded border-dashed'"
+                        >
                             <div class="mb-1 text-[11px] font-medium opacity-60">
                                 {{ (node.props.label as string) || getElementDef(node.type)?.label }}
                                 <span v-if="node.type === 'object'" class="opacity-60">— nests data</span>
                                 <span v-else-if="node.type === 'list'" class="opacity-60">— repeats</span>
+                                <span v-if="appearanceLabel(node)" class="opacity-60"> · {{ appearanceLabel(node) }}</span>
                             </div>
 
                             <BuilderNodeList

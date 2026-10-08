@@ -67,8 +67,20 @@ export interface InstanceCurrentTask {
     activeTaskCount: number;
 }
 
+/** A process's business key (process-instance-runtime spec §6a). */
+export interface ProcessInfo {
+    name: string;
+    version: number;
+    processId?: string;
+    correlationKey?: string;
+    correlationLabel?: string;
+    correlationValue?: string | null;
+    correlationDisplay?: string | null;
+}
+
 export interface ProcessInstance extends APIData {
     id: string;
+    processInfo?: ProcessInfo;
     processDefinition: ProcessDefinition,
     processDefinitionId: string;
     variables: ProcessVariable[];
@@ -133,6 +145,15 @@ export interface ProcessSpec extends ProcessSpecSections {
     generatedAt?: string;
 }
 
+/** One row of a process's history, without the diagram. See docs/specs/design-versioning.spec.md §3.2. */
+export interface ProcessDefinitionVersion {
+    id: string;
+    processId: string;
+    name: string;
+    version: number;
+    createdAt: string;
+}
+
 export class ProcessesService extends ModelApiService {
     constructor() {
         super("bpmn/processes");
@@ -141,6 +162,11 @@ export class ProcessesService extends ModelApiService {
     async getAllProcessDefinitions(): Promise<ProcessDefinition[]> {
         const data = await this.get<ProcessDefinition[]>() ;
         return data as ProcessDefinition[];
+    }
+
+    /** Every version of this definition's process, newest first (design-versioning spec §3.2). */
+    async getVersions(processDefinitionId: string): Promise<ProcessDefinitionVersion[]> {
+        return this.get<ProcessDefinitionVersion[]>(`${processDefinitionId}/versions`);
     }
 
     public async findById(processDefinitionId: string): Promise<ProcessDefinition> {

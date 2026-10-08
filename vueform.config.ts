@@ -36,6 +36,29 @@ const LIST = (items: unknown): string => {
     return `<ul class="form-list">${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`
 }
 
+/**
+ * Sums one field across an array of rows, optionally only the rows whose `unit_type`
+ * matches:
+ *
+ *   "{priced_monthly_total + SUM_FIELD(staff_services, 'price', 'MONTHLY')}"
+ *
+ * Vueform's own SUM cannot do this: its `list.*.field` wildcard only resolves inside a
+ * list item, so from outside the array there is no way to reach a column. Blank cells
+ * count as 0, so a total stays live while staff are still typing prices.
+ *
+ * Same registration contract as LIST: called with no arguments it returns a number,
+ * which keeps it a plain function rather than a form$ factory.
+ */
+const SUM_FIELD = (rows: unknown, field?: unknown, unitType?: unknown): number => {
+    if (!Array.isArray(rows) || typeof field !== 'string') return 0
+    return rows.reduce((sum, row) => {
+        if (!row || typeof row !== 'object') return sum
+        if (unitType !== undefined && (row as any).unit_type !== unitType) return sum
+        const value = Number((row as any)[field])
+        return Number.isFinite(value) ? sum + value : sum
+    }, 0)
+}
+
 // Both locales are registered so a form can be switched at runtime via
 // form$.setLanguage(); `locale` here is only the default. See useFormLocale().
 export default defineConfig({
@@ -43,7 +66,7 @@ export default defineConfig({
   locales: { en, es },
   locale: 'en',
   expression: {
-    functions: { LIST },
+    functions: { LIST, SUM_FIELD },
   },
   /**
    * Custom elements. Registered here rather than per-form because Vueform resolves an

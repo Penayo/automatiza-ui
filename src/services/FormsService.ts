@@ -29,6 +29,16 @@ export interface IForm extends APIData {
     __v?: string;
 }
 
+/** One row of a form's history, without the body. See docs/specs/design-versioning.spec.md §3.1. */
+export interface IFormVersion {
+    _id: string;
+    id: string;
+    code: string;
+    name: string;
+    version: number;
+    createdAt: string;
+}
+
 export class FormsService extends ModelApiService {
     constructor() {
         super("forms");
@@ -47,6 +57,16 @@ export class FormsService extends ModelApiService {
 
     async findById(id: string): Promise<IForm> {
         return this.get<IForm>(id) as Promise<IForm>;
+    }
+
+    /** Every saved version of a form family, newest first. */
+    async getVersions(id: string): Promise<IFormVersion[]> {
+        return this.get<IFormVersion[]>(`${encodeURIComponent(id)}/versions`);
+    }
+
+    /** One exact version, for read-only viewing. */
+    async findVersion(id: string, version: number): Promise<IForm> {
+        return this.get<IForm>(`${encodeURIComponent(id)}/versions/${version}`);
     }
 
     async findByName(formName: string): Promise<IForm> {

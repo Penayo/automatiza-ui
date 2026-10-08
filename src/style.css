@@ -293,6 +293,78 @@ html * {
 }
 
 /*
+ * Container appearance (spec §5.1), set from the builder's Appearance tab.
+ *
+ * Unlike `.form-items` above, these use the full child chain from the element's own
+ * layout to its rows. A list item usually holds an object that holds more lists, and a
+ * descendant selector would card every nested row too:
+ *
+ *   list:   .X > outer-wrapper > inner-container > inner-wrapper > .vf-rowset > .vf-row
+ *   object: .X > outer-wrapper > inner-container > inner-wrapper > .vf-row
+ */
+.form-items--card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row,
+.form-card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-row {
+    padding: 1rem;
+    border: 1px solid var(--vf-border-color-input);
+    border-radius: calc(var(--vf-radius-input) * 2);
+    background: color-mix(in srgb, var(--vf-border-color-input) 12%, transparent);
+}
+
+.form-items--card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset {
+    row-gap: 1rem;
+}
+
+/* A card inside a card steps down, so the nesting still reads. */
+:is(.form-items--card, .form-card) :is(
+    .form-items--card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row,
+    .form-card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-row
+) {
+    padding: 0.75rem;
+    border-color: color-mix(in srgb, var(--vf-border-color-input) 60%, transparent);
+    background: transparent;
+}
+
+.form-items--striped > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--vf-radius-input);
+}
+
+.form-items--striped > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row:nth-child(odd) {
+    background: color-mix(in srgb, var(--vf-border-color-input) 18%, transparent);
+}
+
+/* "#1", "#2"… in the card's corner. Only meaningful with Card, which the builder enforces. */
+.form-items--numbered > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset {
+    counter-reset: form-item;
+}
+
+.form-items--numbered > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row {
+    counter-increment: form-item;
+}
+
+.form-items--numbered > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row::before {
+    content: "#" counter(form-item);
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--vf-color-muted);
+}
+
+/*
+ * Card title: the `card-title` palette preset, a static h4 placed first in a list item.
+ * Tailwind's preflight zeroes heading size and weight, so both are restated.
+ */
+.form-card-title :is(h1, h2, h3, h4, p) {
+    margin: 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--vf-border-color-input);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/*
  * Vueform's own "Upload" button on file/multifile elements.
  *
  * Our file elements are `auto: false` (see formbuilder/registry/index.ts) so the

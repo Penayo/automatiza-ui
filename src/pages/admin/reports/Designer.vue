@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useToast, Button, InputText, Textarea, Dialog } from 'primevue';
+import { useToast, Button, InputText, Textarea, Dialog, Message } from 'primevue';
 import { $api } from '@services/api';
-import type { ReportDefinition } from '@services/ReportsService';
+import type { ReportDefinition, DesignRevisionSummary } from '@services/ReportsService';
+import VersionPicker from '@components/VersionPicker.vue';
 import PdfDesigner from './components/PdfDesigner.vue';
 import PdfPreview  from './components/PdfPreview.vue';
 import JsonEditor from 'vue3-ts-jsoneditor';
@@ -21,6 +22,39 @@ const report      = ref<ReportDefinition | null>(null);
 const loading     = ref(false);
 const saving      = ref(false);
 const designerRef = ref<InstanceType<typeof PdfDesigner> | null>(null);
+
+// ── Versions (docs/specs/design-versioning.spec.md §4) ────────────────────────
+// `?version=N` opens a saved revision; anything older than the newest is read-only.
+const versions = ref<DesignRevisionSummary[]>([]);
+const latestVersion = computed(() => versions.value[0]?.version ?? null);
+const requestedVersion = computed(() => {
+    const n = Number(route.query.version);
+    return Number.isInteger(n) && n > 0 ? n : null;
+});
+const shownVersion = computed(() => requestedVersion.value ?? latestVersion.value);
+const readOnly = computed(() =>
+    requestedVersion.value !== null && latestVersion.value !== null && requestedVersion.value < latestVersion.value);
+
+async function loadVersions(reportId: string) {
+    try {
+        versions.value = await $api.reports.getVersions(reportId);
+    } catch {
+        versions.value = [];
+    }
+}
+
+function selectVersion(version: number) {
+    router.replace({ query: { ...route.query, version: version === latestVersion.value ? undefined : String(version) } });
+}
+
+async function copyTemplate() {
+    try {
+        await navigator.clipboard.writeText(JSON.stringify(report.value?.template ?? {}, null, 2));
+        toast.add({ severity: 'success', summary: 'Copied', detail: `v${shownVersion.value} template JSON copied. Paste it in the latest version's JSON tab.`, life: 3000 });
+    } catch {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Clipboard is not available.', life: 3000 });
+    }
+}
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 type Tab = 'designer' | 'json' | 'preview';
@@ -74,7 +108,13 @@ async function load() {
     if (isNew.value) return;
     loading.value = true;
     try {
-        report.value = await $api.reports.findById(id.value!);
+        const [loaded] = await Promise.all([
+            requestedVersion.value
+                ? $api.reports.findVersion(id.value!, requestedVersion.value)
+                : $api.reports.findById(id.value!),
+            loadVersions(id.value!),
+        ]);
+        report.value = loaded;
 
         // Seed the meta refs from the loaded report. save() reads them as
         // "has this report been named yet?", so leaving them empty makes the
@@ -84,6 +124,12 @@ async function load() {
         metaName.value = report.value?.name        ?? '';
         metaDesc.value = report.value?.description ?? '';
     } catch {
+        if (requestedVersion.value) {
+            // A bad ?version is a bad link, not a missing report: fall back to the latest.
+            toast.add({ severity: 'warn', summary: 'Not found', detail: `Version ${requestedVersion.value} does not exist.`, life: 4000 });
+            router.replace({ query: { ...route.query, version: undefined } });
+            return;
+        }
         toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load report.', life: 4000 });
         router.push({ name: 'ReportsList' });
     } finally {
@@ -93,6 +139,7 @@ async function load() {
 
 // ── Save ──────────────────────────────────────────────────────────────────────
 async function save() {
+    if (readOnly.value) return;
     if (!metaName.value.trim() || !metaKey.value.trim()) { openMeta(); return; }
 
     saving.value = true;
@@ -115,6 +162,7 @@ async function save() {
             report.value = (updated as any)?.data ?? updated;
             toast.add({ severity: 'success', summary: 'Saved', detail: `"${dto.name}" updated.`, life: 3000 });
         }
+        if (report.value?.id) void loadVersions(report.value.id);
 
         metaVisible.value = false;
     } catch (err: any) {
@@ -125,10 +173,12 @@ async function save() {
 }
 
 function handleSave() {
+    if (readOnly.value) return;
     if (isNew.value && !metaName.value) { openMeta(); } else { save(); }
 }
 
 onMounted(load);
+watch(() => route.query.version, () => { if (!isNew.value) void load(); });
 </script>
 
 <template>
@@ -155,6 +205,12 @@ onMounted(load);
                     >
                         {{ report.key }}
                     </span>
+                    <VersionPicker
+                        v-if="versions.length > 1"
+                        :versions="versions.map(v => ({ version: v.version, savedAt: v.createdAt }))"
+                        :model-value="shownVersion"
+                        @update:model-value="selectVersion"
+                    />
                 </div>
             </div>
 
@@ -174,9 +230,25 @@ onMounted(load);
                 </button>
             </div>
 
-            <Button icon="pi pi-pencil" size="small" text rounded v-tooltip.left="'Edit name & key'" @click="openMeta" />
-            <Button label="Save" icon="pi pi-save" size="small" :loading="saving" @click="handleSave" />
+            <Button icon="pi pi-pencil" size="small" text rounded :disabled="readOnly" v-tooltip.left="'Edit name & key'" @click="openMeta" />
+            <Button
+                label="Save" icon="pi pi-save" size="small"
+                :loading="saving" :disabled="readOnly"
+                v-tooltip.bottom="readOnly ? 'Older versions are read-only' : undefined"
+                @click="handleSave"
+            />
         </div>
+
+        <Message v-if="readOnly" severity="info" class="mx-4 mt-2 shrink-0">
+            <div class="flex flex-wrap items-center gap-2">
+                <span>
+                    Viewing <strong>v{{ shownVersion }}</strong> of {{ latestVersion }} (read-only).
+                    Copy what you need and paste it into the latest version.
+                </span>
+                <Button label="Copy JSON" icon="pi pi-copy" size="small" @click="copyTemplate" />
+                <Button label="Go to latest" size="small" text @click="selectVersion(latestVersion!)" />
+            </div>
+        </Message>
 
         <!-- ── Content ────────────────────────────────────────────────────── -->
         <div v-if="loading" class="flex-1 flex items-center justify-center text-surface-400">
