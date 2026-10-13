@@ -137,6 +137,42 @@ watch(
 );
 
 /**
+ * Re-resolve expressions that aggregate over an array (SUM_FIELD, LIST).
+ *
+ * Vueform tracks an expression's dependencies by flattening the form data to leaf
+ * keys (`quote_items.0.price`) and watching the keys the expression names. An
+ * expression that names the array itself (`SUM_FIELD(quote_items, ...)`) depends on
+ * a key that never exists in the flattened data, so it resolves once on mount and
+ * never again: editing a row or adding one leaves the total stale. Nothing on the
+ * element is exposed to force a recompute, so the value is set from here instead.
+ * Writing an unchanged value is skipped, which is what stops this from looping
+ * through its own watcher.
+ */
+const ARRAY_EXPRESSION = /\b(SUM_FIELD|LIST)\s*\(/;
+
+function refreshArrayExpressions(children: Record<string, any> | undefined) {
+    for (const el$ of Object.values(children ?? {})) {
+        if (!el$ || typeof el$ !== 'object') continue;
+
+        if (typeof el$.expression === 'string' && ARRAY_EXPRESSION.test(el$.expression)) {
+            const next = vueform$.value.resolveExpression(el$.expression, el$.dataPath);
+            if (next !== el$.value) el$.update(next);
+        }
+
+        refreshArrayExpressions(el$.children$);
+    }
+}
+
+watch(
+    vueformData,
+    () => {
+        if (engine.value !== 'vueform' || !vueform$.value) return;
+        refreshArrayExpressions(vueform$.value.elements$);
+    },
+    { deep: true },
+);
+
+/**
  * A paginated form. Vueform renders its own step bar and Previous/Next/Finish
  * controls, with Next auto-disabled while the current page has validation errors.
  */

@@ -14,6 +14,7 @@ import { onApprove } from "@/utils/common";
 import { parseApiError } from "@/utils/error";
 import type { IAccess } from "@services/AuthService.ts";
 import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
+import { resolveCompletion } from '@/formbuilder/completion';
 
 import FormRenderer from '@components/forms/FormRenderer.vue';
 import ProcessComments from '@components/comments/ProcessComments.vue';
@@ -45,6 +46,12 @@ const saving          = ref<boolean>(false);
 const saved           = ref<boolean>(false);
 const userInfo        = ref<IAccess | null>(null);
 const completed       = ref<boolean>(false);
+/**
+ * The submitted form's own completion text (forms spec §5.2), captured at submit
+ * because the schema is cleared right after. In a wizard each step overwrites it, so
+ * the panel shows the last submitted step's text.
+ */
+const completion      = ref<{ title: string | null; message: string | null }>({ title: null, message: null });
 
 
 // Custom views are the one form type FormRenderer does not own — they take a
@@ -65,6 +72,7 @@ async function completeTask(variables: any) {
             // behaviour (including auto-claim) stay exactly as they are today.
             chainForms: isWizard.value,
         });
+        completion.value = resolveCompletion(formSchema.value, { ...formData.value, ...variables });
         formSchema.value = null;
 
         if (isWizard.value && response?.chain) {
@@ -246,6 +254,7 @@ watch(() => props.task, () => {
     waiting.value     = false;
     step.value        = 1;
     completed.value   = false;
+    completion.value  = { title: null, message: null };
     getTaskForm();
     userInfo.value  = $api.authService.getAccessInfo();
 }, { immediate: true });
@@ -262,8 +271,11 @@ onUnmounted(() => chainAbort.value?.abort());
         <div class="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
             <i class="pi pi-check text-green-600 dark:text-green-400" style="font-size: 2rem" />
         </div>
-        <h2 class="text-2xl font-semibold text-(--layout-accent-color)">Task completed!</h2>
-        <p class="text-zinc-500 dark:text-zinc-400 max-w-sm">
+        <h2 class="text-2xl font-semibold text-(--layout-accent-color)">{{ completion.title ?? 'Task completed!' }}</h2>
+        <p v-if="completion.message" class="text-zinc-500 dark:text-zinc-400 max-w-sm whitespace-pre-line">
+            {{ completion.message }}
+        </p>
+        <p v-else class="text-zinc-500 dark:text-zinc-400 max-w-sm">
             The task <strong>{{ activeTask?.name }}</strong> was submitted successfully and is now progressing to the next stage.
         </p>
         <Button

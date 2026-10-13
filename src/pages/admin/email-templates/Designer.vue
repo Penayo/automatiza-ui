@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useToast, Button, InputText, Textarea, Dialog, Tag, Message } from 'primevue';
+import { useToast, Button, InputText, Textarea, Dialog, Tag, Message, SelectButton } from 'primevue';
 import { $api } from '@services/api';
 import type { EmailTemplateDefinition, EmailTemplateType } from '@services/EmailTemplatesService';
 import EmailDesigner from './components/EmailDesigner.vue';
+import EmailPreview from './components/EmailPreview.vue';
+import CodeEditor from '@components/CodeEditor.vue';
+import { useTheme } from '@/composables/useTheme';
 import VersionPicker from '@components/VersionPicker.vue';
 import type { DesignRevisionSummary } from '@services/ReportsService';
 
@@ -14,6 +17,8 @@ const toast  = useToast();
 
 const id    = computed(() => route.params.id as string | undefined);
 const isNew = computed(() => !id.value);
+
+const { isDark } = useTheme();
 
 const template    = ref<EmailTemplateDefinition | null>(null);
 const loading     = ref(false);
@@ -87,6 +92,55 @@ function openMeta() {
     metaVisible.value = true;
 }
 
+// ── Views: Design / Code / Preview (email-templates spec §4a) ─────────────────
+// The visual editor stays mounted (v-show) so its undo history and selection
+// survive a trip through Code or Preview.
+type View = 'design' | 'code' | 'preview';
+const view = ref<View>('design');
+const viewOptions = [
+    { value: 'design',  label: 'Design',  icon: 'pi pi-pencil' },
+    { value: 'code',    label: 'Code',    icon: 'pi pi-code' },
+    { value: 'preview', label: 'Preview', icon: 'pi pi-eye' },
+];
+
+const mjml        = ref('');
+const codeError   = ref<string | null>(null);
+const previewHtml = ref('');
+const previewVars = ref('{\n  \n}');
+
+/**
+ * Pushes the Code view's MJML back into the visual editor. Returns false (and
+ * keeps the user on Code) when it can't be loaded. Read-only versions skip it:
+ * their Code view can't be edited.
+ */
+function applyCode(): boolean {
+    if (view.value !== 'code' || readOnly.value) return true;
+
+    const result = designerRef.value?.loadMjml(mjml.value) ?? {};
+    if (result.error) {
+        codeError.value = result.error;
+        return false;
+    }
+    codeError.value = null;
+    if (result.warning) {
+        toast.add({ severity: 'warn', summary: 'Content dropped', detail: result.warning, life: 8000 });
+    }
+    return true;
+}
+
+async function switchView(next: View) {
+    if (next === view.value || !applyCode()) return;
+
+    if (next === 'code') {
+        mjml.value = designerRef.value?.getMjml() ?? '';
+        codeError.value = null;
+    }
+    if (next === 'preview') {
+        previewHtml.value = (await designerRef.value?.exportDesign())?.html ?? '';
+    }
+    view.value = next;
+}
+
 // ── Load ──────────────────────────────────────────────────────────────────────
 // `loading` is owned by the onMounted orchestration below so the designer only
 // mounts once both the template AND the reusable-block list are ready — the
@@ -122,6 +176,8 @@ async function save() {
         openMeta();
         return;
     }
+
+    if (!applyCode()) return;
 
     saving.value = true;
     try {
@@ -178,6 +234,7 @@ onMounted(async () => {
 // The designer is built once at mount, so a version switch remounts it via `loading`.
 watch(() => route.query.version, async () => {
     if (isNew.value) return;
+    view.value = 'design';
     loading.value = true;
     try {
         await load();
@@ -221,6 +278,21 @@ watch(() => route.query.version, async () => {
                 </div>
             </div>
 
+            <SelectButton
+                v-if="!loading"
+                :model-value="view"
+                :options="viewOptions"
+                option-value="value"
+                :allow-empty="false"
+                size="small"
+                @update:model-value="switchView"
+            >
+                <template #option="{ option }">
+                    <i :class="option.icon" />
+                    <span>{{ option.label }}</span>
+                </template>
+            </SelectButton>
+
             <!-- Edit metadata -->
             <Button
                 icon="pi pi-pencil"
@@ -255,10 +327,22 @@ watch(() => route.query.version, async () => {
         <!-- ── Designer canvas ─────────────────────────────────────────────── -->
         <div v-if="!loading" class="flex-1 min-h-0 overflow-hidden">
             <EmailDesigner
+                v-show="view === 'design'"
                 ref="designerRef"
                 :design="template?.design ?? null"
                 :reusable-blocks="reusableBlocks"
             />
+
+            <div v-if="view === 'code'" class="h-full flex flex-col">
+                <Message v-if="codeError" severity="error" size="small" class="m-2 shrink-0">
+                    {{ codeError }} Fix it to leave the Code view.
+                </Message>
+                <div class="flex-1 min-h-0">
+                    <CodeEditor v-model="mjml" lang="xml" :dark="isDark" :readonly="readOnly" />
+                </div>
+            </div>
+
+            <EmailPreview v-if="view === 'preview'" v-model:variables="previewVars" :html="previewHtml" />
         </div>
 
         <div v-else class="flex-1 flex items-center justify-center text-surface-400">

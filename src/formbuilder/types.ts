@@ -128,6 +128,17 @@ export interface VueformPayload {
      * so a step-less payload stays byte-identical to what earlier versions stored.
      */
     steps?: VueformSteps;
+    /**
+     * Text shown after the task is submitted, in place of the default panel text.
+     * Not part of the doc: it is form-level settings, edited in the form info dialog.
+     * See docs/specs/frontend-forms-editor-and-renderer.spec.md §5.2.
+     */
+    completion?: FormCompletion;
+}
+
+export interface FormCompletion {
+    title?: string;
+    message?: string;
 }
 
 export const BUILDER_VERSION = 1 as const;

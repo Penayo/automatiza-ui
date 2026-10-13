@@ -1,0 +1,327 @@
+/*
+ * Vueform overrides: theme tokens, dark mode, labels, layout helpers used by form
+ * schemas (form-section, form-items, ...). Imported from style.css.
+ */
+
+/* You might use a customized CSS selector */
+.dark, .dark *, .dark :before, .dark :after {
+    --vf-bg-input: var(--vf-dark-800);
+    --vf-bg-input-hover: var(--vf-bg-input);
+    --vf-bg-input-focus: var(--vf-bg-input);
+    --vf-bg-input-danger: var(--vf-bg-input);
+    --vf-bg-input-success: var(--vf-bg-input);
+    --vf-bg-checkbox: var(--vf-dark-700);
+    --vf-bg-checkbox-hover: var(--vf-bg-checkbox);
+    --vf-bg-checkbox-focus: var(--vf-bg-checkbox);
+    --vf-bg-checkbox-danger: var(--vf-bg-checkbox);
+    --vf-bg-checkbox-success: var(--vf-bg-checkbox);
+    --vf-bg-disabled: var(--vf-dark-700);
+    --vf-bg-selected: var(--vf-dark-700); /* Used eg. when select option is hovered or a checkbox is selected in `blocks` view */
+    --vf-bg-passive: var(--vf-dark-700); /* Used as a background color for eg. slider, toggle */
+    --vf-bg-icon: var(--vf-dark-400);
+    --vf-bg-danger: var(--vf-danger-lighter);
+    --vf-bg-success: var(--vf-success-lighter);
+    --vf-bg-addon: transparent;
+    --vf-bg-tag: var(--vf-primary);
+    --vf-bg-slider-handle: var(--vf-primary);
+    --vf-bg-toggle-handle: #ffffff;
+    --vf-bg-date-head: var(--vf-dark-700);
+    --vf-bg-btn: var(--vf-primary);
+    --vf-bg-btn-danger: var(--vf-danger);
+    --vf-bg-btn-secondary: var(--vf-dark-700);
+
+    --vf-color-on-primary: #ffffff; /* Used when text is displayed on primary color */
+    --vf-color-input: var(--vf-dark-100);
+    --vf-color-input-hover: var(--vf-color-input);
+    --vf-color-input-focus: var(--vf-color-input);
+    --vf-color-input-danger: var(--vf-color-input);
+    --vf-color-input-success: var(--vf-color-input);
+    --vf-color-placeholder: var(--vf-dark-500);
+    --vf-color-disabled: var(--vf-dark-500);
+    --vf-color-passive: var(--vf-dark-900); /* Used when text is displayed on passive background eg. `off` toggle */
+    --vf-color-muted: var(--vf-dark-500); /* Used for helper texts eg. element description, floating label */
+    --vf-color-floating: var(--vf-color-muted);
+    --vf-color-floating-focus: var(--vf-color-floating); /* Used when the input is focused */
+    --vf-color-floating-success: var(--vf-color-floating); /* Used when the input is filled with success */
+    --vf-color-floating-danger: var(--vf-color-floating); /* Used when the input has error */
+    --vf-color-danger: var(--vf-danger);
+    --vf-color-success: var(--vf-success);
+    --vf-color-addon: initial;
+    --vf-color-tag: var(--vf-color-on-primary);
+    --vf-color-date-head: var(--vf-dark-200);
+    --vf-color-btn: var(--vf-color-on-primary);
+    --vf-color-btn-danger: #ffffff;
+    --vf-color-btn-secondary: var(--vf-dark-300);
+
+    --vf-border-color-input: var(--vf-dark-800);
+    --vf-border-color-input-focus: var(--vf-primary);
+    --vf-border-color-input-hover: var(--vf-border-color-input);
+    --vf-border-color-input-danger: var(--vf-border-color-input);
+    --vf-border-color-input-success: var(--vf-border-color-input);
+    --vf-border-color-checkbox: var(--vf-border-color-input);
+    --vf-border-color-checkbox-focus: var(--vf-primary);
+    --vf-border-color-checkbox-hover: var(--vf-border-color-checkbox);
+    --vf-border-color-checkbox-danger: var(--vf-border-color-checkbox);
+    --vf-border-color-checkbox-success: var(--vf-border-color-checkbox);
+    --vf-border-color-checked: var(--vf-primary);
+    --vf-border-color-btn: var(--vf-primary);
+    --vf-border-color-tag: var(--vf-primary);
+    --vf-border-color-slider-tooltip: var(--vf-primary);
+    --vf-border-color-passive: var(--vf-dark-700); /* Used as a border for passive states eg. `off` toggle */
+    --vf-border-color-btn-danger: var(--vf-danger);
+    --vf-border-color-btn-secondary: var(--vf-dark-700);
+    --vf-border-color-blockquote: var(--vf-dark-700);
+    --vf-border-color-hr: var(--vf-dark-700);
+
+    --vf-shadow-input: 0px 0px 0px 0px rgba(0,0,0,0);
+    --vf-shadow-input-hover: 0px 0px 0px 0px rgba(0,0,0,0);
+    --vf-shadow-input-focus: 0px 0px 0px 0px rgba(0,0,0,0);
+    --vf-shadow-handles: 0px 0px 0px 0px rgba(0,0,0,0);
+    --vf-shadow-handles-hover: 0px 0px 0px 0px rgba(0,0,0,0);
+    --vf-shadow-handles-focus: 0px 0px 0px 0px rgba(0,0,0,0);
+    --vf-shadow-btn: 0px 0px 0px 0px rgba(0,0,0,0);
+    --vf-shadow-dropdown: 0px 0px 0px 0px rgba(0,0,0,0);
+}
+
+/*
+ * Vueform field labels.
+ *
+ * `.vf-label` ships with no font-weight or color of its own — it only sets font-size,
+ * letter-spacing and line-height, so labels inherit body text and read as plain black.
+ * These set an explicit light weight and step the colour back in both themes.
+ */
+:root {
+    --vf-label-color: #555;
+    --vf-label-weight: 300;
+}
+.dark {
+    --vf-label-color: #bfbfbf;
+}
+.vf-label,
+.vf-vertical-label,
+.vf-horizontal-label {
+    font-weight: var(--vf-label-weight);
+    color: var(--vf-label-color);
+}
+
+/* Aligns the radio row with the label above it. */
+.vf-radiogroup-wrapper .vf-radio-container {
+    padding-top: 5px;
+}
+
+/*
+ * Vueform text sizes. The base matches the theme's own default and is pinned
+ * here so the pair stays visible together; `small` is stepped down from it.
+ *
+ * `html *`, not `:root`, is deliberate. vueform.css declares its font tokens on
+ * `*,:after,:before,:root`, so every element carries its own copy of
+ * `--vf-font-size` and an override on an ancestor alone is shadowed on each
+ * descendant. `html *` (0,0,1) outranks that bare `*` (0,0,0), which also makes
+ * the rule immune to load order — vueform.css is bundled after this file.
+ *
+ * Line heights are left at the theme's values on purpose: the base 1.5rem line
+ * box is what gives inputs their height, so keeping it changes the text size
+ * without resizing every field.
+ */
+html,
+html * {
+    --vf-font-size: 1rem;           /* inputs, labels, buttons */
+    --vf-font-size-small: .85rem;   /* descriptions and help text */
+}
+
+/*
+ * Group titles.
+ *
+ * A `list` or `object` label heads a section, but Vueform gives it the same
+ * `.vf-label` as a field caption and puts no element-type marker on the layout
+ * container — so there is nothing in the DOM to select on. The schema opts in
+ * instead, with `addClass: "form-section"` on the container element; `addClass`
+ * merges into the element's `container` class, which is what ElementLayout puts
+ * on `.vf-element-layout`.
+ *
+ * The child chain is load-bearing: `.vf-label` matches every label inside the
+ * section too, and `>` keeps the rule on the section's own heading.
+ */
+.form-section > .vf-element-layout-outer-wrapper > .vf-label {
+    margin-top: 1.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--vf-border-color-input);
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+/* A section inside a section is a sub-heading: stepped down, and no rule. */
+.form-section .form-section > .vf-element-layout-outer-wrapper > .vf-label {
+    margin-top: 1rem;
+    border-bottom: 0;
+    font-size: 1rem;
+}
+
+/*
+ * "Label: value" info lines — the `text-info` palette preset, a static element
+ * whose content is `<b>Label:</b> {path}`.
+ *
+ * Tailwind's preflight zeroes the paragraph margin, so consecutive info lines
+ * would otherwise run together with no rhythm at all; the padding here is what
+ * separates them. Weight matches `.form-section` so a group and the lines under
+ * it read as one scale.
+ */
+.form-info p {
+    margin: 0;
+    padding: 0.15rem 0;
+}
+
+.form-info b {
+    font-weight: 600;
+}
+
+/*
+ * Bullet list inside an info line — the markup LIST() emits from an array.
+ *
+ * Tailwind's preflight strips list styling from <ul>, so the markers and indent
+ * have to be restated here or the items render as bare stacked lines.
+ */
+.form-info .form-list {
+    margin: 0.2rem 0 0;
+    padding-left: 1.25rem;
+    list-style: disc outside;
+}
+
+.form-info .form-list li {
+    padding: 0.05rem 0;
+}
+
+/*
+ * Separator between the repetitions of a list.
+ *
+ * Vueform lays list items out as `.vf-rowset > .vf-row`, with only a row-gap
+ * between them — so a match runs straight into the next one with nothing to say
+ * where the boundary is. Opt in per list with `addClass: "form-items"`.
+ *
+ * `+` means the first item gets no rule, which keeps it flush under the section
+ * heading.
+ */
+.form-items .vf-rowset > .vf-row + .vf-row {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--vf-border-color-input);
+}
+
+/*
+ * Container appearance (spec §5.1), set from the builder's Appearance tab.
+ *
+ * Unlike `.form-items` above, these use the full child chain from the element's own
+ * layout to its rows. A list item usually holds an object that holds more lists, and a
+ * descendant selector would card every nested row too:
+ *
+ *   list:   .X > outer-wrapper > inner-container > inner-wrapper > .vf-rowset > .vf-row
+ *   object: .X > outer-wrapper > inner-container > inner-wrapper > .vf-row
+ */
+.form-items--card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row,
+.form-card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-row {
+    padding: 1rem;
+    border: 1px solid var(--vf-border-color-input);
+    border-radius: calc(var(--vf-radius-input) * 2);
+    background: color-mix(in srgb, var(--vf-border-color-input) 12%, transparent);
+}
+
+.form-items--card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset {
+    row-gap: 1rem;
+}
+
+/* A card inside a card steps down, so the nesting still reads. */
+:is(.form-items--card, .form-card) :is(
+    .form-items--card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row,
+    .form-card > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-row
+) {
+    padding: 0.75rem;
+    border-color: color-mix(in srgb, var(--vf-border-color-input) 60%, transparent);
+    background: transparent;
+}
+
+.form-items--striped > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--vf-radius-input);
+}
+
+.form-items--striped > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row:nth-child(odd) {
+    background: color-mix(in srgb, var(--vf-border-color-input) 18%, transparent);
+}
+
+/* "#1", "#2"… in the card's corner. Only meaningful with Card, which the builder enforces. */
+.form-items--numbered > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset {
+    counter-reset: form-item;
+}
+
+.form-items--numbered > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row {
+    counter-increment: form-item;
+}
+
+.form-items--numbered > .vf-element-layout-outer-wrapper > .vf-layout-inner-container > .vf-layout-inner-wrapper > .vf-rowset > .vf-row::before {
+    content: "#" counter(form-item);
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--vf-color-muted);
+}
+
+/*
+ * Card title: the `card-title` palette preset, a static h4 placed first in a list item.
+ * Tailwind's preflight zeroes heading size and weight, so both are restated.
+ */
+.form-card-title :is(h1, h2, h3, h4, p) {
+    margin: 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--vf-border-color-input);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/*
+ * Vueform's own "Upload" button on file/multifile elements.
+ *
+ * Our file elements are `auto: false` (see formbuilder/registry/index.ts) so the
+ * raw File stays in the model and FormRenderer.resolveFiles() uploads it to
+ * /bpmn/files/upload at submit — which is what routes it to the tenant's storage
+ * provider and produces a DocumentReference.
+ *
+ * `auto: false` is also the exact condition Vueform uses to offer a manual upload
+ * button, and that button posts to its own default endpoint (/vueform/file/upload-temp),
+ * which does not exist here: clicking it only ever produces an upload error on a
+ * file that is already going to be uploaded correctly on submit. There is no prop
+ * to suppress it — `canUploadTemp` is derived from `auto` — so it is hidden here.
+ */
+.vf-file-preview-upload,
+.vf-file-preview-image-upload,
+.vf-file-preview-gallery-upload {
+    display: none !important;
+}
+
+/*
+ * A Vueform `hidden` element renders as a bare <span> wrapping <input type="hidden">.
+ * Inside a .vf-row grid that span still takes a grid cell, so in an object/list row it
+ * pushes the visible fields right and wraps the last one. The value lives in the form
+ * model, not the DOM, so hiding the wrapper changes nothing about submitted data.
+ */
+.vf-row > span:has(> input[type="hidden"]) {
+    display: none;
+}
+
+/*
+ * Approve / reject decision: a radiogroup with `view: "tabs"` and
+ * `addClass: "form-decision"`. The first option is always green, the last always
+ * red, so list Approve first and Reject last.
+ */
+.form-decision .vf-radio-tabs-first {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+}
+
+.form-decision .vf-radio-tabs-last {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+}

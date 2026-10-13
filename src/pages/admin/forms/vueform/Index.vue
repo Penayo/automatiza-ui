@@ -15,6 +15,7 @@ import { buildPayload, loadPayload } from '@/formbuilder/payload';
 import { compileSteps } from '@/formbuilder/steps';
 import { decompile } from '@/formbuilder/decompile';
 import { emptyDoc } from '@/formbuilder/types';
+import { normalizeCompletion } from '@/formbuilder/completion';
 import BuilderPalette from './components/BuilderPalette.vue';
 import BuilderCanvas from './components/BuilderCanvas.vue';
 import BuilderProperties from './components/BuilderProperties.vue';
@@ -195,6 +196,9 @@ const metaVisible = ref(false);
 const metaName = ref('');
 const metaDesc = ref('');
 const metaCode = ref('');
+/** Shown after the task is submitted. Spec: frontend-forms-editor-and-renderer §5.2. */
+const completionTitle = ref('');
+const completionMessage = ref('');
 
 function openMeta() {
     metaName.value = form.value?.name ?? '';
@@ -218,6 +222,7 @@ async function save() {
         // Explicit fields, not a spread of the loaded form: legacy form-js documents
         // still carry `components`, and the DTO rejects any property it doesn't declare.
         const { metadata, processDefinitionId, taskDefinitionId } = (form.value ?? {}) as any;
+        const completion = normalizeCompletion({ title: completionTitle.value, message: completionMessage.value });
         const payload: IForm = {
             ...(metadata ? { metadata } : {}),
             ...(processDefinitionId ? { processDefinitionId } : {}),
@@ -229,7 +234,7 @@ async function save() {
             type: 'vueform',
             schemaVersion: 1,
             version: form.value?.version ?? 1,
-            vueform: buildPayload(builder.doc.value),
+            vueform: { ...buildPayload(builder.doc.value), ...(completion ? { completion } : {}) },
         } as IForm;
 
         const saved = await $api.forms.save(payload) as IForm;
@@ -281,6 +286,8 @@ async function load() {
         metaName.value = loaded.name ?? '';
         metaDesc.value = loaded.description ?? '';
         metaCode.value = loaded.code ?? loaded.id ?? '';
+        completionTitle.value = loaded.vueform?.completion?.title ?? '';
+        completionMessage.value = loaded.vueform?.completion?.message ?? '';
 
         const { doc, rebuilt } = loadPayload(loaded.vueform);
         builder.reset(doc);
@@ -578,6 +585,23 @@ async function copyVersionJson() {
                 </FormField>
                 <FormField label="Description" label-for="fdesc">
                     <Textarea id="fdesc" v-model="metaDesc" rows="2" class="w-full" placeholder="Optional" auto-resize />
+                </FormField>
+
+                <div class="pt-2 border-t border-surface-200 dark:border-surface-700">
+                    <p class="text-sm font-semibold">After submit</p>
+                    <small class="text-surface-400">
+                        Replaces the default text shown once the task is submitted.
+                        Use {field} to insert a submitted value.
+                    </small>
+                </div>
+                <FormField label="Completion title" label-for="fctitle">
+                    <InputText id="fctitle" v-model="completionTitle" class="w-full" placeholder="e.g. Quote reviewed" />
+                </FormField>
+                <FormField label="Completion message" label-for="fcmessage">
+                    <Textarea
+                        id="fcmessage" v-model="completionMessage" rows="3" class="w-full" auto-resize
+                        placeholder="e.g. The quote for {company_name} was marked as {quote_decision}."
+                    />
                 </FormField>
             </div>
             <template #footer>

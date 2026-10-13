@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed } from 'vue';
-import { EmailEditor, createDefaultDocument, cloneSubtree } from '@lab2view/vue-email-editor';
+import { EmailEditor, createDefaultDocument, cloneSubtree, compileMjml, documentToMjml, mjmlToDocument } from '@lab2view/vue-email-editor';
 import type { Plugin, EmailNode } from '@lab2view/vue-email-editor';
 import '@lab2view/vue-email-editor/style.css';
 import type { EmailTemplateDefinition } from '@services/EmailTemplatesService';
@@ -231,13 +231,57 @@ function resetHeadingMargins(html: string): string {
 }
 
 // ── Public API exposed to parent ─────────────────────────────────────────────
-function exportDesign(): EmailExport {
+// The editor recompiles its HTML on a 150-300ms debounce, so getHtml() can lag
+// the document right after an edit or a Code-view load. Compile fresh instead.
+async function exportDesign(): Promise<EmailExport> {
     const design = editorRef.value?.getDesignJson?.() ?? currentDesign.value ?? {};
-    const html   = resetHeadingMargins(editorRef.value?.getHtml?.() ?? currentHtml.value ?? '');
+    const doc    = editorRef.value?.getDocument?.();
+    const fresh  = doc ? (await compileMjml(documentToMjml(doc))).html : '';
+    const html   = resetHeadingMargins(fresh || editorRef.value?.getHtml?.() || currentHtml.value || '');
     return { design, html };
 }
 
-defineExpose({ exportDesign });
+// ── MJML round-trip for the page's Code view (email-templates spec §4a) ─────
+function getMjml(): string {
+    const doc = editorRef.value?.getDocument?.();
+    return doc ? documentToMjml(doc) : currentMjml.value;
+}
+
+export interface MjmlCheck {
+    /** Set when the MJML can't be loaded; the design is left untouched. */
+    error?:   string;
+    /** Set when it loaded but some content was dropped. */
+    warning?: string;
+}
+
+/**
+ * mjmlToDocument never throws: unparseable input silently becomes an empty
+ * document. So the structure is checked here first, with the same lenient
+ * HTML fallback the library uses (its own output can hold `&nbsp;`, which
+ * strict XML rejects).
+ */
+function loadMjml(mjml: string): MjmlCheck {
+    const xml  = new DOMParser().parseFromString(mjml, 'text/xml');
+    const root = xml.querySelector('parsererror')
+        ? new DOMParser().parseFromString(mjml, 'text/html').querySelector('mjml')
+        : xml.querySelector('mjml');
+
+    if (!root)                          return { error: 'Missing <mjml> root element.' };
+    if (!root.querySelector('mj-body')) return { error: 'Missing <mj-body> element.' };
+
+    // The editor keeps inner HTML only for mj-text and mj-button. mj-raw holding
+    // just a comment is the editor's own conditional-display marker, so it's fine.
+    const droppedRaw = Array.from(root.querySelectorAll('mj-raw'))
+        .some((el) => el.children.length > 0 || (el.textContent ?? '').trim() !== '');
+
+    editorRef.value?.setDocument(normalizeDocument(mjmlToDocument(mjml) as any));
+
+    return droppedRaw
+        ? { warning: 'mj-raw content is not kept by the editor and was dropped. Put raw HTML (tables, {{#each}} loops) inside mj-text instead.' }
+        : {};
+}
+
+defineExpose({ exportDesign, getMjml, loadMjml });
 </script>
 
 <template>
@@ -254,5 +298,9 @@ defineExpose({ exportDesign });
 </template>
 
 <style scoped>
-
+/* The page's Code view replaces the library's, which has no folding and no
+   validation (email-templates spec §4a). */
+.email-designer-fill :deep(.ebb-toolbar__action-btn[aria-label="Code"]) {
+    display: none;
+}
 </style>

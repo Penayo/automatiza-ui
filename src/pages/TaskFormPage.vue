@@ -9,6 +9,7 @@ import { FilesService } from '@services/FilesService';
 import { setPublicFormContext, clearPublicFormContext } from '@services/publicFormContext';
 import { CUSTOM_TASK_VIEWS } from '@/task-views/index';
 import { awaitChain, hasNextForm, isPending, type FormChain } from '@services/FormChainService';
+import { resolveCompletion } from '@/formbuilder/completion';
 
 import FormRenderer from '@components/forms/FormRenderer.vue';
 const filesService = new FilesService();
@@ -39,6 +40,11 @@ const saved      = ref(false);   // shows brief "Saved" confirmation
 type PageState = 'loading' | 'form' | 'waiting' | 'done' | 'used' | 'notfound' | 'error';
 const state     = ref<PageState>('loading');
 const errorMsg  = ref('');
+/**
+ * The submitted form's own completion text (forms spec §5.2). Set on every submit, so
+ * when a wizard ends the success screen shows the last submitted step's text.
+ */
+const completion = ref<{ title: string | null; message: string | null }>({ title: null, message: null });
 
 // ── Multi-step form chain (docs/specs/multi-step-forms.spec.md §12) ───────────
 // `isWizard` comes from the task itself, so a share link that opens mid-wizard
@@ -200,6 +206,7 @@ async function submit(variables: Record<string, any>) {
         // otherwise the response (and the server's behaviour) stays exactly as it
         // is today, including no auto-claim of whatever comes next.
         const { chain } = await $taskPublic.complete(token.value, variables, isWizard.value);
+        completion.value = resolveCompletion(data.value?.formSchema, { ...(data.value?.formData ?? {}), ...variables });
 
         if (isWizard.value && chain) {
             await followChain(chain);
@@ -406,9 +413,9 @@ onUnmounted(() => {
                         <i class="pi pi-check-circle text-green-500" style="font-size: 2.5rem" />
                     </div>
                     <div>
-                        <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">Thank you!</h2>
-                        <p class="text-sm text-surface-500 mt-1 max-w-xs">
-                            Your response has been recorded. You may close this page.
+                        <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">{{ completion.title ?? 'Thank you!' }}</h2>
+                        <p class="text-sm text-surface-500 mt-1 max-w-xs whitespace-pre-line">
+                            {{ completion.message ?? 'Your response has been recorded. You may close this page.' }}
                         </p>
                     </div>
                 </div>

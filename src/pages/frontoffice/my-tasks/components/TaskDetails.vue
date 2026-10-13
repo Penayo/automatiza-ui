@@ -76,7 +76,7 @@ async function updateTask(key: string, value: string) {
 
     <!-- Task detail -->
     <div class="w-full flex-1 min-h-0 flex flex-col" v-else>
-        <div class="shrink-0 px-5 pt-4 pb-3 sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b border-surface-100 dark:border-zinc-800">
+        <div class="shrink-0 px-5 pt-4 pb-0 sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b border-surface-100 dark:border-zinc-800">
             <h3 class="text-(--layout-accent-color) text-2xl font-semibold">{{ props.currentTask?.name }}</h3>
 
             <div
@@ -137,7 +137,7 @@ async function updateTask(key: string, value: string) {
         </div>
 
         <!-- Bounded height: panels scroll under the tab bar; the Form tab splits it further. -->
-        <Tabs value="0" class="mt-2 flex-1 min-h-0">
+        <Tabs value="0" class="flex-1 min-h-0">
             <TabList>
                 <Tab value="0">Form</Tab>
                 <Tab value="1">Task details</Tab>
