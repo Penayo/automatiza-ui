@@ -27,6 +27,7 @@ export interface ITenant {
     status:     TenantStatus;
     createdAt:  string;
     branding:   TenantBranding;
+    profile?:   TenantProfile;
     settings:   Record<string, any>;
 }
 
@@ -52,6 +53,25 @@ export interface TenantBrandingResponse {
     companyName:          string;
     showCompanyName:      boolean;
     companyNameStyle:     CompanyNameStyle;
+}
+
+/** The tenant's business identity; feeds the `tenant` process variable. */
+export interface TenantProfile {
+    legalName?: string;
+    taxId?:     string;
+    email?:     string;
+    phone?:     string;
+    website?:   string;
+    address?: {
+        line1?:      string;
+        line2?:      string;
+        city?:       string;
+        state?:      string;
+        postalCode?: string;
+        country?:    string;
+    };
+    signer?: { name?: string; title?: string };
+    custom?: { key: string; value: string }[];
 }
 
 export class TenantsService extends BaseService {
@@ -81,6 +101,11 @@ export class TenantsService extends BaseService {
 
     async activate(id: string): Promise<ITenant> {
         return this.post<ITenant>(`${id}/activate`, {}) as Promise<ITenant>;
+    }
+
+    /** Replaces the tenant's organization profile (SUPER_ADMIN). */
+    async updateProfile(id: string, profile: TenantProfile): Promise<TenantProfile> {
+        return this.put<TenantProfile>(`${id}/profile`, profile) as Promise<TenantProfile>;
     }
 
     async getBranding(): Promise<TenantBrandingResponse> {

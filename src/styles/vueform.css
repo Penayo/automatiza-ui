@@ -312,16 +312,35 @@ html * {
 /*
  * Approve / reject decision: a radiogroup with `view: "tabs"` and
  * `addClass: "form-decision"`. The first option is always green, the last always
- * red, so list Approve first and Reject last.
+ * red, so list Approve first and Reject last. Colors are Tailwind's green/red 400
+ * (fill) and 900 (text), as literals: Tailwind v4 only emits the color variables
+ * the source uses, so `var(--color-red-400)` is not guaranteed to exist.
+ *
+ * The tabs are split into separate rounded buttons; Vueform's own rules join them
+ * (no right border and square inner corners), so radius and borders are reset on
+ * every option, not just first/last. The wrapper class in each selector is there
+ * for specificity: Vueform's own `.vf-radio-tabs.vf-radio-tabs-*` rules (including
+ * the selected state) tie at 0,2,0 and its stylesheet is bundled after this one.
  */
-.form-decision .vf-radio-tabs-first {
-    background: #16a34a;
-    border-color: #16a34a;
-    color: #fff;
+.form-decision .vf-radiogroup-tabs-wrapper {
+    gap: 0.75rem;
 }
 
-.form-decision .vf-radio-tabs-last {
-    background: #dc2626;
-    border-color: #dc2626;
-    color: #fff;
+.form-decision .vf-radiogroup-tabs-wrapper .vf-radio-tabs {
+    padding: 0.625rem 1.5rem;
+    border-width: 1px;
+    border-radius: 0.5rem;
+    font-weight: 600;
+}
+
+.form-decision .vf-radiogroup-tabs-wrapper .vf-radio-tabs-first {
+    background: oklch(79.2% 0.209 151.711);
+    border-color: oklch(79.2% 0.209 151.711);
+    color: oklch(39.3% 0.095 152.535);
+}
+
+.form-decision .vf-radiogroup-tabs-wrapper .vf-radio-tabs-last {
+    background: oklch(70.4% 0.191 22.216);
+    border-color: oklch(70.4% 0.191 22.216);
+    color: oklch(39.6% 0.141 25.723);
 }

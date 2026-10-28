@@ -63,6 +63,8 @@ const dnd = useBuilderDnd({
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 type Tab = 'designer' | 'json' | 'preview';
 const activeTab = ref<Tab>('designer');
+/** Preview task variables, kept here so they survive switching tabs. */
+const previewVars = ref('');
 
 // ── Steps ─────────────────────────────────────────────────────────────────────
 
@@ -561,6 +563,7 @@ async function copyVersionJson() {
 
             <BuilderPreviewTab
                 v-if="activeTab === 'preview'"
+                v-model:variables="previewVars"
                 :schema="builder.schema.value"
                 :steps="compileSteps(builder.doc.value)"
                 class="flex-1 min-h-0"

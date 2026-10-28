@@ -38,12 +38,20 @@ export function normalizeDocuments(list: unknown): DocumentSpec[] {
     });
 }
 
-/** A dataTable column. `align` is passed straight to the cell's text-align. */
+/**
+ * A dataTable column. `align` is passed straight to the cell's text-align; `format`,
+ * `decimals` and `currency` only change the cell text (forms spec §5.5).
+ */
 export interface ColumnSpec {
     key: string;
     label: string;
     align?: 'left' | 'center' | 'right';
+    format?: 'number' | 'currency' | 'percent' | 'date';
+    decimals?: number;
+    currency?: string;
 }
+
+const COLUMN_FORMATS = new Set(['number', 'currency', 'percent', 'date']);
 
 /** Same leniency as normalizeDocuments: a bare string is its own label. */
 export function normalizeColumns(list: unknown): ColumnSpec[] {
@@ -51,12 +59,16 @@ export function normalizeColumns(list: unknown): ColumnSpec[] {
     return list.flatMap((entry) => {
         if (typeof entry === 'string') return [{ key: entry, label: entry }];
         if (entry && typeof entry === 'object' && 'key' in entry) {
-            const { key, label, align } = entry as Record<string, unknown>;
+            const { key, label, align, format, decimals, currency } = entry as Record<string, unknown>;
             if (key === undefined || key === null || key === '') return [];
+            const digits = decimals === '' || decimals === null ? NaN : Number(decimals);
             return [{
                 key: String(key),
                 label: String(label ?? key),
                 ...(align ? { align: align as ColumnSpec['align'] } : {}),
+                ...(COLUMN_FORMATS.has(format as string) ? { format: format as ColumnSpec['format'] } : {}),
+                ...(Number.isInteger(digits) && digits >= 0 ? { decimals: digits } : {}),
+                ...(typeof currency === 'string' && currency.trim() ? { currency: currency.trim() } : {}),
             }];
         }
         return [];

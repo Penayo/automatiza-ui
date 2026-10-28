@@ -13,7 +13,7 @@
                                 <th
                                     v-for="col in resolvedColumns"
                                     :key="col.key"
-                                    :style="col.align ? { textAlign: col.align } : undefined"
+                                    :style="alignOf(col)"
                                 >{{ col.label }}</th>
                             </tr>
                         </thead>
@@ -27,8 +27,8 @@
                                 <td
                                     v-for="col in resolvedColumns"
                                     :key="col.key"
-                                    :style="col.align ? { textAlign: col.align } : undefined"
-                                >{{ cell(row, col.key) }}</td>
+                                    :style="alignOf(col)"
+                                >{{ cell(row, col) }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -63,6 +63,7 @@
 import { computed } from 'vue';
 import { defineElement } from '@vueform/vueform';
 import { normalizeColumns, columnsFromRows, getPath } from '@/formbuilder/seededSources';
+import { formatColumnValue, NUMERIC_COLUMN_FORMATS } from '@/utils/valueFormat';
 
 export default defineElement({
     name: 'DataTableElement',
@@ -81,7 +82,8 @@ export default defineElement({
 
     props: {
         /**
-         * `[{ key, label, align }]`. Empty means "derive them from the rows".
+         * `[{ key, label, align, format, decimals, currency }]`. Empty means "derive them
+         * from the rows". `format` changes only the cell text (forms spec §5.5).
          *
          * Named `cols`, like the matrix element's, because Vueform's own `columns` prop
          * is the element's layout width — declaring a second meaning for that name
@@ -160,21 +162,29 @@ export default defineElement({
             return authored.length ? authored : columnsFromRows(resolvedRows.value);
         });
 
+        /** Numbers line up on the right unless the author chose otherwise. */
+        function alignOf(col) {
+            const align = col.align || (NUMERIC_COLUMN_FORMATS.has(col.format) ? 'right' : null);
+            return align ? { textAlign: align } : undefined;
+        }
+
         /** Dotted paths so a column can reach into a nested row object. */
-        function cell(row, key) {
-            const value = String(key).split('.').reduce(
+        function cell(row, col) {
+            const value = String(col.key).split('.').reduce(
                 (node, part) => (node === null || node === undefined ? undefined : node[part]),
                 row,
             );
 
             if (value === null || value === undefined || value === '') return '—';
+            const formatted = formatColumnValue(value, col);
+            if (formatted !== null && formatted !== '') return formatted;
             if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-            if (Array.isArray(value)) return value.map((v) => cell({ v }, 'v')).join(', ');
+            if (Array.isArray(value)) return value.map((v) => cell({ v }, { key: 'v' })).join(', ');
             if (typeof value === 'object') return JSON.stringify(value);
             return String(value);
         }
 
-        return { resolvedRows, resolvedColumns, cell };
+        return { resolvedRows, resolvedColumns, cell, alignOf };
     },
 });
 </script>

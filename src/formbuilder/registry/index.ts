@@ -265,6 +265,31 @@ const DEFS: ElementDef[] = [
         tabs: [generalTab({ ...PLACEHOLDER_PROP }), validationTab(), conditionsTab()],
     },
     {
+        type: 'amount',
+        label: 'Amount',
+        icon: 'pi-wallet',
+        namePrefix: 'amount',
+        // Custom element — see form-fields/vueform/AmountElement.vue. Stores a plain
+        // number; the grouping and currency are display only (forms spec §5.6).
+        defaults: { label: 'Amount', decimals: 2 },
+        tabs: [
+            generalTab({
+                ...PLACEHOLDER_PROP,
+                currency: {
+                    type: 'text',
+                    label: 'Currency',
+                    placeholder: 'e.g. USD',
+                    description: 'ISO 4217 code. Leave empty to show a plain grouped number.',
+                    columns: 6,
+                },
+                decimals: { type: 'text', inputType: 'number', label: 'Decimals', columns: 6 },
+                ...READONLY_PROP,
+            }),
+            validationTab(),
+            conditionsTab(),
+        ],
+    },
+    {
         type: 'phone',
         label: 'Phone',
         icon: 'pi-phone',
@@ -525,6 +550,26 @@ const DEFS: ElementDef[] = [
                                     items: { left: 'Left', center: 'Center', right: 'Right' },
                                     columns: 3,
                                 },
+                                // Display only (forms spec §5.5): the row data stays raw.
+                                format: {
+                                    type: 'select',
+                                    placeholder: 'Format',
+                                    items: { number: 'Number', currency: 'Currency', percent: 'Percent', date: 'Date' },
+                                    columns: 5,
+                                },
+                                decimals: {
+                                    type: 'text',
+                                    inputType: 'number',
+                                    placeholder: 'Decimals',
+                                    columns: 4,
+                                    conditions: [['cols.*.format', 'in', ['number', 'percent']]],
+                                },
+                                currency: {
+                                    type: 'text',
+                                    placeholder: 'USD',
+                                    columns: 4,
+                                    conditions: [['cols.*.format', '==', 'currency']],
+                                },
                             },
                         },
                     },
@@ -606,6 +651,11 @@ const PALETTE_ITEMS: PaletteItem[] = [
         description: 'Numeric input. A text element with inputType number — Vueform has no separate number element.',
         namePrefix: 'number',
         defaults: { label: 'Number', inputType: 'number' },
+    },
+    {
+        id: 'amount', type: 'amount', label: 'Amount', icon: 'pi-wallet',
+        category: 'Text & input',
+        description: 'Number shown grouped or as money (1,234.50). Stores a plain number.',
     },
     {
         id: 'email', type: 'text', label: 'Email', icon: 'pi-envelope',

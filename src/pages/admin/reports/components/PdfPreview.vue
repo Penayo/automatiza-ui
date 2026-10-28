@@ -1,29 +1,29 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, shallowRef, toRaw } from 'vue';
 import { useToast, Button, Textarea } from 'primevue';
+import { useExampleData } from '@/composables/useExampleData';
+import { deriveReportSample } from '@/utils/reportSample';
 
 const props = defineProps<{
     template: Record<string, any> | null;
 }>();
 
+/** Input data JSON, owned by the designer page so it survives tab switches. */
+const inputJson = defineModel<string>('inputs', { required: true });
+
 const toast       = useToast();
 const viewerRef   = ref<HTMLElement | null>(null);
 const viewer      = shallowRef<any>(null);
-const inputJson   = ref('{}');
 const loadError   = ref<string | null>(null);
 const rendering   = ref(false);
 
-// ── Build inputs skeleton from template schemas ────────────────────────────
-function buildEmptyInputs(tpl: Record<string, any>): Record<string, string> {
-    const fields: Record<string, string> = {};
-    const schemas: any[][] = tpl?.schemas ?? [];
-    for (const page of schemas) {
-        for (const schema of page) {
-            if (schema?.name) fields[schema.name] = '';
-        }
-    }
-    return fields;
-}
+// ── Example data (reports spec §3a) ───────────────────────────────────────────
+// A fill on an open viewer re-renders it; before mount, mountViewer reads it anyway.
+const { fill: fillExample, fillIfEmpty } = useExampleData(
+    inputJson,
+    () => deriveReportSample(props.template),
+    () => { if (viewer.value) render(); },
+);
 
 // ── Shared plugins loader (same set as PdfDesigner) ────────────────────────
 async function loadPlugins() {
@@ -66,7 +66,7 @@ async function mountViewer(tpl: Record<string, any>) {
             const parsed = JSON.parse(inputJson.value);
             inputs = Array.isArray(parsed) ? parsed : [parsed];
         } catch {
-            inputs = [buildEmptyInputs(tpl)];
+            inputs = [deriveReportSample(tpl)];
         }
 
         viewer.value = new (Viewer as any)({
@@ -104,15 +104,9 @@ async function render() {
     }
 }
 
-// ── Populate data skeleton from template fields ────────────────────────────
-function populateSkeleton() {
-    if (!props.template) return;
-    inputJson.value = JSON.stringify(buildEmptyInputs(props.template), null, 2);
-}
-
 onMounted(() => {
     if (props.template) {
-        populateSkeleton();
+        fillIfEmpty();
         mountViewer(props.template);
     }
 });
@@ -124,7 +118,7 @@ onUnmounted(() => {
 
 watch(() => props.template, (tpl) => {
     if (tpl) {
-        populateSkeleton();
+        fillIfEmpty();
         mountViewer(tpl);
     }
 });
@@ -143,8 +137,8 @@ watch(() => props.template, (tpl) => {
                         size="small"
                         text
                         icon="pi pi-refresh"
-                        v-tooltip.top="'Fill with empty field names from template'"
-                        @click="populateSkeleton"
+                        v-tooltip.top="'Fill with example data'"
+                        @click="fillExample"
                     />
                     <Button
                         size="small"

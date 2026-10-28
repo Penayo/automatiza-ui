@@ -62,6 +62,8 @@ const activeTab  = ref<Tab>('designer');
 const jsonText   = ref('');
 const jsonError  = ref('');
 const previewTpl = ref<Record<string, any> | null>(null);
+/** Preview input data, kept here so it survives switching tabs. */
+const previewInputs = ref('');
 
 function captureTemplate(): Record<string, any> {
     return designerRef.value?.getTemplate() ?? report.value?.template ?? {};
@@ -292,7 +294,7 @@ watch(() => route.query.version, () => { if (!isNew.value) void load(); });
 
             <!-- Preview tab -->
             <div v-if="activeTab === 'preview'" class="flex-1 min-h-0 overflow-hidden">
-                <PdfPreview :template="previewTpl" />
+                <PdfPreview v-model:inputs="previewInputs" :template="previewTpl" />
             </div>
 
         </template>

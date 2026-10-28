@@ -6,10 +6,12 @@
  * Never saves or sends (email-templates spec §4a).
  */
 import { computed, ref } from 'vue';
-import { SelectButton, Splitter, SplitterPanel, Message } from 'primevue';
+import { Button, SelectButton, Splitter, SplitterPanel, Message } from 'primevue';
 import Handlebars from 'handlebars';
 import CodeEditor from '@components/CodeEditor.vue';
 import { useTheme } from '@/composables/useTheme';
+import { useExampleData } from '@/composables/useExampleData';
+import { deriveEmailSample } from '@/utils/emailSample';
 
 const props = defineProps<{ html: string }>();
 
@@ -17,6 +19,9 @@ const props = defineProps<{ html: string }>();
 const variablesJson = defineModel<string>('variables', { required: true });
 
 const { isDark } = useTheme();
+
+const { fill: fillExample, fillIfEmpty } = useExampleData(variablesJson, () => deriveEmailSample(props.html));
+fillIfEmpty();
 
 type ViewMode = 'desktop' | 'mobile';
 const viewMode = ref<ViewMode>('desktop');
@@ -55,8 +60,15 @@ const rendered = computed<{ html: string; error?: string }>(() => {
 <template>
     <Splitter class="h-full border-0 rounded-none">
         <SplitterPanel :size="30" :min-size="20" class="flex flex-col min-h-0">
-            <div class="px-3 py-2 text-xs font-semibold uppercase text-surface-500 border-b border-surface-200 dark:border-surface-700 shrink-0">
-                Sample variables
+            <div class="flex items-center justify-between px-3 py-1 border-b border-surface-200 dark:border-surface-700 shrink-0">
+                <span class="text-xs font-semibold uppercase text-surface-500">Sample variables</span>
+                <Button
+                    size="small"
+                    text
+                    icon="pi pi-refresh"
+                    v-tooltip.top="'Fill with example data'"
+                    @click="fillExample"
+                />
             </div>
             <div class="flex-1 min-h-0">
                 <CodeEditor v-model="variablesJson" lang="json" :dark="isDark" />

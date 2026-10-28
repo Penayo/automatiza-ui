@@ -106,7 +106,7 @@ const viewOptions = [
 const mjml        = ref('');
 const codeError   = ref<string | null>(null);
 const previewHtml = ref('');
-const previewVars = ref('{\n  \n}');
+const previewVars = ref('');
 
 /**
  * Pushes the Code view's MJML back into the visual editor. Returns false (and

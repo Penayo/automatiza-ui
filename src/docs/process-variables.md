@@ -50,6 +50,28 @@ Use the variable name directly:
 
 ---
 
+## The `tenant` variable
+
+Every process instance starts with a `tenant` variable holding the tenant's organization profile
+(Platform → Tenants → the tenant → *Profile* tab), so documents and messages can use the firm's details:
+
+```
+= tenant.legalName            // falls back to the tenant name
+= tenant.email
+= tenant.address.state
+= tenant.signer.name + ", " + tenant.signer.title
+= tenant.custom.ptin          // a custom field with key "ptin"
+```
+
+Fields: `id`, `name`, `legalName`, `taxId`, `email`, `phone`, `website`,
+`address` (`line1`, `line2`, `city`, `state`, `postalCode`, `country`),
+`signer` (`name`, `title`) and `custom`. Fields you haven't filled in are `null`.
+
+- It is a snapshot taken when the instance starts. Editing the profile affects new instances only.
+- A `tenant` value passed when starting a process is ignored; the engine always sets its own.
+
+---
+
 ## Output variable mapping
 
 Service tasks write results to a named variable. Configure the `outputVariable` input parameter in the task template. If not set, the default name is used (`generatedReport` for reports, etc.).

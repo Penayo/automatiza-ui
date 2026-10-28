@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Button, InputText, InputNumber, ToggleSwitch, Message, Skeleton } from 'primevue';
+import { Button, InputText, InputNumber, ToggleSwitch, Message, Skeleton, Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import { $api } from '@services/api';
 import type { ITenant, BrandingTheme, CompanyNameStyle, UpdateTenantDto } from '@services/TenantsService';
 import { generateShades } from '@/composables/useTenantBranding';
+import ProfileForm from './components/ProfileForm.vue';
 
 const THEMES: { value: BrandingTheme; label: string; color: string }[] = [
     { value: 'sky',     label: 'Sky',     color: '#0ea5e9' },
@@ -35,6 +36,7 @@ const tenant  = ref<ITenant | null>(null);
 const loading = ref(true);
 const saving  = ref(false);
 const error   = ref('');
+const profileForm = ref<InstanceType<typeof ProfileForm>>();
 
 const LOGO_SIZES: { value: number; label: string }[] = [
     { value: 24, label: 'XS' },
@@ -101,6 +103,10 @@ async function load() {
 }
 
 async function save() {
+    if (profileForm.value?.hasErrors) {
+        error.value = 'Fix the custom fields on the Profile tab before saving';
+        return;
+    }
     saving.value = true;
     error.value  = '';
     try {
@@ -121,9 +127,13 @@ async function save() {
             },
         };
         await $api.tenants.update(tenant.value!.id, dto);
+        if (profileForm.value) {
+            tenant.value!.profile = await $api.tenants.updateProfile(tenant.value!.id, profileForm.value.value());
+        }
         toast.add({ severity: 'success', summary: 'Saved', detail: 'Tenant updated', life: 3000 });
     } catch (e: any) {
-        error.value = e?.response?.data?.message ?? 'Failed to save';
+        const message = e?.response?.data?.message;
+        error.value = Array.isArray(message) ? message.join(', ') : message ?? 'Failed to save';
     } finally {
         saving.value = false;
     }
@@ -133,7 +143,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="flex flex-col h-full gap-6 p-6 max-w-xl">
+    <div class="flex flex-col h-full gap-6 p-6 w-full">
 
         <!-- Header -->
         <div class="flex items-center gap-3">
@@ -153,24 +163,13 @@ onMounted(load);
         <template v-else>
             <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
-            <!-- General -->
-            <section class="flex flex-col gap-4">
-                <h2 class="text-sm font-semibold text-surface-500 uppercase tracking-wide">General</h2>
-
-                <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">Name</label>
-                    <InputText v-model="name" size="small" class="w-full" />
-                </div>
-
-                <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium text-surface-400">Slug</label>
-                    <code class="text-xs text-surface-400 font-mono bg-surface-100 dark:bg-zinc-800 px-3 py-2 rounded">
-                        {{ tenant?.slug }}
-                    </code>
-                </div>
-            </section>
-
-            <hr class="border-surface-200 dark:border-zinc-700" />
+            <Tabs value="branding">
+                <TabList>
+                    <Tab value="branding">Branding</Tab>
+                    <Tab value="profile">Profile</Tab>
+                </TabList>
+                <TabPanels class="p-6!">
+                    <TabPanel value="branding">
 
             <!-- Branding -->
             <section class="flex flex-col gap-4">
@@ -436,6 +435,26 @@ onMounted(load);
                     </div>
                 </div>
             </section>
+
+                    </TabPanel>
+                    <TabPanel value="profile">
+                        <!-- General -->
+                        <section class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 rounded-lg border border-surface-200 dark:border-zinc-700 p-4">
+                            <div class="flex flex-col gap-1">
+                                <label class="text-sm font-medium">Name</label>
+                                <InputText v-model="name" size="small" class="w-full" />
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-sm font-medium text-surface-400">Slug</label>
+                                <code class="text-xs text-surface-400 font-mono bg-surface-100 dark:bg-zinc-800 px-3 py-2 rounded">
+                                    {{ tenant?.slug }}
+                                </code>
+                            </div>
+                        </section>
+                        <ProfileForm ref="profileForm" :profile="tenant?.profile" />
+                    </TabPanel>
+                </TabPanels>
+            </Tabs>
 
             <!-- Actions -->
             <div class="flex justify-end gap-2 pt-2">

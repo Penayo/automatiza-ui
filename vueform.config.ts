@@ -8,6 +8,8 @@ import '@vueform/vueform/dist/vueform.css';
 
 import DocumentListElement from './src/form-fields/vueform/DocumentListElement.vue'
 import DataTableElement from './src/form-fields/vueform/DataTableElement.vue'
+import AmountElement from './src/form-fields/vueform/AmountElement.vue'
+import { formatCurrency, formatDate, formatNumber } from './src/utils/valueFormat'
 
 /**
  * Renders an array as a real <ul>, for use inside a `static` element's content:
@@ -59,6 +61,22 @@ const SUM_FIELD = (rows: unknown, field?: unknown, unitType?: unknown): number =
     }, 0)
 }
 
+/**
+ * Number display for static content (forms spec §5.4):
+ *
+ *   "Monthly total: {CURRENCY(quote_monthly_total, 'USD')}"   "{NUMBER(hours, 1)}"   "{DATE(due)}"
+ *
+ * Same registration contract as LIST: called with no arguments they return '', which
+ * keeps them plain functions. Output is text for display, not for further arithmetic.
+ */
+const NUMBER = (value?: unknown, decimals?: unknown, locale?: unknown): string =>
+    formatNumber(value, decimals, locale)
+
+const CURRENCY = (value?: unknown, code?: unknown, locale?: unknown): string =>
+    formatCurrency(value, code, locale)
+
+const DATE = (value?: unknown, locale?: unknown): string => formatDate(value, locale)
+
 // Both locales are registered so a form can be switched at runtime via
 // form$.setLanguage(); `locale` here is only the default. See useFormLocale().
 export default defineConfig({
@@ -66,7 +84,7 @@ export default defineConfig({
   locales: { en, es },
   locale: 'en',
   expression: {
-    functions: { LIST, SUM_FIELD },
+    functions: { LIST, SUM_FIELD, NUMBER, CURRENCY, DATE },
   },
   /**
    * Custom elements. Registered here rather than per-form because Vueform resolves an
@@ -74,5 +92,5 @@ export default defineConfig({
    * `type: 'documentList'` looks for a `DocumentListElement` component and renders
    * nothing at all if one was never installed.
    */
-  elements: [DocumentListElement, DataTableElement],
+  elements: [DocumentListElement, DataTableElement, AmountElement],
 })

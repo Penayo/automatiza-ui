@@ -12,9 +12,14 @@ import JsonEditor from 'vue3-ts-jsoneditor';
 import { useFormLocale } from '@/composables/useFormLocale';
 import { resolveFormVariables } from '@/formbuilder/formVariables';
 import { resolveSeededSources } from '@/formbuilder/seededSources';
+import { deriveFormSample } from '@/formbuilder/sampleData';
+import { useExampleData } from '@/composables/useExampleData';
 import type { VueformSchema, VueformSteps } from '@/formbuilder/types';
 
 const props = defineProps<{ schema: VueformSchema; steps?: VueformSteps }>();
+
+/** Task variables JSON, owned by the builder page so it survives tab switches. */
+const taskVarsJson = defineModel<string>('variables', { required: true });
 
 const { locale, locales } = useFormLocale();
 
@@ -31,7 +36,6 @@ const canvasMaxWidth: Record<ViewMode, string> = {
 };
 
 // ── Form instance ─────────────────────────────────────────────────────────────
-const taskVarsJson = ref('{\n  \n}');
 const form$ = ref<any>(null);
 const hasFields = computed(() => Object.keys(props.schema).length > 0);
 
@@ -120,17 +124,18 @@ async function reset() {
     readOutput();
 }
 
-/** Seed the editor with the field names the schema actually exposes. */
-function scaffoldVars() {
-    const skeleton: Record<string, unknown> = {};
-    for (const [name, entry] of Object.entries(props.schema)) {
-        if (entry.type === 'static') continue;      // holds no data
-        skeleton[name] = '';
-    }
-    taskVarsJson.value = JSON.stringify(skeleton, null, 2);
-}
+// ── Example data (spec §5.3) ──────────────────────────────────────────────────
+// A fill that adds or drops keys remounts the form (formKey), which applies it below;
+// one that keeps the same keys has to be applied by hand.
+const { fill: fillExample, fillIfEmpty } = useExampleData(
+    taskVarsJson,
+    () => deriveFormSample(props.schema),
+    () => nextTick(applyVars),
+);
+fillIfEmpty();
 
-watch(form$, readOutput);
+// Every fresh instance starts from the task variables, as a real task form would.
+watch(form$, (form) => (form ? applyVars() : readOutput()));
 </script>
 
 <template>
@@ -187,9 +192,9 @@ watch(form$, readOutput);
                     type="button"
                     class="self-start text-[11px] underline opacity-60 hover:opacity-100 shrink-0"
                     :disabled="!hasFields"
-                    @click="scaffoldVars"
+                    @click="fillExample"
                 >
-                    Fill from schema
+                    Fill with example data
                 </button>
                 <p v-if="varsJsonError" class="text-xs text-red-500 shrink-0">{{ varsJsonError }}</p>
                 <JsonEditor

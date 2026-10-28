@@ -3,6 +3,8 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast, Button, Message } from 'primevue';
 import { useTheme } from '@/composables/useTheme';
+import { useExampleData } from '@/composables/useExampleData';
+import { deriveDmnSample } from '@/utils/dmnSample';
 import { $api } from '@services/api';
 import type { DecisionDefinition, DecisionDefinitionVersion } from '@services/DecisionsService';
 import DmnModeler from './components/DmnModeler.vue';
@@ -70,6 +72,7 @@ async function switchTab(tab: Tab) {
     }
     if (tab === 'preview') {
         previewResult.value = null;
+        fillIfEmpty();
     }
     activeTab.value = tab;
 }
@@ -108,10 +111,13 @@ function xmlWellFormedError(text: string): string | null {
 }
 
 // ── Preview ───────────────────────────────────────────────────────────────────
-const previewVarsText = ref('{\n  \n}');
+const previewVarsText = ref('');
 const previewResult   = ref<{ outputs: Record<string, any>; matchedRules: number[] } | null>(null);
 const previewError    = ref('');
 const evaluating      = ref(false);
+
+// Derived from the XML switchTab just captured, so unsaved table edits count.
+const { fill: fillExample, fillIfEmpty } = useExampleData(previewVarsText, () => deriveDmnSample(currentXml.value));
 
 async function evaluate() {
     if (!decision.value?.id) {
@@ -358,6 +364,13 @@ watch(id, (next) => { if (next && next !== decision.value?.id) void load(); });
                         <div class="flex items-center justify-between">
                             <span class="font-semibold" style="color: var(--layout-title-color)">Input Data</span>
                             <div class="flex flex-row gap-3">
+                                <Button
+                                    size="small"
+                                    text
+                                    icon="pi pi-refresh"
+                                    v-tooltip.top="'Fill with example data'"
+                                    @click="fillExample"
+                                />
                                 <Button
                                     size="small"
                                     label="Evaluate"
